@@ -1,0 +1,24 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>讓某個Function有無限多個參數可以使用</h1><p>今天在使用string.Format()時突然想到，這種可以創造無限多個參數（Parameters）、加入無限多的引數（Arguments）是怎麼樣辦到的，查一查之後才知道是要依靠方法參數（Method Parameters）裡的params來完成，那麼，我們就自己實作個string.Format()來進行個小小的練習吧！此外，搞不清楚參數引數的人，可以順便參考一下下圖說明。</p><p><img src=https://content.slashview.com/img/2015/20150606_01.jpg alt="" /></p><h3>實作一個類似string.Format()的無窮參數Fuinction</h3><p>跟params類似的方法參數有ref、out等，它們不是.NET Framework的類別或列舉，它們是參數用的「修飾詞」，用來給編譯器看的啦！</p><pre><code class=language-cs>class Program
+{
+  static void Main(string[] args)
+  {
+    string cTemp_1 = "is";
+    string cTemp_2 = "apple";
+    Console.Write(
+      getTogether("This {0} an {1}. Yes! An really {1}", cTemp_1, cTemp_2)
+    );
+    Console.Read();
+  }
+
+  static string getTogether(string cTemp, params string[] aryTemp)
+  {
+    int iTemp = 0;
+    foreach (var item in aryTemp)
+    {
+      cTemp = cTemp.Replace("{" + iTemp + "}", item);
+      iTemp++;
+    }
+    return cTemp;
+  }
+}
+</code></pre><p>輸出結果：</p><p><img src=https://content.slashview.com/img/2015/20150606_02.jpg alt="" /></p><h6>C# string.Format Functions params MethodParameters MultiParameters MultiArguments</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

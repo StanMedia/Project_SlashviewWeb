@@ -1,0 +1,27 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>如何查詢ISO光碟映像檔中Windows 10的版本、版本號</h1><p>當我們透過微軟的網站或者是其他的管道取得了一個Windows 10的光碟映像檔案（ISO image files），在尚未安裝Windows之前，我們是否有任何方法可以得知這一片光碟中Windows的相關資料？答案是有的。</p><p><img src=https://content.slashview.com/img/2017/20170412_01.jpg alt="" /></p><h2>取得ISO光碟映像檔中Windows 10的版本、版本號以及相關資訊</h2><p>Step 1. 請先將ISO檔案掛載成一個可存取的軟體光碟機（或者透過Rufus這類的軟體載入到USB隨身碟中），假設這片ISO被掛載到「X磁碟機」。</p><p>Step 2. Windows 10有x86以及x64兩種版本，請確認你要查詢的位元版本。</p><p>Step 3. 以系統管理員身分去開啟一個cmd命令視窗。</p><p>Step 4. 假設我們要查詢x64版本，則請切換到下列目錄：</p><pre><code class=language-txt>X:\>cd x64\sources
+</code></pre><p>Step 5. 找到source目錄下是否有叫做「install.esd」或是「install.wim」的檔案，它就是我們要查詢的目標。</p><p>Step 6. 利用部署映像服務與管理工具（DISM）來協助我們查詢，請輸入下列指令：</p><pre><code class=language-txt>X:\x64\sources>dism /Get-WimInfo /WimFile:install.esd /index:1
+</code></pre><p>Step 7. 大功告成，你將會得到下列有用的判讀資訊。例如：（名稱 : Windows 10 Pro、版本 : 10.0.15063、版本 : Professional、建立日期 : 2017/03/20 - 13:24:56...等）</p><pre><code class=language-txt>映像詳細資料: install.esd
+
+索引 : 1
+名稱 : Windows 10 Pro
+描述 : Windows 10 Pro
+大小 : 15,525,287,632 個位元組
+WIM 可開機   : 否
+架構 : x64
+HAL : &lt;未定義>
+版本 : 10.0.15063
+ServicePack 組建 : 0
+ServicePack 等級 : 0
+版本 : Professional
+安裝 : Client
+產品類型 : WinNT
+產品套件 : Terminal Server
+系統根目錄 : WINDOWS
+目錄 : 20838
+檔案 : 104990
+建立日期 : 2017/03/20 - 13:24:56
+修改日期 : 2017/04/10 - 12:36:51
+語言 : zh-TW (預設值)
+
+操作順利完成。
+</code></pre><p>對於Windows 10版本號有興趣的人，可以順便到<a href=https://en.wikipedia.org/wiki/Windows_10_version_history>Windows 10 version history</a>查詢一下版本代碼與對應資訊。以這片光碟是10.0.15063版本來說，他已屬於Version 1703，也就是眾所皆知的Windows 10 Creator Update。</p><h6>Windows10 IsoFiles IsoImages IsoFileContains QueryVersion QueryOsType</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

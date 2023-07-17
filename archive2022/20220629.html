@@ -1,0 +1,71 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>依據SQL TABLE Schema建立C#資料物件類別</h1><p>從網路上看到的文章，免安裝任何套件可以在SQL TABLE建立後透過純SQL指令產生出C#的ORM（Object Relational Mapping）或稱DTO（Data Transfer Object），基於該文章去除掉一些自己不會用到的冗餘部分並且把欄位註解也標註上去，拾人牙慧將資訊摘錄至此。</p><h2>SQL TABLE Schema to C# Class</h2><p>基本上把下面這一段貼到SSMS上面，設定好前兩行：CatalogName、TableName，按下執行後就可以把既有的SQL資料表轉換成C#類別了。</p><pre><code class=language-sql>USE YourSQLCatalogName
+DECLARE @Table NVARCHAR(MAX) = 'YourSQLTableName'
+DECLARE @Result NVARCHAR(MAX) = ''
+SET @Result = 'public class ' + @Table + CHAR(13) + '{' + CHAR(13) + CHAR(10)
+SELECT
+  @Result = @Result + CASE WHEN cDescription IS NOT NULL THEN '  //' + cDescription  + CHAR(13) + CHAR(10) ELSE '' END + '  public ' + cDataType + ' ' + cName + ' { get; set; }' + CHAR(13) + CHAR(10)
+FROM
+  (
+    SELECT
+      TOP (999999)
+      c.ORDINAL_POSITION AS iPosition,
+      c.COLUMN_NAME AS cName,
+      CASE c.DATA_TYPE
+          WHEN 'bigint'           THEN CASE C.IS_NULLABLE WHEN 'YES' THEN 'long?' ELSE 'long' END
+          WHEN 'binary'           THEN 'Byte[]'
+          WHEN 'bit'              THEN CASE C.IS_NULLABLE WHEN 'YES' THEN 'bool?' ELSE 'bool' END
+          WHEN 'char'             THEN 'string'
+          WHEN 'date'             THEN CASE C.IS_NULLABLE WHEN 'YES' THEN 'DateTime?' ELSE 'DateTime' END
+          WHEN 'datetime'         THEN CASE C.IS_NULLABLE WHEN 'YES' THEN 'DateTime?' ELSE 'DateTime' END
+          WHEN 'datetime2'        THEN CASE C.IS_NULLABLE WHEN 'YES' THEN 'DateTime?' ELSE 'DateTime' END
+          WHEN 'datetimeoffset'   THEN CASE C.IS_NULLABLE WHEN 'YES' THEN 'DateTimeOffset?' ELSE 'DateTimeOffset' END
+          WHEN 'decimal'          THEN CASE C.IS_NULLABLE WHEN 'YES' THEN 'decimal?' ELSE 'decimal' END
+          WHEN 'float'            THEN CASE C.IS_NULLABLE WHEN 'YES' THEN 'double?' ELSE 'double' END
+          WHEN 'image'            THEN 'Byte[]'
+          WHEN 'int'              THEN CASE C.IS_NULLABLE WHEN 'YES' THEN 'int?' ELSE 'int' END
+          WHEN 'money'            THEN CASE C.IS_NULLABLE WHEN 'YES' THEN 'decimal?' ELSE 'decimal' END
+          WHEN 'nchar'            THEN 'string'
+          WHEN 'ntext'            THEN 'string'
+          WHEN 'numeric'          THEN CASE C.IS_NULLABLE WHEN 'YES' THEN 'decimal?' ELSE 'decimal' END
+          WHEN 'nvarchar'         THEN 'string'
+          WHEN 'real'             THEN CASE C.IS_NULLABLE WHEN 'YES' THEN 'double?' ELSE 'double' END
+          WHEN 'smalldatetime'    THEN CASE C.IS_NULLABLE WHEN 'YES' THEN 'DateTime?' ELSE 'DateTime' END
+          WHEN 'smallint'         THEN CASE C.IS_NULLABLE WHEN 'YES' THEN 'short?' ELSE 'short' END
+          WHEN 'smallmoney'       THEN CASE C.IS_NULLABLE WHEN 'YES' THEN 'decimal?' ELSE 'decimal' END
+          WHEN 'text'             THEN 'string'
+          WHEN 'time'             THEN CASE C.IS_NULLABLE WHEN 'YES' THEN 'TimeSpan?' ELSE 'TimeSpan' END
+          WHEN 'timestamp'        THEN 'Byte[]'
+          WHEN 'tinyint'          THEN CASE C.IS_NULLABLE WHEN 'YES' THEN 'Byte?' ELSE 'Byte' END
+          WHEN 'uniqueidentifier' THEN CASE C.IS_NULLABLE WHEN 'YES' THEN 'Guid?' ELSE 'Guid' END
+          WHEN 'varbinary'        THEN 'Byte[]'
+          WHEN 'varchar'          THEN 'string'
+          ELSE 'Object'
+      END AS cDataType,
+      CONVERT(NVARCHAR(MAX), e.value) AS cDescription
+    FROM
+      INFORMATION_SCHEMA.COLUMNS c
+    LEFT OUTER JOIN 
+      SYS.EXTENDED_PROPERTIES e
+    ON
+      e.major_id = OBJECT_ID(c.TABLE_SCHEMA + '.' + c.TABLE_NAME)
+      AND
+      e.minor_id = c.ORDINAL_POSITION
+      AND
+      e.name = 'MS_Description'
+    WHERE
+      c.TABLE_NAME = @Table
+    ORDER BY
+      c.ORDINAL_POSITION
+  ) t
+SET @Result = @Result + '}' + CHAR(13) + CHAR(10)
+PRINT @Result
+</code></pre><p>以下是轉換出來的效果範例，還不錯：</p><pre><code class=language-cs>public class YourSQLTableName
+{
+  //自動編號
+  public int iAutoIndex { get; set; }
+  //身分證號
+  public string cID { get; set; } 
+  //張貼日期
+  public DateTime? dPost { get; set; }
+}
+</code></pre><p>原始出處：<a href=https://briancaos.wordpress.com/2022/06/24/create-c-class-from-sql/>Create C# Class from SQL</a></p><h3>20221116 更新備註</h3><p>修正當欄位描述（Description）為NULL引發無法產生任何DTO的BUG，並且加入原始欄位排序作為列舉依據。</p><h6>MSSQL SqlToCSharpClass SqlToC#Class SqlToDTO SqlToORM SqlToEntityModel</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

@@ -1,0 +1,135 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>讓Google Drive能夠支援匿名上傳檔案（未登入即可上傳）</h1><p>在雲端檔案中心百家爭鳴的年代，迄今能夠讓一般使用者隨手設定即可支援匿名上傳（Anoymous Upload）的，也只有DropBox一家。原因無它，匿名上傳意味著一個網路的匿名（未經過任何身分驗證）使用者，就可以透過介面去上傳到你自己所擁有的儲存空間，這對一間以商業導向的軟體公司來說，根本沒有任何的甜頭可言，所以在2016年的此刻，我們仍可以發現大如Google、Microsoft等雲端軟體服務（Google Drive、Microsoft OneDrive）等，仍然不願意提供匿名上傳的服務。</p><p>但路是人走出來的，正所謂山不轉路轉，有人發現利用Google開放給自己旗下辦公室軟體的操作語言：Google Apps Script，擁有讀寫Google Drive的能力，這意味著可以透過Google Apps Script來達成使用者與自己後端擁有的Google Drive進行溝通的橋樑，這也就是說，匿名上傳檔案到Google Drive再也不是不可能的事了。</p><h2>讓Google Drive支援匿名上傳檔案全攻略</h2><p>Step 1. 登入你的Google帳號後，先到Google Apps Script的首頁：<a href=https://www.google.com/script/start/>https://www.google.com/script/start/</a>，點選畫面中間的「Start Scripting」按鈕，開始一個全前後端JavaScript語言的創作空間。</p><p>Step 2. 打開畫面後，你可以先到右上角，點選「無標題專案」，幫你這個Script重新命名。重新命名後，基本上你會在你的Google Drive中，看到以這個名字為命名的Google Apps Script檔案。</p><p><img src=https://content.slashview.com/img/2016/20160524_01.jpg alt="" /></p><p>Step 3. 由於我們是要透過網頁跟「匿名」的一般使用者溝通，因此有一個網頁介面是必要的，在下圖我們示範了如何去新增一個HTML檔案資料，當然很沒創意的，我們就叫他「MyForm.html」。</p><p><img src=https://content.slashview.com/img/2016/20160524_02.jpg alt="" /></p><p>Step 4. 點選左側的「MyForm.html」，並填入下列的HTML。先聲明，在這篇網誌中，我並不打算講解任何的前後端HTML、JS程式碼的意思，我已經盡量在段落的字裡行間加了一些註解，這種小孩子等級的程式碼應該難不倒各位Coding大師的啦！</p><p><img src=https://content.slashview.com/img/2016/20160524_03.jpg alt="" /></p><pre><code class=language-html>&lt;!DOCTYPE html>
+&lt;html>
+
+&lt;head>
+  &lt;base target="_top">
+  &lt;script src="https://code.jquery.com/jquery-2.2.4.min.js">&lt;/script>
+  &lt;link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css">
+  &lt;script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/js/bootstrap.min.js">&lt;/script>
+&lt;/head>
+
+&lt;body style="margin: 2em">
+
+  &lt;div class="row" style="margin-bottom:1em">
+    &lt;div class="col-md-12">
+      &lt;h1>&lt;span class="glyphicon glyphicon-grain" aria-hidden="true">&lt;/span> 請上傳PDF檔案&lt;small> Upload PDF File&lt;/small>&lt;/h1>
+    &lt;/div>
+  &lt;/div>
+
+  &lt;div class="row">
+    &lt;div class="col-md-6">
+      &lt;div class="panel panel-primary">
+        &lt;div class="panel-heading">
+          &lt;h3 class="panel-title">請依照下方規定上傳你的檔案 Please upload your file by following requirements&lt;/h3>
+        &lt;/div>
+        &lt;div class="panel-body">
+          &lt;p>1. 檔案名稱：OOOOO&lt;/p>
+          &lt;p>2. 檔案格式：PDF格式（File type: PDF Format）&lt;/p>
+          &lt;p>3. 檔案大小：最大限定 2M Bytes（File size: 2M Bytes limited）&lt;/p>
+        &lt;/div>
+      &lt;/div>
+    &lt;/div>
+  &lt;/div>
+
+  &lt;div class="row">
+    &lt;div class="col-md-6">
+      &lt;form id="uploadForm">
+        &lt;div class="form-group">
+          &lt;label for="applicationFile">&lt;span class="glyphicon glyphicon-download" aria-hidden="true">&lt;/span> 請於下方點選瀏覽按鈕，並上傳您的PDF檔案。&lt;/label>
+          &lt;p class="help-block">Click the "Browse" button below, and upload your PDF File.&lt;/p>
+          &lt;input type="file" id="applicationFile" name="applicationFile">
+        &lt;/div>
+        &lt;button type="button" id="btnUpload" class="btn btn-success">
+          &lt;span class="glyphicon glyphicon-ok" aria-hidden="true">&lt;/span>
+          Upload PDF file
+        &lt;/button>
+      &lt;/form>
+    &lt;/div>
+  &lt;/div>
+
+  &lt;div class="row" style="margin-top:1em">
+    &lt;div class="col-md-6">
+      &lt;div id="cMsg" role="alert">&lt;/div>
+    &lt;/div>
+  &lt;/div>
+
+  &lt;script>
+    $(document).ready(function () {
+      $("#btnUpload").click(function () {
+        $(this).prop("disabled", true).addClass("disabled");
+        $("#cMsg").html("&lt;div class='progress'>&lt;div class='progress-bar progress-bar-success progress-bar-striped active' role='progressbar' aria-valuenow='100' aria-valuemin='0' aria-valuemax='100' style='width: 100%'>&lt;span class='sr-only'>Uploading...&lt;/span>&lt;/div>&lt;/div>");
+        google.script.run.withSuccessHandler(function (e) {
+          if (e.indexOf('failed') == -1) { //上傳成功
+            $("#cMsg").html("&lt;div class='alert alert-success' role='alert'>&lt;span class='glyphicon glyphicon-info-sign' aria-hidden='true'>&lt;/span>&lt;strong> System Message: &lt;/strong>" + e + "&lt;/div>");
+          }
+          else { //上傳失敗
+            $("#btnUpload").prop("disabled", false).removeClass("disabled");
+            $("#cMsg").html("&lt;div class='alert alert-danger' role='alert'>&lt;span class='glyphicon glyphicon-info-sign' aria-hidden='true'>&lt;/span>&lt;strong> System Message: &lt;/strong>" + e + "&lt;/div>");
+          }
+        }).uploadFiles(this.parentNode);
+        return false;
+      });
+    });
+  &lt;/script>
+
+&lt;/body>
+&lt;/html>
+</code></pre><p>Step 5. 點選左側的「程式碼.gs」（.gs就是Google Script的意思），把所有的程式碼取代成下列程式碼。同樣的，這種幼兒等級的程式碼，應該難不倒各位程式設計師之神的對吧！所以我就不再說明了。</p><p><img src=https://content.slashview.com/img/2016/20160524_04.jpg alt="" /></p><pre><code class=language-js>function doGet(e) {
+  return HtmlService.createHtmlOutputFromFile('MyForm.html');
+}
+
+function uploadFiles(form) {
+  try
+  { 
+    var parentFolderName = "匿名上傳資料夾";
+    var parentFolders = DriveApp.getFoldersByName(parentFolderName);
+    var parentFolder;
+    
+    //由於可能具有眾多同名稱的資料夾，因此在這邊做預設處理
+    if (parentFolders.hasNext())
+    { parentFolder = parentFolders.next(); }
+    else //如果資料夾不存在就自動建立
+    { parentFolder = DriveApp.createFolder(parentFolderName); }
+    
+    var blob1 = form.applicationFile;
+    var errMsg = "";
+    
+    //檢查檔案正確性
+    if (blob1.length &lt;= 0)
+    {
+      errMsg = "Application form file size can not be 0 Byte.";
+    } else if (blob1.getName().toUpperCase().indexOf(".PDF") == -1)
+    {
+      errMsg = "Application form file must be uploaded in PDF format.";
+    }
+    
+    //如果不正確就踢回去
+    if (errMsg != "")
+    {
+      return "Upload failed! Reason: " + errMsg;
+    }
+    
+    //處理檔案寫入工作
+    if (blob1.length > 0) {
+      //自動以年分新增資料夾
+      var subFolderName = new Date().getFullYear();
+      var subFolders = parentFolder.getFoldersByName(subFolderName);
+      var subFolder;
+      
+      //由於可能具有眾多同名稱的資料夾，因此在這邊做預設處理
+      if (subFolders.hasNext())
+      { subFolder = subFolders.next(); }
+      else //如果資料夾不存在就自動建立子資料夾
+      { subFolder = parentFolder.createFolder(subFolderName); }
+      
+      //寫入資料
+      var file1 = subFolder.createFile(blob1);
+    }
+    return "Upload successfully!";
+  }
+  catch (error)
+  { 
+    return "Upload failed! Reason: " + error.toString();
+  }
+}
+</code></pre><p>Step 6. 取得這支Google Apps Script對你的OneDrive之讀寫權限！點選「執行」＞「doGet」，跑一下doGet裡面的程式碼。</p><p><img src=https://content.slashview.com/img/2016/20160524_05.jpg alt="" /></p><p>Step 7. 彈出「需要授權」視窗，請核對授權並允許吧！</p><p><img src=https://content.slashview.com/img/2016/20160524_06.jpg alt="" /></p><p><img src=https://content.slashview.com/img/2016/20160524_07.jpg alt="" /></p><p>Step 8. 發佈你的程式碼，請點選「發佈」>「部署為網路應用程式」。</p><p><img src=https://content.slashview.com/img/2016/20160524_08.jpg alt="" /></p><p>Step 9. 專案版本請每次都挑選「新增」，否則將會測不出你最新修改的前後端程式碼。另外有一點超級重要的，就是紅框中的「具有應用程式存取權的使用者」，這個一定要選「任何人，甚至是匿名使用者」，否則你無法真正的匿名檔案上傳。一切都確定後，點選部屬按鈕。</p><p><img src=https://content.slashview.com/img/2016/20160524_09.jpg alt="" /></p><p>Step 10. 最後，將畫面中的應用程式網址，COPY給你要應用的對象（一般使用者），他們就可以透過這個程式碼將檔案直接免登入，送到你的Google Drive之中了。</p><p><img src=https://content.slashview.com/img/2016/20160524_10.jpg alt="" /></p><h2>後記與心得</h2><ol><li>程式碼中的parentFolders.hasNext();等檢查機制，對於嚴重缺乏類別庫的JavaScript來說，頗具有無奈中之巧妙，值得玩味。當然啦，對於C#之於.Net Framework來說，這種機制就變成是笑話了。</li><li>對於前端的form表單來說，text或其他field的input properties，請注意加上「name」屬性。對於前後端都早已習慣使用ID屬性的你來說，我只能請你回想一下HTTP的POST機制，你會有會心一笑的感覺。</li><li>真心地覺得在後端用JS寫Code，純粹是一種自虐的行為（有在寫後端語言的就知道我在講什麼）。論開發效率或速度，都屬於下乘。不過這時代就是這樣，大家一窩蜂往這種語言跑，所有的資源都往這邊挹注，最終的結果就是這裡資源超級豐富（一堆套件、框架等），你不跳進來，有時候反而又變成你自己在自虐了。</li><li>千萬不要濫用匿名上傳這個功能，你要知道，你的Google Drive應該都是免費版本的，江湖上傳言上傳超過1G後，就變成不能上傳了。（沒驗證過）</li></ol><h6>GoogleDrive GoogleAppsScript AnonymousFileUpload</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

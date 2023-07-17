@@ -1,0 +1,21 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>如何將匿名型別的屬性賦予null值</h1><p>寫Dapper引入SQL Parameter進行參數化查詢的時候，很常發生一個匿名型別的屬性問題，就是有時候我們會試圖將這個參數賦予null值，但是這時候編譯器不會給予通過，反而會拋出如下的資訊：</p><pre><code class=language-txt>錯誤 CS0828 無法將 '&lt;null>' 指派給匿名型別屬性
+error CS0828: Cannot assign '&lt;null>' to anonymous type property
+</code></pre><p>會形成這個問題也沒啥好說的，就是C#語言禁止你針對匿名型別屬性給予null的值，遇到這個問題你的思路不應該往System.DBNull.Value方向走，否則這樣會破壞到你的匿名型別的屬性本身要表達的型別，以下列的程式碼來舉例：</p><pre><code class=language-cs>var oTemp = new
+{
+  bIsError = System.DBNull.Value,
+  iMoney = 99,
+};
+Console.WriteLine(oTemp.GetType());
+</code></pre><p>直觀的來說，我們會期望oTemp這個匿名型別的bIsError屬性是布林值、iMoney是整數，但是我們針對這個物件GetType()後可以發現，bIsError屬性的型別並非我們想像，而是被指定成為System.DBNull：</p><pre><code class=language-cs>&lt;>f__AnonymousType0\`2[System.DBNull,System.Int32]
+</code></pre><p>這樣的結果對於SQL參數來說，很顯然地跟資料欄位本身的型別無法對應上了。</p><h2>將匿名型別的屬性賦予null值</h2><p>經過上述的思辨後，我們可以得知System.DBNull.Value是錯誤的道路，正確的作法是引入Nullable觀念並善用型別的強轉型。完整範例程式碼如下：</p><pre><code class=language-cs>bool? bBoolean = null;
+int? iInteger = null;
+
+var oTemp = new
+{
+  bIsError = (bBoolean != null) ? bBoolean : (bool?)null,
+  iMoney = (iInteger != null) ? iInteger : (int?)null,
+};
+
+Console.WriteLine(oTemp.GetType());
+</code></pre><p>把經過這樣封裝過後的匿名型別打開來看，屬性的型別就會跟我們期望中的一致了。</p><pre><code class=language-cs>&lt;>f__AnonymousType0\`2[System.Nullable\`1[System.Boolean],System.Nullable\`1[System.Int32]]
+</code></pre><h6>C# CSharp AnonymousType Property Properties Assign Assignment null NullValue Dapper SqlParameters</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

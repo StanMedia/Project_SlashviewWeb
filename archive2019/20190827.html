@@ -1,0 +1,15 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>利用C#的switch case when語法來忽略字串大小寫</h1><p>會出現這個需求是因為有需要用switch指令來進行作業切割，而裡面又需要進行非精準的字串命中解析，以防止有些人為狀況下導致程式碼不能使用，例如下列這個情況：</p><p>假設 "Abc", "ABc", "abC" ... 都要命中某個case，所以我們都會先在switch端進行ToUpper()或ToLower()的轉換，但是轉換後case端字串又顯得其醜難以閱讀，例如下面這兩段程式碼，你會覺得哪個比較好閱讀？</p><pre><code class=language-cs>case "TheBoySayWannaDrink": //閱讀良好
+  DoSomething();
+case "THEBOYSAYWANNADRINK": //難以閱讀
+  DoSomething();
+</code></pre><h2>C# 7.0之後的case when來解救你啦！</h2><p>從C# 7.0開始case陳述式不需要互斥，所以可新增when子句來指定其他條件，滿足這些條件case陳述式才會評估為true。when子句可以是任何傳回布林值的運算式。</p><p>以剛才舉的ToUpper()例子來說，我們可以用這個寫法來讓程式碼變得更好閱讀。</p><pre><code class=language-cs>//終於可以保留高辨識度的字串了
+switch (cTemp)
+{
+  case string x when x.Equals("TheBoySayWannaDrink", System.StringComparison.InvariantCultureIgnoreCase):
+    DoSomething();
+    break;
+  case string x when x.Equals("TheGirlSayWannaEat", System.StringComparison.InvariantCultureIgnoreCase):
+    DoSomething();
+    break;
+}
+</code></pre><h3>相關連結</h3><ol><li><a href=/archive2021/20210224.html>在C#的SwitchExpression下使用模式比對（Pattern Matching）</a></li><li><a href=/archive2022/20220331.html>利用SwitchExpression來進行switch流程程式碼判斷的優化</a></li><li><a href=/archive2019/20190827.html>利用C#的switch case when語法來忽略字串大小寫</a></li><li><a href=/archive2021/20210301.html>C#的IS與AS運算子之撰寫方法</a></li><li><a href=/archive2022/20221108.html>C#的NULL運算演化：?.、??、??=、以及模式比對增強功能</a></li><li><a href=https://docs.microsoft.com/zh-tw/dotnet/csharp/language-reference/proposals/csharp-8.0/patterns>遞迴模式比對</a></li><li><a href=https://docs.microsoft.com/zh-tw/dotnet/csharp/whats-new/csharp-9#pattern-matching-enhancements>C# 9.0 中的新增功能</a></li></ol><h6>C#7.0 switch case when ToUpper() ToLower()</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

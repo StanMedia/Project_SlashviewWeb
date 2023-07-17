@@ -1,0 +1,3 @@
+﻿User-agent: *
+Allow: /
+Sitemap: https://slashview.com/.data/sitemap.txt

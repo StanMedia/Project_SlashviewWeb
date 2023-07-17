@@ -1,0 +1,18 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>C# 物件陣列 Array of Objects</h1><p>在寫MVC的時候，資料模型是用Class來存放的，因此在產生多筆資料的情況，要用JSON輸出時，這些類別肯定是要用物件陣列的方式輸出才行。但不知道是腦筋打結了還是怎樣，竟然在執行期時一直回應我說「陣列超出索引範圍」，真是見鬼了。</p><p>幸虧有強大的Visual Studio，進行逐步除錯後才發現，物件陣列在生成的時候，根本就還是個null，沒有實體，所以我去操控這個實體是無意義的。</p><p>例如下面這個簡單的「錯誤範例」，就會出現Array Index Out Of Bounds Exception：</p><pre><code class=language-cs>Myclass[] oEmployee = new Myclass[2];
+oEmployee[0].name = "john";
+oEmployee[0].salary = 999;
+oEmployee[1].name = "marry";
+oEmployee[1].salary = 888;
+
+
+錯誤發生的原因，就是因為第一行執行完成時，是有oEmployee[0], oEmployee[1]沒錯，可是這兩個空間下並沒有實體（Object Instance）。因此，改成下列這樣就可以動啦！
+
+```cs
+MyClass[] oEmployee = new MyClass[2];
+oEmployee[0] = new MyClass();
+oEmployee[0].name = "john";
+oEmployee[0].salary = 999;
+oEmployee[1] = new MyClass();
+oEmployee[1].name = "marry";
+oEmployee[1].salary = 888;
+</code></pre><p>StackOverflow有<a href=http://goo.gl/I0i38t>相關的文章</a>在討論，裡面最佳解還有使用到泛型的寫法，也有人建議用迴圈的寫法，很多種解啦！大家可以前往參考看看。</p><h6>C# Array Objects 類別 物件 陣列</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

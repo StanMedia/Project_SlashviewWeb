@@ -1,0 +1,47 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>C#函式如何得知是哪一個方法或屬性來呼叫自己本身</h1><p>早期在寫沒有IDE環境下寫程式時，最怕的就是偵錯。當你的程式碼越來越長、越來越龐大時，如果有數十個Function去調用某隻Function，然後在這隻Function裡面被Try-Cache到某個錯誤時，你就會發現問題大條了！是誰？是誰來呼叫這隻Function的？失去了單步追蹤，這時候簡直是Debug的夢靨。</p><p><img src=https://content.slashview.com/img/2016/20160603_01.jpg alt="" /></p><p>然後我們就會開始在每個Function裡面插入印出垃圾資訊的程式碼，諸如print("AAA");print("BBB");之類的。這個惡夢到物件導向的世界裡依然不能解除，一個大型的商用元件要考量、要捕捉的錯誤細緻度是很繁雜的。所以你可能會想要把整個錯誤的拋擲整理在一個統一的私有方法（Private Method）內，這時候你會遇到跟古時候一樣的問題，啊我怎麼知道是誰把Exception拋到這個方法裡面？</p><h2>該是System.Runtime.CompilerServices來救你了</h2><p>System.Runtime.CompilerServices裡面有關於Caller Info attributes中文翻譯成「呼叫端資訊」，裡面包含了三個屬性（Attribute），分別是CallerMemberNameAttribute 誰來呼叫你、CallerFilePathAttribute 呼叫你的程式路徑、CallerLineNumberAttribute 呼叫你的程式行號，這三個屬性其實你望文生義就知道答案了。得知有這個抓蟲神器也不要高興得太早，因為CallerMemberNameAttribute要.Net Framework 4.5以後才有。</p><p>看一下老中青三代的範例程式碼：</p><pre><code class=language-cs>public static void Main()
+{
+  A();
+  WriteLine("-----");
+  B();
+  Read();
+}
+
+public static void A()
+{
+  whoscall_1("Test1", "Method-A");
+  whoscall_2("Test2", System.Reflection.MethodBase.GetCurrentMethod());
+  whoscall_3("Test3");
+}
+
+public static void B()
+{
+  whoscall_1("Test1", "Method-B");
+  whoscall_2("Test2", System.Reflection.MethodBase.GetCurrentMethod());
+  whoscall_3("Test3");
+}
+
+private static void whoscall_1(string cMsg, string cWhoAmI)
+{
+  WriteLine($"{cMsg}\t{cWhoAmI}");
+}
+
+private static void whoscall_2(string cMsg, System.Reflection.MethodBase oMethod)
+{
+  WriteLine($"{cMsg}\t{oMethod.Name}");
+}
+
+private static void whoscall_3(
+  string cMsg,
+      [System.Runtime.CompilerServices.CallerMemberName] string cName = "",
+      [System.Runtime.CompilerServices.CallerFilePath] string cPath = "",
+      [System.Runtime.CompilerServices.CallerLineNumber] int cNum = 0)
+{
+  WriteLine($"{cMsg}\t{cName}\t{cNum}\t{cPath}");
+}
+</code></pre><p>執行結果如下圖：</p><p><img src=https://content.slashview.com/img/2016/20160603_02.jpg alt="" /></p><p>值得一提的是，System.Runtime.CompilerServices是編譯時期在做的事情，所以遠比執行時期的System.Reflection.MethodBase.GetCurrentMethod()（反射、映射）來的高速！（純個人以既有知識推論，未證實！）</p><p>相關連結請參考MSDN：<a href=https://goo.gl/IumZf8>System.Runtime.CompilerServices Namespace / CallerMemberNameAttribute Class</a></p><p>System.Reflection.MethodBase.GetCurrentMethod();盡管好用，但其實就某一種角度來說其實未必「自動」，說穿了其實是你自己主動把現在調用的方法名稱取出，並且將訊息傳遞給想要知道的方法，如果需要更自動的寫法可以參考下面這支修改過後的程式碼，或者直接參考另外一篇連結：<a href=/archive2019/20190521.html>如何在父類別中知道是哪個子類別過來繼承、調用或呼叫</a></p><pre><code class=language-cs>private static void whoscall_4()
+{
+  System.Diagnostics.StackTrace oStack = new System.Diagnostics.StackTrace();
+  System.Reflection.MethodBase oMethod = oStack.GetFrame(1).GetMethod();
+  WriteLine($"不用傳遞任何參數給我，我自己知道是{oMethod.Name}過來調用我的。");
+}
+</code></pre><h6>C# Debug WhoCallMe WhoRunMe Function Method 誰在調用我 誰在呼叫我 誰在Call我</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

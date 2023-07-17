@@ -1,0 +1,45 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>LINQ筆記：利用Except()進行快速資料差集比對</h1><p>在LINQ的世界裡，若在一般的情況下要比對兩個資料的差集，通常我們會直觀用.Any搭配.Contains直接做掉（詳見文末相關參考），但其實這樣的方式只適用於數百筆資料量少的情況之下，若是資料上看數萬、數十萬甚至更多筆資料，那麼我就完全不建議採用這種方式，因為這種方式產生的運算量將形成O(n x m)的笛卡爾乘積運算（Cartesian product），若採用Except()方法可以將運算量降低至O(n + m)，相較之下速度自然是快到爆炸了。</p><p>這篇文章將會針對直觀的寫法，以及Except()的兩種寫法進行羅列比較，大家可以自行看看喜歡哪一種寫法，我個人的建議如果是真的遇到要使用Except()的情境了，那應該採用實作IEqualityComparer比較器介面來完成，來達成最佳的效能（但是程式碼會比較囉嗦）。</p><h2>LINQ資料差集的做法比較</h2><p>首先先定義ORM資料類別，並創造出兩個準備進行差集的資料集合。母體讓他直接攻上十萬筆且故意採用數值與文字混合，來進行效能的比較。</p><pre><code class=language-cs>List&lt;Student> AllStudents = new List&lt;Student>();
+for (int i = 0; i &lt; 100000; i++)
+{ AllStudents.Add(new Student() { ID = i, Name = $"ABC{i}" }); }
+
+List&lt;Student> BadStudents = new List&lt;Student>();
+for (int i = 75000; i &lt; 90000; i++)
+{ BadStudents.Add(new Student() { ID = i, Name = $"ABC{i}" }); }
+
+public class Student
+{
+  public int ID { get; set; }
+  public string Name { get; set; }
+}
+</code></pre><p>第一種：LINQ差集直觀寫法（效能最差）</p><pre><code class=language-cs>var MS = AllStudents
+  .Where(x => !BadStudents.Any(y => y.ID == x.ID &amp;&amp; y.Name == x.Name))
+  .ToList();
+</code></pre><p>第二種：LINQ差集Except()偷懶寫法（效能次之）</p><pre><code class=language-cs>var MS = AllStudents
+  .Select(x => new {x.ID, x.Name })
+  .Except(BadStudents.Select(x => new { x.ID, x.Name }))
+  .ToList();
+</code></pre><p>第三種：LINQ差集Except()完整寫法（效能最佳）</p><pre><code class=language-cs>var MS = AllStudents
+  .Except(BadStudents, new StudentComparer())
+  .ToList();
+
+//實作比較器介面
+public class StudentComparer : IEqualityComparer&lt;Student>
+{
+  public bool Equals(Student x, Student y)
+  {
+    if (object.ReferenceEquals(x, y))
+    { return true; }
+    if (object.ReferenceEquals(x, null) || object.ReferenceEquals(y, null))
+    { return false; }
+    return x.ID == y.ID &amp;&amp; x.Name == y.Name;
+  }
+  public int GetHashCode(Student obj)
+  {
+    if (obj == null)
+    { return 0; }
+    int IDHashCode = obj.ID.GetHashCode();
+    int NameHashCode = obj.Name == null ? 0 : obj.Name.GetHashCode();
+    return IDHashCode ^ NameHashCode;
+  }
+}
+</code></pre><p>當然啦，還有很多種其他五花八門的Except()寫法，但我不想去擴大額外討論。</p><h2>實驗比較結果</h2><p>因為偷懶，在此僅記錄我實驗完成的數據，若不信的人就...自己動手做樂趣多吧。</p><table class="table table-hover"><thead><tr><th>LINQ差集方法</th><th>執行時間</th><th>耗用記憶體</th></tr></thead><tbody><tr><td>直觀寫法</td><td>21736ms</td><td>20.0MB</td></tr><tr><td>Except()偷懶寫法</td><td>51ms</td><td>22.9MB</td></tr><tr><td>Except()完整寫法</td><td>37ms</td><td>22.6MB</td></tr></tbody></table><p>建議效能要看他增進的百分率，因為如果把比對的資料差距擴大到百萬筆，那執行時間與耗用記憶體的差距會變得非常可觀。</p><h3>相關參考</h3><ul><li><a href=/archive2020/20201112.html>LINQ筆記：使用LINQ達成NOT IN的效果（黑名單）</a></li><li><a href=https://dotnettutorials.net/lesson/linq-except-method/>LINQ Except in C# with Examples</a></li><li><a href=https://stackoverflow.com/questions/10269610/>How does except method work in linq</a></li><li><a href=https://blog.darkthread.net/blog/linq-except-for-custom-class/>LINQ Except() 比對自訂類別</a></li></ul><h6>LINQ SQL LeftOuterJoin Except 資料 集合 比對 相差 差集</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

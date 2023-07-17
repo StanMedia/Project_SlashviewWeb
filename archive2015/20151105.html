@@ -1,0 +1,70 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>yield return的運行動作拆解</h1><p>yield return與傳統的return最大的不同，就是他是「動態的」回傳資料，使用上必須與IEnumerable、IEnumerable(T)、IEnumerator或IEnumerator(T)一起搭配處理。這一點有很多網頁在討論，但是不是講的文謅謅，就是根本亂舉例一通，我還有看過有一個網頁根本擺錯重點，把yield return的重大意義擺在return完後，還可以繼續執行程式，這種廢話不需要拿出來再標註一次吧？</p><h2>yield return的重點在於動態回傳</h2><p>請試著想看看，如果你今天去讀取一個超大的檔案（甚至是一個可能永遠沒有終點的TextStream），那麼在進行資料的讀取＞處理＞顯示時，你可能會讓使用者整個ＵＩ卡住（感覺當掉），然後在迫不得已的情況下，你只好在讀取這個程式區塊，插入顯示進度的相關程式碼，這是傳統的設計上，很常見的問題。</p><p>下面這個程式碼，可以展現上述的特性</p><pre><code class=language-cs>static void Main(string[] args)
+{
+  foreach (var item in GetList1())
+  {
+    WriteLine("正在處理：" + item);
+  }
+  foreach (var item in GetList2())
+  {
+    WriteLine("整批處理：" + item);
+  }
+}
+
+//用yield return回傳資料
+static System.Collections.Generic.IEnumerable&lt;int> GetList1()
+{
+  for (int i = 0; i &lt; 10; i++)
+  {
+    yield return i;
+    WriteLine("---");
+  }
+}
+
+//用return回傳資料
+static System.Collections.Generic.List&lt;int> GetList2()
+{
+  System.Collections.Generic.List&lt;int> oList = new System.Collections.Generic.List&lt;int>();
+  for (int i = 0; i &lt; 10; i++)
+  {
+    oList.Add(i);
+  }
+  return oList;
+}
+</code></pre><p>結果當然很顯而易見了：</p><pre><code class=language-txt>正在處理：0
+---
+正在處理：1
+---
+正在處理：2
+---
+正在處理：3
+---
+正在處理：4
+---
+正在處理：5
+---
+正在處理：6
+---
+正在處理：7
+---
+正在處理：8
+---
+正在處理：9
+---
+整批處理：0
+整批處理：1
+整批處理：2
+整批處理：3
+整批處理：4
+整批處理：5
+整批處理：6
+整批處理：7
+整批處理：8
+整批處理：9
+</code></pre><p>動態回傳的優點除了在資料回傳的即時性大佔上風之外，對於記憶體的損耗更是極低，所以當你了解yield return的執行動作後，下面這種可以多次yield return，或者是yield return後還可以繼續run程式碼，對你來說有很重要的感覺嗎？</p><pre><code class=language-cs>static System.Collections.Generic.List&lt;int> GetList3()
+{
+  yield return 1;
+  yield return 2;
+  yield return 3;
+  yield return 4;
+}
+</code></pre><h6>YieldReturn Return IEnumerable IEnumerable(T) IEnumerator IEnumerator(T)</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

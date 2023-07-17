@@ -1,0 +1,53 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>利用TcpClient快速得知對方主機是否活著</h1><p>在.NET裡面某些網路連線元件在實作上缺乏Timeout設定的機制，這時候我們可以透過最底層的Socket來實作出類似Ping的動作，透過敲門來得知這部主機是否活著。當然，這時候的秒數我們就可以自行定義啦！</p><p>在這邊沒有特意去包成類別，請自行放在script runat="server"，純粹展示概念，Browser端的物件不用說也知道是TextBox吧。大概動作就是我們不去調用TCPClient.GetStream指令了，因為這個動作還要包二進制陣列資料，而是改由直接下TCPClient.Connected，然後利用執行續去觀察它的處理結果。當然，所謂的Timeout時間，就是執行續的起來查看時間啦！</p><pre><code class=language-cs>//定義TCP連線測試時間（千分之一秒）
+public int iConnectTime = 1000;
+//定義系統是否可以順利連線上
+public bool bConnected = false;
+//定義共用例外物件
+public System.Exception oException = null;
+//主要OnClick事件
+protected void QueryTCPServer(object sender, EventArgs e)
+{
+  //利用Threading進行TCP敲門，如果TCP沒有回應的話（通常要20秒以上）且自己定義的時間到的話，就把整個執行緒停掉
+  System.Threading.Thread oThread = new System.Threading.Thread(() => KnockDoor(targetIP.Text, 80));
+  //設定執行緒背景運行
+  oThread.IsBackground = true;
+  //開始執行緒
+  oThread.Start();
+  //指定執行緒的逾時時間
+  oThread.Join(iConnectTime);
+  //如果執行緒內的KnockDoor在小於iConnectTime內運行完成，那他會自動把這個bConnected標記成true，並且結束執行緒。否則的話，執行緒就會在這邊卡住，直到Join(iConnectTime)到達，或者是KnockDoor運行完成，如果你的iConnectTime設定大於20秒，那你將會看到TCPException觸發錯誤。
+  if (bConnected)
+  {
+    //主機活著
+    showMe.Text = "主機活著";
+    return;
+  }
+  if (oException != null)
+  {
+    //主機死掉（真的由TCP觸發連線逾時）
+    oThread.Abort();
+    showMe.Text = "主機死掉（TCP觸發連線逾時）";
+    return;
+  }
+  else
+  {
+    //主機死掉（超過使用者自行定義時間）
+    oThread.Abort();
+    showMe.Text = "主機死掉（自行定義時間到達）";
+    return;
+  }
+}
+//TCP敲門副程式
+public void KnockDoor(string cTempIP, int cTempPort)
+{
+  try
+  {
+    System.Net.Sockets.TcpClient oTcp = new System.Net.Sockets.TcpClient(cTempIP, cTempPort);  //由於TCP協定的限制，不可以設定連線時間，因此如果對方的FTP沒開，會卡在這一行卡很久
+    bConnected = oTcp.Connected;  //如果跑到這一行了，表示對方主機有開且連線已經成功，通常這樣的動作不到一秒就完成了。如果對方的主機沒開，那大約要等20秒才會跳到錯誤區塊
+  }
+  catch
+  {
+    oException = new System.Exception("TCP觸發連線逾時。");
+  }
+}
+</code></pre><p>這裡巧妙的使用到Thread.Join來當作中斷的技巧，有興趣的人可以自己翻一下MSDN：<a href="https://msdn.microsoft.com/en-us/library/6b1kkss0%28v=vs.110%29.aspx">https://msdn.microsoft.com/en-us/library/6b1kkss0%28v=vs.110%29.aspx</a>。</p><h6>System.Net.Sockets.TcpClient System.Threading.Thread TCP Ping KnockDoor</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

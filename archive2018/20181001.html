@@ -1,0 +1,18 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>列舉NameValueCollection集合內所有的資料</h1><p>NameValueCollection位於System.Collections.Specialized命名空間下，是一種非Hash型的集合物件，這類型的物件的特性就是Keys可以重複，這代表你必須要多一層的迴圈來運行，才可以真實的列舉出所有的集合值。（否則你可能只有取到第一筆資料而已，且事實上你也不可能單使用一層取回資料，因為第一層回傳的value是object。）</p><p><img src=https://content.slashview.com/img/2018/20181001_01.jpg alt="" /></p><p>例如我們有這樣的合法NameValueCollection集合：</p><pre><code class=language-cs>var oNC = new System.Collections.Specialized.NameValueCollection();
+oNC.Add("A", "小明");
+oNC.Add("A", "小華"); //鍵值重複
+oNC.Add("B", "小英");
+</code></pre><p>NameValueCollection內值得結果會長得像這樣：</p><pre><code class=language-txt>A --> [小明、小華]
+B --> [小英]
+</code></pre><h3>讓我們用LINQ把它拍扁（Flatten）吧！</h3><p>多一層迴圈其實也不是甚麼樣的問題，但其實我們可以靠LINQ SelectMany來幫我們把集合拍扁，讓他的結構層次從二階層降回一階層，讓程式碼更精簡，以下是程式碼範例。</p><pre><code class=language-cs>//拍扁它
+var oCollections = System.Web.HttpContext.Current.Request.Headers.AllKeys.SelectMany(
+  System.Web.HttpContext.Current.Request.Headers.GetValues,
+  (k, v) => new {key = k, value = v}
+);
+//簡單的一階層迴圈就拿到資料嘍
+foreach (var oItem in oCollections)
+{ Console.WriteLine($"{oItem.key}: {oItem.value}"); }
+</code></pre><p>oCollections內值得結果會長得像這樣：</p><pre><code class=language-txt>A --> 小明
+A --> 小華
+B --> 小英
+</code></pre><h3>相關連結</h3><ul><li><a href=/archive2018/20180503.html>LINQ筆記：利用Linq撈取具有兩個階層的匿名型別（AnonymousType）資料</a></li><li><a href=/archive2018/20181001.html>列舉NameValueCollection集合內所有的資料</a></li><li><a href=/archive2022/20220208.html>LINQ筆記：SelectMany的使用方式</a></li></ul><h6>System.Collections.Specialized.NameValueCollection LINQ Flat Flatten ForNext Foreach</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

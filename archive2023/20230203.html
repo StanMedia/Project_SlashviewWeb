@@ -1,0 +1,20 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>刪除Windows磁碟管理員無法刪除的磁碟分割（特定刪除）與延伸磁區</h1><p>有網友來信討教上篇diskpart是屬於「完全清除分割區」的作法，若只要單一的刪除某個Windows磁碟管理員無法刪除的分割（例如「修復磁碟分割」區不可透過UI介面刪除），如果我們確定想要將這個分割區完全拿回來的話，做法上要如何進行？</p><h3>透過diskpart刪除特定分割磁區，收回磁區並進行延伸擴展</h3><p>簡單的說，這次的教學是要將Windows安裝時期認定的「修復磁碟分割」區真實移除，並且將它回收變成我們可以運用的磁碟空間。</p><p>Step 1. 使用系統管理員身分，打開CMD，並輸入DISKPART執行。</p><p>Step 2. 進入後依序輸入下列指令（雙斜線開頭的代表我的附註說明，不需要輸入）</p><pre><code class=language-txt>//列舉系統所認知的磁碟機
+list disk
+
+//選擇磁碟機編號
+select disk 0
+
+//列舉這台磁碟機所有的磁碟分割區
+list partition
+
+//選擇要操作的磁碟分割區編號
+select partition 4
+
+//再度列舉這台磁碟機所有的磁碟分割區，確認看到第四分割區被打上星號（*）
+list partition
+</code></pre><p><img src=https://content.slashview.com/img/2023/20230203_01.jpg alt="" /></p><p>Step 3. 確認後我們開始下「delete partition」指令砍這個磁碟分割區，但是卻被系統擋下來了，出現下列警語：</p><pre><code class=language-txt>Virtual Disk Service error:
+Cannot delete a protected partition without the force protected parameter set.
+
+虛擬磁碟服務錯誤:
+若未設定強制保護參數，無法刪除受保護的磁碟分割。
+</code></pre><p>Step 4. 因此我們更換參數變成「delete partition override」就可以刪除成功了。</p><p><img src=https://content.slashview.com/img/2023/20230203_02.jpg alt="" /></p><h2>刪除磁碟分割區後的確認、合併與延伸</h2><p>Step 1. 刪除磁碟分割去後，再度利用Windows磁碟管理員進入，可以看到一個出現「未配置」字樣的空白空間分布，我們可以在C磁碟機上面點選「右鍵」＞「延伸磁碟區」。</p><p><img src=https://content.slashview.com/img/2023/20230203_03.jpg alt="" /></p><p>Step 2. 選擇將這個567MB的空間都拉進來（延伸進來）。</p><p><img src=https://content.slashview.com/img/2023/20230203_04.jpg alt="" /></p><p>Step 3. 點選「完成」。</p><p><img src=https://content.slashview.com/img/2023/20230203_05.jpg alt="" /></p><p>Step 4. 回到主介面後，就可以看到我們的C磁碟機容量由222.9GB擴增至223.46GB，多出了567MB的空間出來可存放。</p><p><img src=https://content.slashview.com/img/2023/20230203_06.jpg alt="" /></p><h2>警語</h2><p>最後還是不免於俗的放一下警告，首先若無磁碟空間的嚴重需求，若你沒有能力自行重新安裝作業系統的話，請不要隨意地刪除「修復磁碟分割」區，這是Windows整個系統都掛掉時期的緊急救命稻草。其次就是在進行DiskPart的操作時，請眼睛睜大一點選擇對的磁碟機或磁區編號，以免操作錯誤導致資料損毀。</p><h3>相關連結</h3><ul><li><a href=/archive2017/20170606.html>刪除Windows磁碟管理員無法刪除的磁碟分割（完全清除）</a></li><li><a href=/archive2023/20230203.html>刪除Windows磁碟管理員無法刪除的磁碟分割（特定刪除）與延伸磁區</a></li></ul><h6>KillPartition DeletePartition RemovePartition WindowsRE WindowsRecoveryEnvironment</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

@@ -1,0 +1,16 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>如何輕鬆解決掉「使用未指定的區域變數」的錯誤警告？</h1><p>有在寫C#語言的人都知道，C#的編譯器（Compiler）會很「友善的」在編譯幫你提出一些在程式撰寫上容易出現的錯誤，其中我覺得最煩人就是「使用未指定的區域變數」，盡管這個檢查是一個安全的措施，但有時候我們已經很確認我們的寫法並不會出問題了，這時候就會顯得這個檢查並不是很必要，甚至是很愚蠢。</p><p>話不多說，先來看一下程式碼。</p><pre><code class=language-cs>MyClass oTemp;
+
+try
+{
+  oTemp = TheOtherClass.GetResult();
+  if(oTemp == null) { throw new Exception("這個物件尚未生成。"); }
+}
+catch { BraBra... }
+
+oTemp.MyProperty = "YA!";  //這一行編譯會出錯
+</code></pre><p>以上簡單的例子，當你使用參考型別（非實值型別），未給其初始值卻快快樂樂地要使用它時，按F5 Run下去時，你就會看到下列熟悉的錯誤：</p><pre><code class=language-txt>使用未指定的區域變數 'oTemp'。
+Use of unassigned local variable 'oTemp'
+</code></pre><p>當然啦，大家心裡都很清楚C#是為我們好，但是我們明明都已經在try中檢查了，可否不要那麼雞婆，逼著我一定要去new一個MyClass的實體行不行？最不爽的是，當MyClass的建構程序如果非常耗效能的話，那麼被逼著new的感覺會更加的無奈。</p><pre><code class=language-cs>//可以不要強迫我寫這行嗎？
+MyClass oTemp = new MyClass();
+</code></pre><h2>出現「使用未指定的區域變數」的解決方法</h2><p>答案很簡單，就是指派給他一個null就可以閃過C# Compiler了。例如：</p><pre><code class=language-cs>MyClass oTemp = null;  //這樣至少不會消耗建構時期的效能
+</code></pre><p>如果你看到這裡，仍然不知道為何給他null就可以跳過編譯器的檢查，那麼我勸你最好還是遵循正規的方法產生一個垃圾實體會比較好，因為這代表你的觀念還不夠深。Happy Coding!</p><h6>使用未指定的區域變數 UseOfUnassignedLocalVariable</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

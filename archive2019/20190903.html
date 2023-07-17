@@ -1,0 +1,10 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>在Windows Server 2008 R2 IIS服務中，啟用TLS 1.2傳輸協定</h1><p>自從Google發現SSL 3.0數個漏洞後，世界就朝著TLS 1.2推進，之前都是接人家TLS 1.2的服務，所以知識領域都專注在Client端的引用技術，今天業報到達，政府網站開始要求要強制走TLS 1.2協定，只好鑽研一下老舊伺服器的相關修正技術。</p><h2>解決方案</h2><p>Step 1. 把你的Windows Server 2008 R2更新升級到最新版本（以我為例，已經更新到2019-09的.NET Framework 4.8品質更新）。</p><p>Step 2. 微軟的KM會跟你說，這樣就會預設啟動TLS 1.2了，但你會發現這是個謊言。看了一大堆網站資料後發現只要加入下方註冊檔即可，加入完成後記得重新開機。</p><h2>TLS 1.2 註冊檔</h2><pre><code class=language-txt>Windows Registry Editor Version 5.00
+
+[HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\SecurityProviders\SCHANNEL\Protocols\TLS 1.2\Client]
+"DisabledByDefault"=dword:00000000
+"Enabled"=dword:00000001
+
+[HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\SecurityProviders\SCHANNEL\Protocols\TLS 1.2\Server]
+"DisabledByDefault"=dword:00000000
+"Enabled"=dword:00000001
+</code></pre><p>不放心的話，手動加入也可以。（但這有差別嗎？）</p><p><img src=https://content.slashview.com/img/2019/20190903_01.jpg alt="" /></p><h2>修正成果</h2><p>透過<a href=https://entrust.ssllabs.com>entrust.ssllabs.com</a>來掃描網站的SSL狀態，可以看到TLS 1.2已經被開啟了。至於SSL 2.0及3.0這些有風險性的協定因為還有其他客戶端要連線，因此就暫時不關閉了。</p><p><img src=https://content.slashview.com/img/2019/20190903_02.jpg alt="" /></p><h6>WindowsServer IIS Enabled SSL TLS1.2</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

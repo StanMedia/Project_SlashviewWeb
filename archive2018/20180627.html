@@ -1,0 +1,9 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>Windows 10開始選單之應用程式圖示（ICON）消失解法</h1><p>Windows 10導入了敏捷式開發（Agile Software Development）後，歷經了多次的大版本迭代後，其實還是大大小小臭蟲不斷，到現在已經是1803版本了，但是連最基本的開始選單中，動態磚上應用程式的小圖示（ICON）竟然還是會有無故消失的問題，雖然說也不是大問題，但是看起來就是很惱人，今天特別找了個方法把它解決掉。</p><p><img src=https://content.slashview.com/img/2018/20180627_01.jpg alt="" /></p><h2>解決Windows 10開始選單中，動態磚上的圖示消失問題</h2><p>Step 1. 首先，你可能會遇到長得像下圖的開始選單，選單中有很多圖示都自己不明的消失掉了，依據我的經驗，會這樣消失的電腦並不是每個人都會遇到，但一旦你有消失的問題發生，他就會開始偶爾的、隨機的消失幾個應用程式來惱怒你。</p><p><img src=https://content.slashview.com/img/2018/20180627_02.jpg alt="" /></p><p>從上圖我們可以觀察到，無論你的應用程式是Win32還是UWP，總之都是會中獎的，所以這個BUG理論上與動態磚的更新無關。</p><p>Step 2. 請把下面的script儲存成「patch.bat」，放在你的桌面。</p><pre><code class=language-bat>@echo off
+taskkill /f /im explorer.exe
+taskkill /f /im shellexperiencehost.exe
+timeout /t 3 /NOBREAK > nul
+del %localappdata%\Packages\Microsoft.Windows.ShellExperienceHost_cw5n1h2txyewy\TempState\* /q
+timeout /t 2 /NOBREAK > nul
+start explorer
+@echo on
+</code></pre><p>Step 3. 以系統管理員的身分，運行這隻「patch.bat」。</p><p>Step 4. 俗話說：「服用後到各大醫院檢查，就知效果。」</p><p><img src=https://content.slashview.com/img/2018/20180627_03.jpg alt="" /></p><h6>Windows10 PinnedTiles TileIcons Missing Gone Hidden StartPage AltText</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

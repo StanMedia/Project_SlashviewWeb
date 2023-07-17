@@ -1,0 +1,29 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>正規表示式類別（Regex）獲取Match Group內的多重結果</h1><p>今天遇到一個以往沒有遇過的正規表示式取值應用的問題，之前正規表示式寫完後，我們往往會將匹配到的字串以「Group」來進行獲取，但我卻從來沒有遇過單一Group裡面有可能出現多重結果的情況，研究了一下將語法記錄在此以供日後回憶。</p><h2>利用正規表示式獲取群組（Groups）內的多重結果</h2><p>正規表示式Regex的Match Group中可能不只返回單一結果字串，我們以下列的HTML Button解析來當作範例，假設我們要利用正規表示式取出該HTML Button下所有的屬性與值。</p><pre><code class=language-cs>&lt;button name="myBtn" type="button" onclick="runMe">
+</code></pre><p>然後我們採用下列的正規表示式試圖來解析HTML：（注意！這裡的正規表示式只是示意用途，所以是隨便寫寫罷了！這不是一個正確的HTML解析Regex）</p><pre><code class=language-txt>\&lt;button(\s+(\S+)="(\S*)")*\>
+</code></pre><p>從上面的正規表示式中，我們已經可以看見我們把有規律的HTML屬性（properties）寫成一串群組（$1），裡面包含兩個小群組（$2、$3），然後以C#接著用習慣的Regex的MatchEvaluator寫法來拆解...</p><pre><code class=language-cs>string cRegEx = @"\&lt;button(\s+(\S+)=""(\S*)"")*\>";
+string cInput = @"&lt;button name=""myBtn"" type=""button"" onclick=""runMe"">";
+
+string cResult = System.Text.RegularExpressions.Regex.Replace(cInput, cRegEx, oME =>
+{
+  return $"屬性名稱：{oME.Groups[2].Value} 屬性值：{oME.Groups[3].Value}";
+});
+
+WriteLine(cResult);
+</code></pre><p>雖然說結果難以預期，但我們會想像著輸出的字串「可能會」重疊著三組找到的$2、$3參數，但結果就是無論你怎麼嘗試，他永遠回傳最後一組Group的Value給你，也就是：屬性名稱：onclick 屬性值：runMe。ＷＴＦ！</p><p>可是，我們想要的是多重群組匹配的結果都要取出啊！例如下圖所示：</p><p><img src=https://content.slashview.com/img/2020/20201022_01.jpg alt="" /></p><p>經過一番搜索後，我們發現System.Text.RegularExpressions.Match.Groups下，竟然還有一個名為Captures的System.Text.RegularExpressions.CaptureCollection屬性，就是這道光了。</p><p>馬上修改一下程式碼：</p><pre><code class=language-cs>string cRegEx = @"\&lt;button(\s+(\S+)=""(\S*)"")*\>";
+string cInput = @"&lt;button name=""myBtn"" type=""button"" onclick=""runMe"">";
+
+string cResult = System.Text.RegularExpressions.Regex.Replace(cInput, cRegEx, oME =>
+{
+  string cTemp = string.Empty;
+  for (int i = 0; i &lt; oME.Groups[2].Captures.Count; i++)
+  {
+    cTemp += $"屬性名稱：{oME.Groups[2].Captures[i].Value} 屬性值：{oME.Groups[3].Captures[i].Value}\n";
+  }
+  return cTemp;
+});
+
+WriteLine(cResult);
+</code></pre><p>就可以正確的擷取正規表示式多重命中群組中的值了。</p><pre><code class=language-txt>屬性名稱：name 屬性值：myBtn
+屬性名稱：type 屬性值：button
+屬性名稱：onclick 屬性值：runMe
+</code></pre><h6>.NET CSharp RegularExpressions RegEx Match Groups Array MultiMatchs MultiCaptures Capture GetValue</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

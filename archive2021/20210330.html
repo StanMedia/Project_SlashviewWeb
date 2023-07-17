@@ -1,0 +1,17 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>C# DateTime的第一天、最後一天日期求取</h1><p>大概就是上個月的第一天，這個月的最後一天、下個月的最後一天一天之類的需求，把程式碼整理在此供給有需要的人參考。這裡的寫法是基於要一行解決掉所有需求，不再進行疊加運算，因此才會有這高長度與複雜的嵌套語法。</p><pre><code class=language-cs>System.DateTime dNow = System.Convert.ToDateTime("2021/03/31 12:34:56");
+
+Console.WriteLine($"現在參考時間：{dNow}");
+Console.WriteLine($"上個月第一天：{dNow.AddDays(dNow.Day * -1).AddDays(1).Date.AddMonths(-1)}");
+Console.WriteLine($"上個月最末天：{dNow.AddDays(dNow.Day * -1).AddDays(1).Date.AddMilliseconds(-1)}");
+Console.WriteLine($"這個月第一天：{dNow.AddDays(dNow.Day * -1).AddDays(1).Date}");
+Console.WriteLine($"這個月最末天：{dNow.AddDays(dNow.Day * -1).AddDays(1).Date.AddMonths(1).AddMilliseconds(-1)}");
+Console.WriteLine($"下個月第一天：{dNow.AddDays(dNow.Day * -1).AddDays(1).Date.AddMonths(1)}");
+Console.WriteLine($"下個月最末天：{dNow.AddDays(dNow.Day * -1).AddDays(1).Date.AddMonths(2).AddMilliseconds(-1)}");
+</code></pre><p>輸出訊息：</p><pre><code class=language-txt>現在參考時間：03/31/2021 12:34:56
+上個月第一天：02/01/2021 00:00:00
+上個月最末天：02/28/2021 23:59:59
+這個月第一天：03/01/2021 00:00:00
+這個月最末天：03/31/2021 23:59:59
+下個月第一天：04/01/2021 00:00:00
+下個月最末天：04/30/2021 23:59:59
+</code></pre><h6>上個月第一天 上個月最末天 上個月最後一天 這個月第一天 這個月最末天 這個月最後一天 下個月第一天 下個月最末天 下個月最後一天</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

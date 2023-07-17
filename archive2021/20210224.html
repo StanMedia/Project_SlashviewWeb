@@ -1,0 +1,82 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>在C#的SwitchExpression下使用模式比對（Pattern Matching）</h1><p>C# 9.0再度增強了模式比對（Pattern matching enhancements）的表述能力後，再佐以各式的Recursive Pattern Matching，讓整個Switch運算式（Switch Expressions）撰寫起來已經接近外星語言等級了，實在很擔心C#再繼續往這種極簡的函式語言（Functional Programming；FP）靠攏，若整個官網若都充斥著此類語法範例，對於初學者而言這個語言大概會被放棄掉吧...</p><p>這邊透過Switch運算式：SwitchExpression的結構（傳統寫法叫做Switch語句：SwitchStatement），把模式比對的寫法綜合表述一下，供給有需要的人員參考。</p><h2>SwitchExpression於C# 9.0增強範例</h2><p>不囉嗦，直接上程式碼</p><pre><code class=language-cs>public class Program
+{
+  public static void Main()
+  {
+    Show(Check( 0, "TheBOYSayWANNADrink"));
+    Show(Check( 1, "TheGirlSayWannaEat"));
+    Show(Check( 2, "OthersString"));
+    Show(Check( 3, -100));
+    Show(Check( 4, 123));
+    Show(Check( 5, 199));
+    Show(Check( 6, 201));
+    Show(Check( 7, ("John", 17)));
+    Show(Check( 8, ("John", 18)));
+    Show(Check( 9, ("John", 19)));
+    Show(Check(10, new Human1("John", 17)));
+    Show(Check(11, new Human1("John", 18)));
+    Show(Check(12, new Human1("John", 19)));
+    Show(Check(13, new Human2() { cName="John", iAge = 17}));
+    Show(Check(14, new Human2() { cName="John", iAge = 18}));
+    Show(Check(15, new Human2() { cName="John", iAge = 19}));
+    Show(Check(16, true));
+  }
+  
+  public static string Check(int iIndex, System.Object oTemp) => oTemp switch
+  { //string
+    string x when x.Equals("TheBoySayWannaDrink", System.StringComparison.CurrentCultureIgnoreCase) => $"{iIndex}. 字串Ａ：傳入值為 / {x}",
+    "TheGirlSayWannaEat" => $"{iIndex}. 字串Ｂ",
+    string => $"{iIndex}. 只知道是字串",
+    
+    //int
+    int x and &lt; 0 => $"{iIndex}. 整數Ａ：傳入值為 / {x}",
+    123 => $"{iIndex}. 整數Ｂ：",
+    int and > 0 and ( >= 100 and &lt;= 200) => $"{iIndex}. 整數Ｃ",
+    int => $"{iIndex}. 只知道是整數",
+    
+    //VauleTuple
+    System.ValueTuple&lt;string, int> x when x == ("John", 17) => $"{iIndex}. ValueTupleＡ：傳入值為 / {x.Item1}",
+    ("John", 18) => $"{iIndex}. ValueTupleＢ",
+    (_, _) => $"{iIndex}. 只知道是ValueTuple",
+    
+    //ClassObject-1
+    Human1 { cName: "John", iAge: 17 } x => $"{iIndex}. 物件Ａ：傳入值為 / {x.cName}",
+    Human1("John", 18) => $"{iIndex}. 物件Ａ",
+    Human1 x => $"{iIndex}. 只知道是 / {x.GetType()}",
+
+    //ClassObject-2
+    Human2 { cName: "John", iAge: 17 } x => $"{iIndex}. 物件Ｂ：傳入值為 / {x.cName}",
+    Human2 { cName: "John", iAge: 18 } => $"{iIndex}. 物件Ｂ",
+    Human2 x => $"{iIndex}. 只知道是 / {x.GetType()}",
+  
+    //default
+    _ => $"{iIndex}. 無法識別物件"
+  };
+  
+  public static void Show(string cTemp) =>  Console.WriteLine(cTemp);
+
+  public record Human1(string cName, int iAge);
+
+  public class Human2
+  {
+    public string cName;
+    public int iAge;
+  }
+}
+</code></pre><p>輸出結果如下：</p><pre><code class=language-txt> 0. 字串Ａ：傳入值為 / TheBOYSayWANNADrink
+ 1. 字串Ｂ
+ 2. 只知道是字串
+ 3. 整數Ａ：傳入值為 / -100
+ 4. 整數Ｂ：
+ 5. 整數Ｃ
+ 6. 只知道是整數
+ 7. ValueTupleＡ：傳入值為 / John
+ 8. ValueTupleＢ
+ 9. 只知道是ValueTuple
+10. 物件Ａ：傳入值為 / John
+11. 物件Ａ
+12. 只知道是 / Program+Human1
+13. 物件Ｂ：傳入值為 / John
+14. 物件Ｂ
+15. 只知道是 / Program+Human2
+16. 無法識別物件
+</code></pre><h2>補充說明</h2><ol><li>程式碼中的整數那邊的判斷邏輯有點問題是我故意寫的（大於等於１００肯定大於零），因為我只是想要表示可以用and or等語法。</li><li>SwitchExpression在編譯時期會幫你檢測條件順序邏輯並給予警告，例如把數值判斷「123描述判斷」這行直接與下一行判斷交換，編譯器會直接告訴你錯誤（因為上面行號的邏輯已經包含了「123描述判斷」這行的邏輯），是一個非常有趣的行為。</li><li>Record類別在PatternMatching時期可以用回類似「後宣告」而非「建構式宣告」的寫法，令人激賞。</li></ol><h3>相關連結</h3><ol><li><a href=/archive2021/20210224.html>在C#的SwitchExpression下使用模式比對（Pattern Matching）</a></li><li><a href=/archive2022/20220331.html>利用SwitchExpression來進行switch流程程式碼判斷的優化</a></li><li><a href=/archive2019/20190827.html>利用C#的switch case when語法來忽略字串大小寫</a></li><li><a href=/archive2021/20210301.html>C#的IS與AS運算子之撰寫方法</a></li><li><a href=/archive2022/20221108.html>C#的NULL運算演化：?.、??、??=、以及模式比對增強功能</a></li><li><a href=https://docs.microsoft.com/zh-tw/dotnet/csharp/language-reference/proposals/csharp-8.0/patterns>遞迴模式比對</a></li><li><a href=https://docs.microsoft.com/zh-tw/dotnet/csharp/whats-new/csharp-9#pattern-matching-enhancements>C# 9.0 中的新增功能</a></li></ol><h6>SwitchExpression SwitchStatement RecursivePatternMatching C#9.0 C#8.0 FunctionalProgramming FP 函數式 函式語言程式設計</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

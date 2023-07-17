@@ -1,0 +1,95 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>C#的參數在方法中被使用，是傳值還是傳址？</h1><p>C#的方法參數中，預設都是傳值，但是有一種情況很容易被乎略並誤用，也就是說，你有可能會以為是傳值（by value），可是事實上是傳址（by reference）才對。</p><p>大要要注意一件事，就是在實值類型（<a href=http://goo.gl/QfeFfh target=_blank>Value Types</a>），或稱為基礎型別，例如：int, double...等，套用在方法中的參數都是傳值（by value）沒錯，但是如果傳入的東西已經是物件，那就會變成參考到同一個記憶體位址，這時候就會變成傳址（by reference）了。以下用簡單的程式碼重演這個問題。</p><pre><code class=language-cs>using System;
+
+class Program
+{
+  private static int[] aryTest = {0, 1, 2, 3};
+
+  static void Main()
+  {
+    disp();
+    change(aryTest); //change value
+    disp();
+  }
+
+  static void change(int[] aryTemp)
+  {
+    aryTemp[0] = 5;
+  }
+
+  static void disp()
+  {
+    foreach(int temp in aryTest) { Console.Write(temp.ToString()); }
+    Console.WriteLine();
+  }
+}
+</code></pre><pre><code class=language-txt>輸出是：
+  0123
+  5123
+</code></pre><p>注意重點：</p><ol><li>aryTest與aryTemp是參考到同一個記憶體物件的。</li><li>static void change(int[] aryTemp)方法中的void並沒有寫錯，沒傳回值的原因是因為你改aryTemp，相當於是改到aryTest的記憶體參考點，因此不需要有傳回值的指定。</li></ol><p>下方再舉出一個例子，這裡使用到.NET裡的System.Collection裡面的ArrayList物件，一樣會出現這個問題，藉此提醒使用者注意！</p><pre><code class=language-cs>using System;
+using System.Collections;
+
+class Program
+{
+  private static ArrayList myAL = new ArrayList();
+  
+  static void Main()
+  {
+    myAL.Add("Hello");
+    myAL.Add("World");
+    myAL.Add("!");
+    disp();
+    change(myAL); //change value
+    disp();
+  }
+  
+  static void change(ArrayList tempAL)
+  {
+    tempAL.Remove("World");
+  }
+  
+  static void disp()
+  {
+    foreach(object oObj in myAL) {
+      Console.Write(oObj.ToString());
+    }
+    Console.WriteLine();
+  }
+}
+</code></pre><pre><code class=language-txt>輸出是：
+  HelloWorld!
+  Hello!
+</code></pre><p>但是話說回來啦，如果你是當成By Value的心態，進行鬆藕合的切割觀點來撰寫，也就是傳入與傳出都是真正用ArrayList丟來丟去，老實說除了一次傳址的CPU運算資源外（這個在現代CPU的運算速度觀點來看根本等於0秒），我個人認為並無不會影響到其它的程式運作，在進行程式設計師最愛的Copy-Paste時更顯優勢！下方程式碼多加了回傳ArrayList的觀念範例。（注意！這樣的做法是多餘的，我只是在演譯這樣寫也無妨）</p><pre><code class=language-cs>using System;
+using System.Collections;
+
+class Program
+{
+  private static ArrayList myAL = new ArrayList();
+  
+  static void Main()
+  {
+    myAL.Add("Hello");
+    myAL.Add("World");
+    myAL.Add("!");
+    disp();
+    myAL = change(myAL); //change value
+    disp();
+  }
+  
+  static ArrayList change(ArrayList tempAL)
+  {
+    tempAL.Remove("World");
+    return tempAL;
+  }
+  
+  static void disp()
+  {
+    foreach(object oObj in myAL) {
+      Console.Write(oObj.ToString());
+    }
+    Console.WriteLine();
+  }
+}
+</code></pre><pre><code class=language-txt>輸出依然是：
+  HelloWorld!
+  Hello!
+</code></pre><h6>CSharp Method Arguments Array Object ByValue ByReference</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

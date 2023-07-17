@@ -1,0 +1,58 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>非同步程式設計Async與Await</h1><p>在微軟次世代的Merto UI，要達成良好的UX體驗，非同步的程式設計是少不了的，透過非同步的程式設計更可以妥善的利用CPU的多執行緒功能，平行處理大量的運算，來達成更好的響應率。有關於Async與Await的基本功能，在董大偉先生的這一篇<a href=http://goo.gl/tmHNbI>文章</a>，有詳細的說明。</p><p>在這邊舉一個更進階的例子，來展示一下Async與Await的寫法，運行環境當然是ASP.NET with .NET Framework 4.5啦！以下僅進行純程式碼說明：</p><pre><code class=language-cs>//建立產品物件
+public class product
+{
+  public string name { get; set; }
+  public int price { get; set; }
+}
+//建立產品主控物件
+public class productHandler
+{
+  private System.Collections.Generic.IEnumerable&lt;product> _oProducts;
+  public productHandler()
+  {
+    _oProducts = new[]
+    {
+      new product{name="AAA", price=100},
+      new product{name="BBB", price=200}
+    };
+  }
+  public System.Collections.Generic.IEnumerable&lt;product> getAllProducts()
+  {
+    //設定一個5秒睡眠，來拖長回應時間
+    System.Threading.Thread.Sleep(5000);
+    return _oProducts;
+  }
+}
+
+private async void ClickMe(object sender, EventArgs e)
+{
+  showMe.Text = "開始" + "換行";
+  
+  //要達成真實的同步感，一定要丟到背景進行平行處理
+  productHandler oTemp1 = new productHandler();
+  var oTask1 = System.Threading.Tasks.Task&lt;IEnumerable&lt;product>>.Factory.StartNew(() =>
+  {
+    return oTemp1.getAllProducts();
+  });
+  productHandler oTemp2 = new productHandler();
+  var oTask2 = System.Threading.Tasks.Task&lt;IEnumerable&lt;product>>.Factory.StartNew(() =>
+  {
+    return oTemp2.getAllProducts();
+  });
+  
+  //程式遇到await後，會真的等它運行完成回傳後，才往下做，因此await是分歧的終點
+  var oResult1 = await oTask1;
+  var oResult2 = await oTask2;
+  
+  foreach (var product in oResult1)
+  {
+    showMe.Text += product.name + "; " + product.price + "換行";
+  }
+  foreach (var product in oResult2)
+  {
+    showMe.Text += product.name + "; " + product.price + "換行";
+  }
+  
+  showMe.Text += "結束";
+}
+</code></pre><p>上面的程式碼展示了使用兩次的object.getAllProducts()，但是總耗費時間還是接近五秒鐘，理論上是要10秒才對。所有的重點在於丟到背景運行，這是很多在介紹Async與Await使用方式的網站，都沒有跟你講的東西。更明白的說一點，Async跟Await真正展現實力之處，在於搭配Background Task且平行處理運行。</p><p>簡單的Async跟Await寫法，能用上的地方其實極度的有限，例如按下某個按鈕，大概只能進行某個JSON的查詢，然後去更新單一個UI List，在這段等待的時間讓出一些CPU去進行Windows UI的相關繪製，大概就只能這樣了。</p><p>相關參考：</p><ul><li><a href=/archive2015/20150505.html>利用SemaphoreSlim類別來進行async/await非同步工作排程</a></li><li><a href=/archive2015/20150506.html>在泛型處理常式（ashx）中利用HttpTaskAsyncHandler來完成async/await之需求</a></li></ul><h6>Async Await ASP.NET UX UI BackgroundTask</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

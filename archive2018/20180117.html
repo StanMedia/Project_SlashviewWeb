@@ -1,0 +1,25 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>如何變更VisualStudio下WSP的網站名稱？</h1><p>當我們在同一個方案下，新增與刪除同一個WSP（Web Site Project）多次，你就會發現每次New起來的網站名稱後面，會多了一個(數字)的東西。這是一個蠻無用的技巧，應該是說，其實網站名稱與VisualStudio的執行並無任何的影響，只是自己看了礙眼而已。這個並不會發生在WAP（Web Application Project）的身上，因為人家已經有專屬的設定檔（*.csproj），所以可以自行覆寫名稱。</p><p>舉例來說，如果你不斷在自己的方案下，新增與移除一個叫做ABC的WSP網站，你就會發現你的網站專案名稱開始變成ABC(2)、ABC(3)、ABC(4)...，看了真的很礙眼，這篇文章就是教你把它變回ABC單純的名稱。</p><h2>變更Visual Studio下WSP的網站名稱</h2><p>Step 1. 關閉Visual Studio並打開你的檔案總管，把「隱藏的項目」勾選起來，使你的檔案總管看的到隱藏的檔案。</p><p>Step 2. 進入到你的WSP專案所屬的「.sln」檔案的目錄下。</p><p>Step 3. 你應該會看到一個隱藏的「.vs」目錄，循線進入找到這個檔案「.vs\config\applicationhost.config」。</p><p>Step 4. 用記事本把這個檔案打開，你會看到很像下列的結構：</p><pre><code class=language-xml>&lt;site name="ABC" id="2">
+  &lt;application path="/" applicationPool="Clr4IntegratedAppPool">
+    &lt;virtualDirectory path="/" physicalPath="C:\brabra" />
+  &lt;/application>
+  &lt;bindings>
+    &lt;binding protocol="http" bindingInformation="*:1234:localhost" />
+  &lt;/bindings>
+&lt;/site>
+&lt;site name="ABC(1)" id="3">
+  &lt;application path="/" applicationPool="Clr4IntegratedAppPool">
+    &lt;virtualDirectory path="/" physicalPath="C:\brabra" />
+  &lt;/application>
+  &lt;bindings>
+    &lt;binding protocol="http" bindingInformation="*:5678:localhost" />
+  &lt;/bindings>
+&lt;/site>
+&lt;site name="ABC(2)" id="4">
+  &lt;application path="/" applicationPool="Clr4IntegratedAppPool">
+    &lt;virtualDirectory path="/" physicalPath="C:\brabra" />
+  &lt;/application>
+  &lt;bindings>
+    &lt;binding protocol="http" bindingInformation="*:9999:localhost" />
+  &lt;/bindings>
+&lt;/site>
+</code></pre><p>Step 5. 通常看到這邊你應該就知道怎麼做了，請把重複的砍掉吧！建議觀察Port編號，通常以保留最後一個為優先，其他的就全砍了。砍完後把保留的結構中，「name="ABC(2)" id="4"」改為「name="ABC" id="2"」即可。</p><p>Step 6. 完成後開進去VisualStudio看一下，應該就可以看到WSP專案名稱變更完成了。</p><h6>VisualStudio WSP IIS-Express Rename</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

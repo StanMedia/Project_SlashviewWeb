@@ -1,0 +1,31 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>SQL筆記：查詢Microsoft SQL Server當前的版本</h1><p>每次用到都要再查一次，所以將其記錄再此。這些指令可以查出你目前的Microsoft SQL Server的版本號，以及所依存的主機作業系統。</p><h2>簡單查詢SQL版本</h2><p>結果會以單一列資料的形式呈現。</p><pre><code class=language-txt>Select @@version
+-----
+Microsoft SQL Server 2008 R2 (RTM) - 10.xx.xxxx (X64) May 31 2019 00:00:00 Copyright (c) Microsoft Corporation Enterprise Edition (64-bit) on Windows NT 6.1
+</code></pre><h2>詳細查詢SQL版本</h2><p>如果要看比上面更詳細的資料（其實也沒多顯示很多東西，就大概是把欄位切一切分開顯示），可以考慮用下列的指令。</p><pre><code class=language-sql>SELECT
+  @@SERVERNAME 'InstanceName',
+  CASE
+    WHEN CONVERT(VARCHAR(99), SERVERPROPERTY('ProductVersion')) like '8%'    THEN 'SQL Server 2000'
+    WHEN CONVERT(VARCHAR(99), SERVERPROPERTY('ProductVersion')) like '9%'    THEN 'SQL Server 2005'
+    WHEN CONVERT(VARCHAR(99), SERVERPROPERTY('ProductVersion')) like '10.0%' THEN 'SQL Server 2008'
+    WHEN CONVERT(VARCHAR(99), SERVERPROPERTY('ProductVersion')) like '10.5%' THEN 'SQL Server 2008R2'
+    WHEN CONVERT(VARCHAR(99), SERVERPROPERTY('ProductVersion')) like '11%'   THEN 'SQL Server 2012'
+    WHEN CONVERT(VARCHAR(99), SERVERPROPERTY('ProductVersion')) like '12%'   THEN 'SQL Server 2014'
+    WHEN CONVERT(VARCHAR(99), SERVERPROPERTY('ProductVersion')) like '13%'   THEN 'SQL Server 2016'
+    WHEN CONVERT(VARCHAR(99), SERVERPROPERTY('ProductVersion')) like '14%'   THEN 'SQL Server 2017'
+    ELSE 'unknown'
+    END AS 'SQLServerVersion', 
+  CASE
+    WHEN SERVERPROPERTY('IsClustered')   = 1 AND  SERVERPROPERTY('IsHadrEnabled') = 1 THEN 'Failover Cluster + Availability Groups'
+    WHEN SERVERPROPERTY('IsClustered')   = 1 THEN 'Failover Cluster'
+    WHEN SERVERPROPERTY('IsHadrEnabled') = 1 THEN 'Availability Groups'
+    ELSE 'unknown'
+    END AS 'HighAvailability',
+  SERVERPROPERTY('ProductVersion')         'ProductVersion',
+  SERVERPROPERTY('ProductLevel')           'ProductLevel',
+  SERVERPROPERTY('Edition')                'ProductEdition',
+  SERVERPROPERTY('ProductUpdateLevel')     'ProductUpdateLevel', 
+  SERVERPROPERTY('ProductBuildType')       'ProductBuildType', 
+  SERVERPROPERTY('ProductUpdateReference') 'ProductUpdateReference', 
+  DATABASEPROPERTYEX('master','Version')   'DatabaseInternalVersion'
+GO
+</code></pre><h6>Microsoft SQL Server Version Query Command</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

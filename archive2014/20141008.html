@@ -1,0 +1,55 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>屬性Property與欄位Field，傻傻分不清楚</h1><p>今天看到網路上的一篇文章，一個C#的初心者在介紹一些功能時，把屬性跟欄位的意思完全搞錯了，因此在此記錄一下屬性Property與欄位Field真正的用意。</p><p>以下是相關的說明：</p><h2>欄位（Field）</h2><p>對於物件封裝來說，沒有什麼比保護好你物件裡面的相關參數來的更重要的了，而欄位往往就是用於此，也就是它通常被用來暫存某些狀態或運算結果，但你不會想要把這個數值公開在外，讓外部物件操控者直接去存取。它會長的像下列的樣子：</p><pre><code class=language-cs>public class TEST
+{
+  // public field
+  public string name;
+  // private field
+  private DateTime _birthday;
+}
+</code></pre><p>從上面的例子我們可以發現，在物件導向裡大家約定成俗的使用方式，有加底線的大概都是封裝考量下的私有變數，如果沒有底線的變數大都屬於公開的，這樣的寫法叫欄位。</p><p>另外可能又會有人說，等等，你說欄位大都是用於封裝用，不能讓人家直接存取，那為何上例的name變數是public呢？這豈不是可以讓人家直接存取嗎？沒錯，答案是「Yes，可以直接存取。」，原因是因為這個物件的撰寫者覺得這個讓外界存取是可以的，因此「不進行封裝」。</p><p>※補充：欄位在Java的世界裡面被稱為「資料成員」。</p><h2>屬性（Property）</h2><p>屬性的用法就是在私有欄位之間，當作一個中間層，用來限制某些讀取，亦或用來限制某些寫入，例如上例來說，有人試圖寫入2014/02/31這個日期，你還要讓他寫入嗎？（雖然說以這個例子對照程式碼來說不太洽當，因為System.DateTime就會擋下來了，所以不可能會有2014/02/31這個數據出現。）欄位的使用方式會長的像下列的樣子：</p><pre><code class=language-cs>public class TEST
+{
+  public string name;
+  private DateTime _birthday;
+  
+  public DateTime Birthday
+  {
+    get 
+    {
+      return _birthday;
+    }
+    set 
+    {
+      if (value.Year > 1900 &amp;&amp; value.Year &lt;= DateTime.Today.Year)
+      {
+        _birthday = value;
+      }
+      else
+      {
+        throw new System.Exception("Error Date Formate.");
+      }
+    }
+  }
+}
+</code></pre><p>欄位跟屬性大概就是這樣用了。另外可能還會有人說，等等，那如果我要全封裝類別欄位，那麼name也幫我示範一下好嗎？沒問題，我們只討論name欄位時，程式碼會長的如下：</p><pre><code class=language-cs>public class TEST
+{
+  private string _name;
+  public string Name
+  {
+    get 
+    {
+      return _name;
+    }
+    set 
+    {
+      _name = value;
+    }
+  }
+}
+</code></pre><p>看完上面的程式碼，你對我白眼我覺得是正常的，因為根本脫褲子放屁，所以要嘛回歸到一開始的寫法（直接存取），要嘛就請你將.NET Framework升上3.0，然後你的C#就可以支援另外一種叫「自動實作屬性」的寫法了。</p><h2>自動屬性實作（Auto-Implemented Properties）</h2><p>自動屬性實作我覺得完全是因應物件關聯對映（ORM, Object Relational Mapping）而生的偷懶性產物，但是受到大家的喜愛啊。以上面的name情境為例，程式碼會長的像這樣：</p><pre><code class=language-cs>//它看起來像欄位，但是它是屬性，請勿誤認
+public string Name { get; set; }
+</code></pre><p>※補充：在Java的世界裡面，沒有屬性這種東西，如果要實作某欄位可被存取，那麼你要設計二個「方法成員」來存取它。以上述的程式碼來說，你要設計成下列的蠢樣：</p><pre><code class=language-java>public class TEST
+{
+  private string _name;
+  public void   setName(string cTemp)  { _name = cTemp; }
+  public string getName(string cTemp)  { return _name; }
+}
+</code></pre><p>延伸閱讀：</p><p><a href=/archive2014/20141007.html>C#類別中this關鍵字的必要性</a></p><p><a href=/archive2015/20150423.html>Visual Studio中的產生方法Stub</a></p><h6>欄位 屬性 Field Property AutoImplementedProperties ObjectRelationalMapping</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

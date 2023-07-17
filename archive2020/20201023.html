@@ -1,0 +1,77 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>LINQ筆記：利用LINQ Aggregate將IEnumerable集合資料轉成單一字串</h1><p>個人比較少用到Aggregate（資料匯聚、資料聚集）的方法，今天剛好有一個需求要將某字串資料陣列（字串資料集合）轉換成單一序列化的字串文字並使用逗號分隔，一般來說都會直接使用String.Join來進行（事實上為了效能你應該也是要這樣做才對），但想說可以趁機把LINE Aggregate拿出來練習一下，所以就開啟這篇文章的紀錄嘍。</p><p>簡單的說，LINQ的Aggregate方法就是提供一個方式讓你集中處理集合（IEnumerable）的資料，他會透過遞迴不斷拋資料給你的Func委派處理，直到集合資料的盡頭才跳出。</p><h2>簡單的LINQ Aggregate範例</h2><p>我們可以透過下面這支程式碼，展示一下如何透過Aggregate方法來進行字串的逆排序。</p><pre><code class=language-cs>var oList = new System.Collections.Generic.List&lt;string>()
+{
+  "a",
+  "bb",
+  "ccc",
+  "dddd",
+  "eeeee"
+};
+
+var cResult = oList.Aggregate((cCurrent, cNext) => {
+  //故意觀察一下傳入的參數是甚麼
+  Console.WriteLine($"cCurrent:{cCurrent} → cNext:{cNext}");
+  //故意把傳入的參數進行前後對調並相加
+  return $"{cNext}, {cCurrent}";
+});
+
+Console.WriteLine(cResult);
+</code></pre><p>輸出的畫面如下，你可以看到第一次拋入委派的cCurrent與cNext，就是集合的第一筆、第二筆資料，經過我們的前後對調相加後回拋出去，Aggregate再度遞迴回呼傳入對調組合後的字串：</p><pre><code class=language-txt>//輸出結果
+cCurrent:a → cNext:bb
+cCurrent:bb, a → cNext:ccc
+cCurrent:ccc, bb, a → cNext:dddd
+cCurrent:dddd, ccc, bb, a → cNext:eeeee
+eeeee, dddd, ccc, bb, a
+</code></pre><h2>進階用法：用來找出集合中哪個字串的長度最長</h2><p>這裡要在第一個位置多傳入一個參數，這個參數會在第一次回呼Func委派時被帶入，之後就看你要不要利用程式碼來保留了，以這個例子來說是不保留的，一律替換成認知中最長的字串（當然！下面這個例子有長度相等的問題，也就是同樣長，但請忽略吧，重點是語法！）。</p><pre><code class=language-cs>var oList = new System.Collections.Generic.List&lt;string>()
+{
+  "a",
+  "bb",
+  "ccc",
+  "dddd",
+  "eeeee"
+};
+
+var cResult = oList.Aggregate("我最長", (cCurrent, cNext) => {
+  return cCurrent.Length >= cNext.Length ? cCurrent : cNext ;
+});
+
+Console.WriteLine($"最長字串為：{cResult}");
+</code></pre><pre><code class=language-txt>//輸出結果
+最長字串為：eeeee
+</code></pre><h2>進階用法：處理完成後的最後一道處理工序</h2><p>有時候我們會想要在整體處理完後，再加上我們想要賦予的工作，這時候就要靠Aggregate提供的多載（Overloading），裡面有另外一個可以在完結時呼叫的Func委派。</p><pre><code class=language-cs>var oList = new System.Collections.Generic.List&lt;string>()
+{
+  "a",
+  "bb",
+  "ccc",
+  "dddd",
+  "eeeee"
+};
+
+var cResult = oList.Aggregate(
+  "我最長",
+  (cCurrent, cNext) => {
+    return cCurrent.Length >= cNext.Length ? cCurrent : cNext ;
+  },
+  (cFinal) =>{
+    return $"{cFinal.ToUpper()}（運算結束後幫忙轉成大寫）";
+  });
+
+Console.WriteLine($"最長字串為：{cResult}");
+</code></pre><pre><code class=language-txt>//輸出結果
+最長字串為：EEEEE（運算結束後幫忙轉成大寫）
+</code></pre><p>Aggregate的用法大概就是這樣，基本上還是建議有LINQ提供其他的聚合函數就用啦，這個方法大多是需要實作自己的演算在使用的，另外基於這篇文章原先的標題，最後把IEnumerable串成字串的方式寫一下，這種作法在集合數量龐大的時候效能其實非常的差，如果可以的話建議還是利用專用的String.Join()來進行即可。</p><pre><code class=language-cs>var oList = new System.Collections.Generic.List&lt;string>()
+{
+  "a",
+  "bb",
+  "ccc",
+  "dddd",
+  "eeeee"
+};
+
+var cResult = oList.Aggregate((cCurrent, cNext) => {
+  return $"{cCurrent}, {cNext}";
+});
+
+Console.WriteLine(cResult);
+</code></pre><pre><code class=language-txt>//輸出結果
+a, bb, ccc, dddd, eeeee
+</code></pre><h6>.NET LINQ Aggregate Sample Demo IEnumerableToSingleString IEnumerableToCommaString IEnumerableToSingleSeparatedString IEnumerableToConcatenateString</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

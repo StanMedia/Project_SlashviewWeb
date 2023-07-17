@@ -1,0 +1,29 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>ASP.NET獲取Request當下所有的HTTP傳入資訊</h1><p>有時候會臨時需要拿取當下傳入的HTTP GET、HTTP POST完整資訊進行分析，再安裝一套封包捕捉軟體也太小題大作了，因此把一些常用的資訊列舉在此，以利要應用的時候可以快速查詢。</p><h2>HTTP Headers</h2><p>可以從<code>Request.Headers</code>拿到，可以查看例如：<code>Accept-Encoding</code>、<code>Content-Length</code>、<code>Content-Type</code>此類的資訊，以下是簡單的查詢範例：</p><pre><code class=language-cs>var cHeaders = string.Join(
+  "\r\n",
+  Request.Headers.AllKeys
+    .Select(x => $"{x}: {Request.Headers[x]}")
+    .ToArray()
+  );
+</code></pre><h2>HTTP InputStream</h2><p>在Headers的後段，自然就是Body主資料表述段的部分了，如果想要完整的知道打過來的本文，可以試著從<code>Request.InputStream</code>拿取，由於可能會涉及到二進制的表述（例如POST Files過來你這邊），因此我們會將其存成檔案後再打開分析。如果是POST multipart/form-dat格式，cBody裡面的內文有可能會出現RFC2388的boundary資料。</p><pre><code class=language-cs>if (Request.HttpMethod == "POST")
+{
+  using var oSR = new System.IO.StreamReader(Request.InputStream);
+  var cBody = oSR.ReadToEnd();
+}
+</code></pre><p>接下來就是ASP.NET後端的機制，自動將<code>Request.InputStream</code>解析成程式設計師好操控的物件：</p><h2>HTTP Form</h2><p>下列的程式碼可以透過物件檢視傳遞進入的表單欄位名稱與數值：</p><pre><code class=language-cs>var cFormFields = string.Join(
+  "\r\n",
+  Request.Form.AllKeys
+    .Select(x => $"{x}= {Request.Form[x]}")
+    .ToArray()
+  );
+</code></pre><h2>HTTP Files</h2><p>有時候前端也會透過POST傳遞多重檔案，可以透過下列指令將其全部儲存。</p><pre><code class=language-cs>if (Request.Files.Count > 0)
+{
+  Request.Files.AllKeys
+    .ToList()
+    .ForEach(x =>
+    {
+      var oFile = Request.Files[x];
+      if (oFile != null &amp;&amp; oFile.ContentLength > 0)
+      { oFile.SaveAs($@"D:\XXXX\{oFile.FileName}"); }
+    });
+}
+</code></pre><h6>ASP.NET WebForm MVC HttpGet HttpPost HttpHeaders Forms Files</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

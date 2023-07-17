@@ -1,0 +1,8 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>不使用UI設定下將VS專案更改到.NET Framework 4.8</h1><p>基於某些理由，我遇到了要將VisualStudio WSP（Web Site Project）專案，在不使用UI設定的狀態下，將網站專案升級到.NET Framework 4.8，理由之一是web.config的設定太多且多有格式編排，一旦透過UI介面設定下去會被全部自動更換掉，另外的原因就不在此說明。以下紀錄手動變更調整的過程。</p><h2>不使用UI設定下將VS專案更改到.NET Framework 4.8</h2><p>Step 1. 先確認是否當前的程式開發平台，已經可以運作.NET Framework 4.8。請點選專案＞屬性頁＞建置＞目標Framework，確認有4.8選項。</p><p><img src=https://content.slashview.com/img/2021/20210302_01.jpg alt="" /></p><p>Step 2. 若Step 1沒有出現4.8選項，則請安裝<a href=https://dotnet.microsoft.com/download/dotnet-framework/thank-you/net48-developer-pack-offline-installer>.NET Framework 4.8 SDK</a>，安裝完畢後記得重新開機。</p><p>Step 3. 重新開機後，先不要打開VisualStudio，而是利用記事本之類的文字編輯器，打開你目標對象專案的.sln檔案，找到下列字串進行更新：</p><pre><code class=language-txt>TargetFrameworkMoniker = ".NETFramework,Version%3Dv4.5"
+↓將本來4.5舊目標更改為4.8新目標
+TargetFrameworkMoniker = ".NETFramework,Version%3Dv4.8"
+</code></pre><p>Step 4. 打開VisualStudio，在你網站所屬的web.config中將compilation與httpRuntime元素進行版本號的更換，即可完成設定。</p><pre><code class=language-xml>&lt;system.web>
+  &lt;compilation targetFramework="4.8"/>
+  &lt;httpRuntime targetFramework="4.8"/>
+&lt;/system.web>
+</code></pre><h6>VisualStudio WSP .NetFramework4.8 non-UI Upgrade WebConfig</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

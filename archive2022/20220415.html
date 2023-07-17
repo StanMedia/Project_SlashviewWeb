@@ -1,0 +1,29 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>解決Bootstrap custom-switch無法賦值、取值錯誤問題</h1><p>今天在使用Bootstrap custom-switch客製化開關元件時，發現在UI層面上的操作並無法影響底層的實際賦值，導致最後Javascript取出時根本就沒有辦法拿到正確、表裡如一的資料，這篇文章就是在介紹如何改善這個問題。</p><h2>討論並解決Bootstrap custom-control-input值表裡不一的問題</h2><p>Step 1. 建立一個典型的Bootstrap開關元件</p><p><img src=https://content.slashview.com/img/2022/20220415_01.jpg alt="" /></p><pre><code class=language-html>&lt;div class="form-group">
+  &lt;div class="custom-control custom-switch">
+    &lt;input type="checkbox" class="custom-control-input" id="bIsEnabled">
+    &lt;label class="custom-control-label increaseCheckbox" for="bIsEnabled">是否開啟？&lt;/label>
+  &lt;/div>
+&lt;/div>
+&lt;style>
+  .increaseCheckbox {
+    line-height: 1.5;
+    margin-left: 1.4em;
+    transform: scale(1.2);
+  }
+&lt;/style>
+</code></pre><p>Step 2. 建立一個按鈕並調用jQuery去讀取這個元件的值，發現出現的是on/off值，以現在的狀況（HTML中根本沒有設定預設值）來說，alert上卻是顯示on。</p><pre><code class=language-js>$(function () {
+  $("#btn").click(function () {
+    alert($("#bIsEnabled").val());
+  });
+});
+</code></pre><p>Step 3. 一般來說資料送到後端都是要以boolean型態儲存，所以應該是true/false才對。但沒事，這個鍋不應該是Bootstrap背，這本來就是HTML的規範，只要稍微實作先賦予value屬性true/false就解決，例如：</p><pre><code class=language-html>&lt;input type="checkbox" class="custom-control-input" id="bIsEnabled" value="false">
+</code></pre><p>註：若嫌麻煩也可以透過jQuery在DocumentReady時期就覆寫掉，這樣你就可以不用補value在HTML上了。這類型的元素一多起來，甚至可以透過Selector一次性選取解決。</p><pre><code class=language-js>$("#bIsEnabled").attr("value", false);
+</code></pre><p>Step 4. 這下alert回傳正確的false了，但是我們發現去點選UI的switch開關並不能如實的反應真正的true/false狀態，也就是說jQuery取到的value在此刻永遠為false。</p><p>Step 5. 按下F12切換到瀏覽器開發者模式，發現這顆input type="checkbox"元素，就算表面UI在那邊不斷切換，他在背景依然躺平連動都不動一下，這代表Bootstrap在後面並沒有幫我們實作真實數值或狀態的toggle，果然只負責到「表面的顯示」而已。</p><p><img src=https://content.slashview.com/img/2022/20220415_02.jpg alt="" /></p><p>Step 6. 知道真相後只能再請jQuery好朋友出來幫忙，設定custom-control-input的監聽事件，如果有被點選異動就馬上去把應該賦予的內含值改掉。（這段程式碼比較消耗前端效能，也會因為應用的場域不同而迥異，請自行視需求變更）</p><pre><code class=language-js>$(".custom-control-input").on("change", function (e) {
+  $(this).attr("value", e.target.checked).attr("checked", e.target.checked);
+});
+</code></pre><p>透過瀏覽器開發者模式我們可以觀察背景的數值的確被賦予正確的HTML屬性了。</p><p><img src=https://content.slashview.com/img/2022/20220415_03.jpg alt="" /></p><p>上面這張圖是開啟狀態背後的屬性值。</p><p><img src=https://content.slashview.com/img/2022/20220415_04.jpg alt="" /></p><p>上面這張圖是關閉狀態背後的屬性值。</p><p>透過這樣的程式碼增補，可以讓FormData收集表單數值更加直觀便利，以上說明。</p><h2>補充：HTML jQuery事件監聽的寫法</h2><p>在早期WebForm的寫法中，我們會很常宣告了一堆ServerControl Buttons，然後透過單一方法來得知是按下哪顆按鈕，進而讓程式碼更精簡，例如：</p><pre><code class=language-cs>void button_Click(object sender, EventArgs e)
+{ var s = (sender as Button).Text; }
+</code></pre><p>那麼，等效的程式碼在Javascript可以看待成：</p><pre><code class=language-js>$("button").on("click", function (e) {
+  var s = e.target.id;
+});
+</code></pre><h6>Bootstrap CustomControl CustomSwitch CustomControlInput CanNotSetValue GetErrorValue Bug</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

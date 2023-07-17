@@ -1,0 +1,61 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>利用SemaphoreSlim類別來進行async/await非同步工作排程</h1><p>非同步程式如果不是用在處理大量的事情，似乎就沒有存在的意義了。之前在處理非同步且大量工作的作法，是真的使用System.Threading.Tasks.Task.Factory.StartNew去硬刻出每一個步驟，這樣的缺點是會導致程式碼又臭又長，今日，我們可以使用SemaphoreSlim來幫我降低一下程式碼的複雜性，我大概以後都會靠SemaphoreSlim來幫我進行工作排程的控制了吧！</p><p>Console程式碼範例如下：</p><pre><code class=language-cs>namespace SemaphoreSlimTest
+{
+  class Program
+  {
+    //建立結果集收納處
+    private System.Collections.Generic.List&lt;string> oResult = new System.Collections.Generic.List&lt;string>();
+    //建立工作排程
+    private async System.Threading.Tasks.Task PushToTask(System.Collections.Generic.IList&lt;string> oURLs)
+    {
+      System.Collections.Generic.List&lt;System.Threading.Tasks.Task> oTasks = new System.Collections.Generic.List&lt;System.Threading.Tasks.Task>();
+      System.Threading.SemaphoreSlim oControl = new System.Threading.SemaphoreSlim(oURLs.Count);
+      foreach (var cURL in oURLs)
+      {
+        await oControl.WaitAsync();
+        oTasks.Add(System.Threading.Tasks.Task.Run(async () =>
+        {
+          try
+          {
+            var oWC = new System.Net.WebClient();
+            string cTemp = await oWC.DownloadStringTaskAsync(new System.Uri(cURL));
+            oResult.Add(cTemp);
+          }
+          catch (System.Exception ex)
+          {
+            System.Console.WriteLine(ex.ToString());
+          }
+          finally
+          {
+            oControl.Release();
+          }
+        }));
+      }
+      //最終等待
+      await System.Threading.Tasks.Task.WhenAll(oTasks);
+      //列印出結果
+      foreach (var item in oResult)
+      {
+        System.Console.Write(item);
+      }
+    }
+    
+    //主控台
+    static void Main(string[] args)
+    {
+      //利用免費服務，傳回JSON字串
+      string[] oURL = {
+        "http://headers.jsontest.com/",
+        "http://echo.jsontest.com/name/john"
+      };
+      System.Console.WriteLine(@"/* STEP.A */");
+      var a = new Program();
+      var oObj = a.PushToTask(oURL);
+      System.Console.WriteLine(@"/* STEP.B */");
+      //這邊創造一個逼近處理臨界點的等待，讓結果出現隨機跳動
+      System.Threading.Thread.Sleep(320);
+      System.Console.WriteLine(@"/* STEP.C */");
+      System.Console.Read();
+    }
+  }
+}
+</code></pre><h2>輸出結果範例：</h2><p>延遲後比JSON回傳值還快！</p><p><img src=https://content.slashview.com/img/2015/20150505_01.jpg alt="" /></p><p>JSON回傳值比延遲後還快！</p><p><img src=https://content.slashview.com/img/2015/20150505_02.jpg alt="" /></p><p>相關參考：</p><ul><li><a href=/archive2014/20140408.html>非同步程式設計Async與Await</a></li><li><a href=/archive2015/20150506.html>在泛型處理常式（ashx）中利用HttpTaskAsyncHandler來完成async/await之需求</a></li><li><a href=/archive2016/20160202.html>再論具總量控管之.NET非同步工作排程模型</a></li><li><a href=https://aspnetmonsters.com/2016/08/2016-08-27-httpclientwrong/>延伸參考：YOU'RE USING HTTPCLIENT WRONG AND IT IS DESTABILIZING YOUR SOFTWARE；HttpClient因IDisposable反而引發連線資源耗盡（TIME_WAIT）問題</a></li><li><a href=/archive2018/20181212.html>HttpClient所引爆的Sockets Port耗盡問題</a></li></ul><h6>System.Threading.SemaphoreSlim System.Threading.Tasks.Task aSync aWait</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

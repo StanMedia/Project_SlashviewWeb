@@ -1,0 +1,87 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>CSS Selector中:nth-child()與:nth-of-type()的差異性</h1><p>今天到<a href=http://flukeout.github.io/>CSS Diner</a>網站中，去進行了CSS Selector的訓練，這是一個非常好的網站，建議有涉汲到前端（F2E）的人都一該要玩一下，雖然我都是在後端（ServerSide）工作的人，但是我還是覺得這是個值得一試的網站。</p><p><img src=https://content.slashview.com/img/2015/20150410_01.jpg alt="" /></p><p>全部有26關，基本上如果你有用過jQuery或者是稍有程式底子的人，應該都不難完成才對。但是，我怎麼樣就是卡在第19關（Level 19），在網路上翻了很多文章，有許多人都說Level 19應該是Bug，就在我決定放棄了這一關時，我在<a href=http://goo.gl/IDyCs6>Hacker News</a>上發現了一篇討論，讓我決定好好的回到<a href=http://goo.gl/un4tz>W3C School</a>翻一下白皮書。</p><p>//有許多人都覺得第19關（Level 19）應該要下這樣的指令</p><pre><code class=language-css>bento:nth-last-child(2) { ... }
+</code></pre><p>但是相信我，上面的程式碼絕對是錯的，因為你被第18關的關卡設計誤導了。我們來看一下第18關的DOM與指令如下所示：</p><pre><code class=language-html>//HTML *目標要挑第3個
+&lt;div class="table">
+  &lt;plate>&lt;/plate>
+  &lt;plate>&lt;/plate>
+  &lt;plate>&lt;/plate>
+  &lt;plate id="fancy"/>&lt;/plate>
+&lt;/div>
+</code></pre><pre><code class=language-css>//於是我們的css就這樣下
+plate:nth-child(3) { ... }
+</code></pre><p>經由上面第18關的程式碼出現了一個很嚴重的誤導，就是我們認為:nth-child()（或者是:nth-last-child()）會自動幫我們把相似DOM Items集合起來，並汰除掉其它的垃圾，但其實並不是我們想的這樣。因此，到第19關的時候，你就會直覺的想要下「bento:nth-last-child(2) { ... }」，會這樣想並不感到意外。</p><h2>X:nth-child()真正的意思</h2><p>X:nth-child()真正的意思是指，「以DOM Block區塊為層級，若該層級內有以X元素為「啟始元素」之條件，那麼就把這個區塊中的所有子元素（包含非X元素）挑選進來。」，這句話的意思我們用簡單的程式碼來逐一解析：</p><pre><code class=language-css>//假設我們的css指令是，在這邊先不討論群組後的index編號，也就是n值
+p:nth-child(n) { ... }
+</code></pre><pre><code class=language-html>//HTML 指令碼範例
+
+//p1, p2 都會中
+&lt;body>
+  &lt;p>1&lt;/p>
+  &lt;p>2&lt;/p>
+&lt;/body>
+
+//p1, span1, p2 都會中
+&lt;body>
+  &lt;p>1&lt;/p>
+  &lt;span>1&lt;/span>
+  &lt;p>2&lt;/p>
+&lt;/body>
+
+//全部都不會中，因為body區塊下，啟始並非p元素
+&lt;body>
+  &lt;span>1&lt;/span>
+  &lt;p>2&lt;/p>
+&lt;/body>
+
+//{p1, span1, p2, div}, {p3, p4} 都會中
+//會用{}表示是因為這被分為兩個Group，也就是p1, p3的index都是1
+&lt;body>
+  &lt;p>1&lt;/p>
+  &lt;span>1&lt;/span>
+  &lt;p>2&lt;/p>
+  &lt;div>
+    &lt;p>3&lt;/p>
+    &lt;p>4&lt;/p>
+  &lt;/div>
+&lt;/body>
+
+//{p1, span1, p2, div, p5}, {p3, p4} 都會中
+//會用{}表示是因為這被分為兩個Group，也就是p1, p3的index都是1
+&lt;body>
+  &lt;p>1&lt;/p>
+  &lt;span>1&lt;/span>
+  &lt;p>2&lt;/p>
+  &lt;div>
+    &lt;p>3&lt;/p>
+    &lt;p>4&lt;/p>
+  &lt;/div>
+  &lt;p>5&lt;/p>
+&lt;/body>
+
+//p3, p4 會中
+//p1 前被加入了span0，所以p系列再也不是body block下的啟始元素，因此會被整個忽略
+&lt;body>
+  &lt;span>0&lt;/span>
+  &lt;p>1&lt;/p>
+  &lt;span>1&lt;/span>
+  &lt;p>2&lt;/p>
+  &lt;div>
+    &lt;p>3&lt;/p>
+    &lt;p>4&lt;/p>
+  &lt;/div>
+  &lt;p>5&lt;/p>
+&lt;/body>
+</code></pre><h2>X:nth-last-child()真正的意思</h2><p>X:nth-last-child()的意思與X:nth-child()雷同，但不是只有index編號從後面為1開始計算而已，而是邏輯裡面進行真正的顛倒。真正的意思是指，「以DOM Block區塊為層級，若該層級內有以X元素為「終止元素」之條件，那麼就把這個區塊中的所有子元素（包含非X元素）挑選進來。」</p><p>有了這些觀念，那我們再回來CSS Diner的Level 19來看看正確的答案，就會覺得一切都是那麼的自然了！</p><p><img src=https://content.slashview.com/img/2015/20150410_02.jpg alt="" /></p><pre><code class=language-html>//HTML *目標要挑.table下的第1個bento
+&lt;div class="table">
+  &lt;plate>&lt;/plate>
+  &lt;bento>&lt;/bento>
+  &lt;apple class="small"/>
+  &lt;plate>
+    &lt;orange/>
+    &lt;orange/>
+    &lt;orange/>
+  &lt;/plate>
+  &lt;bento>&lt;/bento>
+&lt;/div>
+</code></pre><pre><code class=language-css>//於是我們的css就這樣下，這才是正確答案
+plate:nth-last-child(4) { ... }
+//為何是4，還記得是所有子元素吧，所以由下往上逆著算元素應該是{bento1, plate2, apple3, bento4, plate5}
+</code></pre><h2>:nth-of-type()的使用方式</h2><p>X:nth-of-type()的使用方式就很接近一般人的的直覺了，它不去管X是否是Block的起始或終止，挑出來的元素也會幫你過濾非X的元素，群組功能依然保留，因此，如果你沒有要做複雜用途的人，還是乖乖的使用:nth-of-type()會好很多。</p><p>若CSS Diner連結無法連上，這裡可以下載備份離線版的CSS Diner</p><p><a href=https://content.slashview.com/file/20150410/CSS%20Diner.zip>CSS Diner offline version</a></p><h6>CSS3 CSSSelector :nth-child() :nth-last-child() :nth-of-type() CSSDiner Level19</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

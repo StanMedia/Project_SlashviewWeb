@@ -1,0 +1,17 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>SQL筆記：利用SQL相關子查詢，來產生多張資料表間的統計檢視表</h1><p>在利用SQL製作檢視表時，我們常常會將多張資料表JOIN起來查詢，但是這樣的JOIN方式通常只能夠「完全條列」出綜合後的結果，卻無法達到統計式的用法、用途。舉例來說，我要列舉公司的銷售人員，每一個人的通訊錄中總共有幾筆顧客的資料？這樣的統計方式，利用單純的JOIN可能很難達成。（尤其在統計的欄位超過一個以上的時候，語法的複雜度會拉升很多）</p><p><img src=https://content.slashview.com/img/2017/20170515_01.jpg alt="" /></p><h2>SQL語法：相互關聯子查詢（Correlated Subqueries）</h2><p>首先先讓我們描述一下要進行的情境，已知三張資料表，其關聯結構如下：</p><p><img src=https://content.slashview.com/img/2017/20170515_02.jpg alt="" /></p><p>如上圖，所以我們可以觀察到武將列表、武器列表、資產列表，總共三張資料表。</p><p>這些資料表我們將其SELECT出來看一下，可以看到欄位以及資料內容大致上如下列情況：</p><p><img src=https://content.slashview.com/img/2017/20170515_03.jpg alt="" /></p><h2>資料展現方式</h2><p>在大家有了資料表的結構後，假設我們想要知道每一個武將的ＩＤ、姓名、擁有的武器數量、擁有的資產數量，那麼在製作這類型的統計檢視表時，利用傳統的JOIN方式其實不太容易辦到，但我們可以用相互關聯子查詢（Correlated Subqueries）來達成此一需求。</p><p>SQL相互關聯子查詢的語法如下：</p><pre><code class=language-sql>SELECT
+  iAutoIndex AS 武將編號,
+  cName AS 武將姓名,
+  (
+    SELECT
+      COUNT(*) AS Expr1
+    FROM dbo.武器列表
+    WHERE dbo.武將列表.iAutoIndex = iMap2武將列表
+  ) AS 武器筆數,
+  (
+    SELECT
+      COUNT(*) AS Expr1
+    FROM dbo.資產列表
+    WHERE dbo.武將列表.iAutoIndex = iMap2武將列表
+  ) AS 資產筆數
+FROM dbo.武將列表;
+</code></pre><p>所以我們可以得到下圖的查詢結果，所有的統計資料就羅列在其中啦！</p><p><img src=https://content.slashview.com/img/2017/20170515_04.jpg alt="" /></p><h3>相關參考</h3><ul><li><a href=/archive2017/20170515.html>SQL筆記：利用SQL相關子查詢，來產生多張資料表間的統計檢視表</a></li><li><a href=/archive2022/20221109.html>SQL筆記：關於子查詢（SubQuery）的語法整理</a></li><li><a href=/archive2022/20221110.html>SQL筆記：關於SQL暫存表語法整理</a></li></ul><h6>SQL Command Statement 子查詢 SubQuery SubSelect 相關子查詢 CorrelatedSubQuery 巢狀查詢 NestedQuery</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

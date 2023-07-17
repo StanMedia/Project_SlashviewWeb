@@ -1,0 +1,37 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>利用安全且非獨占的方式，將檔案內容讀取或寫回</h1><p>在伺服器端操作文字檔案的讀取總是令人擔心，因為是多人多工的環境，一不小心就會造成資源鎖死（死結）。舉例來說，如果你開啟一個文字檔案的方式錯誤，可能會造成其他執行緒 無法在你讀取檔案的當下，跟你一起分享這個檔案的讀取權限，這樣的設計會造成佇列的排隊，而如果被等候的執行緒剛好出了甚麼差錯，這下就是災難的開始了。</p><p><img src=https://content.slashview.com/img/2018/20180114_01.jpg alt="" /></p><h2>如何正確的利用.NET Framework檔案共享的讀取方式，將權限共享給其他的執行緒？</h2><p>簡單的說，就是放棄寫入權限，並且依循Windows底層的檔案共享讀取機制，將檔案正確的設定共享讀取的權限，以防止咬檔的問題產生。程式碼如下：</p><pre><code class=language-cs>using (
+  System.IO.StreamReader oSR = new System.IO.StreamReader
+  (
+    new System.IO.FileStream
+    (
+      cFilePathAndName,
+      System.IO.FileMode.Open,
+      System.IO.FileAccess.Read,
+      System.IO.FileShare.ReadWrite
+    )
+  ))
+{
+  oSR.ReadToEnd();
+}
+</code></pre><p>透過這樣的方式，如果有其他的執行緒要一起進行這個文字檔的讀取，是不會產生咬死的狀況喔！很古老的資料了，但是每次要實作總會因為膽戰心驚又要去找一次資料，因此將其記錄在這裡嘍！</p><h2>用非獨占的方式將檔案回寫</h2><p>寫入跟讀取的情況又不太一樣了，因為對OS來說，寫入檔案在怎麼神奇，永遠同時間也是只能一個執行緒使用而已，因此如果場景搬到Web上，最好上個lock把執行緒序列化一下會比較安全。</p><pre><code class=language-cs>private static System.Object _oLock = new System.Object();
+public void WriteUpdate()
+{
+  lock (_oLock)
+  {
+    using (System.IO.StreamWriter oSW = new System.IO.StreamWriter(
+        new System.IO.FileStream
+        (
+          path: cFilePathAndName,
+          mode: System.IO.FileMode.OpenOrCreate,
+          access: System.IO.FileAccess.Write,
+          share: System.IO.FileShare.ReadWrite
+        ),
+        System.Text.Encoding.UTF8
+      )
+    )
+    {
+      oSW.WriteLine(YourData);
+      oSW.Flush();
+    }
+  }
+}
+</code></pre><p>對於寫入的程式碼，這邊針對mode做一下小小的補充，如果你要寫入的速度效能最大化，那麼應該設定成System.IO.FileMode.OpenOrCreate，在多執行緒的情景實際測試下來會比System.IO.FileMode.Create的效能快約3倍以上（1xxms變成3xms）。</p><p>然而，有一好沒兩好，如果你這個檔案是要給ASP.NET做快取（Cache）監控用的，那麼System.IO.FileMode.Create會是你的最佳選擇，因為Create會把檔案砍掉重新創造一個新檔案，這會造成SMB的檔案監控馬上觸發，因此依存在這個檔案上的快取會馬上消失。而OpenOrCreate會進行檔案的開啟與修改，這時SMB的檔案監控機制沒有辦法馬上反應，反而要等待10~15秒左右才會觸發（發現這個檔案被異動過），這對網站要求Cache要即時因為修正檔案而反應的效率上，因而大打折扣喔！</p><h3>相關連結</h3><ol><li><a href=/archive2017/20170411.html>利用鎖定（Lock）來保持資源在多執行緒間安全的共用與複寫</a></li><li><a href=/archive2018/20181226.html>Task非同步作業的等候與終結</a></li><li><a href=/archive2020/20200421.html>單例模式（Singleton Pattern）搭配非同步方法與驗證</a></li></ol><h6>.NetFramework Files non-Lock ReadOnly ReadShared</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

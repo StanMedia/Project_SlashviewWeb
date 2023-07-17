@@ -1,0 +1,12 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>C#多重字串（陣列）比對的寫法</h1><p>不是甚麼技術性的文章，就單純紀錄以前跟後期的寫法習慣，以後大概都會用Linq Any()來縮減語法描述的複雜性了。</p><h2>IndexOf()寫法</h2><pre><code class=language-cs>string cSearch = "John";
+if ("John1,John2,Marry,Adam".IndexOf(cSearch) >= 0)
+{ Console.WriteLine($"找到{cSearch}了。"); }
+</code></pre><p>這樣的寫法其實也沒啥大問題，但唯一的問題就是沒有辦法進行完全相等的比對，以上面的範例來說，當我們需要真的比對「John」這個人時，其實這個程式就變得很有問題了，所幸大部分多重字串的比對場景其實都是模糊的居多。（至少我遇到的經驗是如此）</p><p>P.S 或許會有人覺得用IndexOfAny()就好，可是這個只有適用於Char搜尋喔。</p><h2>Linq .Any()寫法</h2><p>改成用Linq的思維來重寫多重字串命中符合的搜尋邏輯，一切就變得合理多了。</p><pre><code class=language-cs>string cSearch = "John";
+if (new string[] {"John1", "John2", "Marry", "Adam"}.Any(x => x.Contains(cSearch)))
+{ Console.WriteLine($"找到{cSearch}了。"); }
+</code></pre><p>改成完全命中符合當然是易如反掌了：</p><pre><code class=language-cs>string cSearch = "John";
+if (new string[] {"John1", "John2", "Marry", "Adam"}.Any(x => x == cSearch))
+{ Console.WriteLine($"找到{cSearch}了。"); }
+else
+{ Console.WriteLine($"找不到{cSearch}。"); }
+</code></pre><h6>C# CSharp MultiString StringArray Search Compare System.Linq Any()</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

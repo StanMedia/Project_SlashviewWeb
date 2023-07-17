@@ -1,0 +1,110 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>將AJAX取得的JSON資料回綁至FORM表單或HTML元素</h1><p>雖然前端雙向綁定的Javascript框架已經非常成熟，但自己在使用上還是偏好採用自行設計並綁定，因為有許多商業邏輯的限制、自行包裝的元件等因素並不適用這種雙向綁定的框架，因此這篇文章試圖介紹一種我自己習慣的單向綁定方法。</p><h2>JSON Data Binding 資料綁定</h2><p>這篇文章示範的是我自己常使用的資料綁定方式，當AJAX自伺服器端取回JSON資料後，通常我們預期應該是Key、Value的資料格式，這時候若沒有框架幫忙，我們會需要很辛苦的一個一個把Value指派回去，這時候只要套用這個寫好的方法，它會自動以Key去現有的DOM尋訪「可能適用」的元素，並試圖將Value指派至該元素，若以一個大型的表單來說，這個舉動會節省掉非常多無謂的Coding時間。</p><p>此外，我採用的是jQuery框架來進行DOM操作，VanillaJS門派的人就請自行離開啦。</p><pre><code class=language-js>function JsonDataBinding(oData) {
+  let fnError = function (cTemp) {
+    console.log(`JsonDataBinding: ${cTemp}`);
+  };
+  $.each(oData, function (cKey, cValue) {
+    let oDom = "";
+    if (oDom.length === 0) { oDom = $(`input[name=${cKey}]`); }
+    if (oDom.length === 0) { oDom = $(`select[name=${cKey}]`); }
+    if (oDom.length === 0) { oDom = $(`textarea[name=${cKey}]`); }
+    if (oDom.length === 0) { oDom = $(`[name=${cKey}]`); }
+    if (oDom.length === 0) { oDom = $(`#${cKey}:not(.date)`); } //規避某些自製包裝元件，若不需要者可自行移除
+    if (oDom.length === 0) { fnError(`Can't find elements with Key: ${cKey}`); return; }
+    switch (oDom.prop("tagName")) {
+      case "INPUT":
+        switch (oDom.prop("type")) {
+          case "text":
+          case "number":
+            oDom.val(cValue);
+            break;
+          case "radio":
+            oDom.filter(`[value=${cValue}]`).attr("checked", cValue);
+            break;
+          case "checkbox":
+            if (typeof cValue === 'boolean')
+            { oDom.attr("value", cValue).attr("checked", cValue); }
+            else if ($.isArray(cValue))
+            { 
+              $.each(cValue, function (cIndex, cArrayValue) {
+                oDom.filter(`[value=${cArrayValue}]`).attr("checked", true);
+              });
+            }
+            else
+            { oDom.filter(`[value=${cValue}]`).attr("checked", true); }
+            break;
+          case "date":
+            oDom.val(`${cValue.substring(0, 4)}-${cValue.substring(5, 7)}-${cValue.substring(8, 10)}`);
+            break;
+          default:
+            fnError(`Not implemented with INPUT element: ${oDom.prop("type")}`)
+            break;
+        }
+        break;
+      case "SELECT":
+        oDom.find(`option[value=${cValue}]`).attr("selected", true);
+        break;
+      case "TEXTAREA":
+        oDom.val(cValue);
+        break;
+      case "DIV":
+      case "P":
+      case "SPAN":
+      case "TD":
+        oDom.html(String(cValue).replace(new RegExp("\r?\n", "g"), "&lt;br/>"));
+        break;
+      default:
+        fnError(`Not implement with HTML element: ${oDom.prop("tagName")}`);
+        break;
+    }
+  });
+}
+</code></pre><p>大致上的運行重點就是先去找FORM元素等級的物件，並以NAME屬性為先決條件，如果最後都找不到的話，才會以非FORM元素的NAME或ID再往下找，再沒有找到則會依據現行的狀況拋出錯誤資訊於console下，以利除錯。</p><h2>驗證運作</h2><p>首先取得下列JSON資料：</p><pre><code class=language-json>var oJSON = {
+  "cName": "王小明",
+  "bSex": true,
+  "iSalary": 12345,
+  "dBirthday": "2022/11/22",
+  "cInterest": "shopping",
+  "cLuckyNumber": [1, 3, 5],
+  "cAge": "21-30",
+  "cNote1": "AAA\nBBB\nCCC",
+  "cNote2": "DDD\nEEE\nFFF",
+  "cCanNotFind": "brabra..."
+};
+</code></pre><p>將JSON資料套用到下列HTML之中：</p><pre><code class=language-html>&lt;html>
+  &lt;body>
+    &lt;p>表單元素：&lt;/p>
+    &lt;form>
+      姓名：&lt;input type="text" name="cName">&lt;br>
+      &lt;!--示範複選但用於單選結構-->
+      性別：&lt;input type="checkbox" name="bSex">（打勾：男生；沒勾：女生）&lt;br>
+      薪資：&lt;input type="number" name="iSalary">&lt;br>
+      生日：&lt;input type="date" name="dBirthday">&lt;br>
+      興趣：
+      &lt;input type="radio" name="cInterest" value="travel">旅行
+      &lt;input type="radio" name="cInterest" value="shopping">購物
+      &lt;input type="radio" name="cInterest" value="sleep">睡覺&lt;br>
+      &lt;!--示範複選且用於多選結構-->
+      幸運數字：
+      &lt;input type="checkbox" name="cLuckyNumber" value="1">1
+      &lt;input type="checkbox" name="cLuckyNumber" value="2">2
+      &lt;input type="checkbox" name="cLuckyNumber" value="3">3
+      &lt;input type="checkbox" name="cLuckyNumber" value="4">4
+      &lt;input type="checkbox" name="cLuckyNumber" value="5">5&lt;br>
+      年齡區間：
+      &lt;select name="cAge">
+        &lt;option value="11-20">11-20&lt;/option>
+        &lt;option value="21-30">21-30&lt;/option>
+        &lt;option value="31-40">31-40&lt;/option>
+      &lt;/select>&lt;br>
+      備註：&lt;textarea name="cNote1">&lt;/textarea>
+    &lt;/form>
+    &lt;p>非表單元素：&lt;/p>
+    &lt;div id="cNote2">&lt;/div>
+    &lt;span id="cCanNotFind_NOooo">&lt;/span>
+  &lt;/body>
+&lt;/html>
+</code></pre><p>最後直接調用JsonDataBinding方法，就可以看到資料都自動綁定HTML元素啦！</p><pre><code class=language-js>$(function(){
+  JsonDataBinding(oJSON);
+});
+</code></pre><p><img src=https://content.slashview.com/img/2022/20221122_01.jpg alt="" /></p><p>最後一個SPAN元素（cCanNotFind_NOooo）因為沒有辦法對齊至JSON的KeyName（cCanNotFind），所以執行後可以看到一行console.log訊息：</p><pre><code class=language-txt>JsonDataBinding: Can't find elements with Key: cCanNotFind
+</code></pre><p>另外要說明的是，這種自幹的簡易版單向綁定方法，向來都會因為自己專案當前的狀況而論定，功能性不可能涵蓋所有考量且面面俱到，故請依照自己的需求隨時增修為佳。</p><h6>AJAX AsynchronousJavaScriptAndXML JSON JavaScriptObjectNotation DataBind DataBinding ValueAssignment HtmlElements jQuery</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

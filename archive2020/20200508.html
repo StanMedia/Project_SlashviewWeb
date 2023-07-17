@@ -1,0 +1,29 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>當物件包含Enum屬性被序列化成JSON時，強制輸出Enum名稱</h1><p>最近遇到一個需求，就是當某API丟出JSON格式的資料時，裡面若具備enum列舉等級的屬性，則該屬性被賦予成JSON的值不可為整數，必須為可識別的文字，例如該項次的ToString()後的字眼。</p><p>舉例來說，我們有下列student學生物件與shoes鞋子列舉：</p><pre><code class=language-cs>class student
+{
+  public string cName  { get; set; }
+  public shoes  eShose { get; set; }
+}
+
+enum shoes
+{
+  Nike   = 0,
+  Reebok = 1,
+}
+</code></pre><p>然後我們建立一個資料物件起來：</p><pre><code class=language-cs>var oUser = new student()
+{
+  cName  = "王小明",
+  eShose = shoes.Reebok
+};
+</code></pre><p>經過Newtonsoft.Json.JsonConvert.SerializeObject(oUser)的序列化後，你應該會得到下列的JSON字串：</p><pre><code class=language-json>{
+  "cName": "王小明",
+  "eShose": 1
+}
+</code></pre><p>接下來我們的問題是，要怎麼讓這個eShose列舉屬性不要以整數（數值）的方式呈現，而是改採以列舉本身的項次文字字串來輸出呢？以這個例子來說，我們想要顯示成下列JSON資料：</p><pre><code class=language-json>{
+  "cName": "王小明",
+  "eShose": "Reebok"
+}
+</code></pre><p>答案出乎意料的簡單，只要在序列化方法的後面加入一個StringEnumConverter()引數即可。</p><pre><code class=language-cs>Newtonsoft.Json.JsonConvert.SerializeObject(
+  oUser,
+  new Newtonsoft.Json.Converters.StringEnumConverter()
+)
+</code></pre><h6>Newtonsoft Json.Net SerializeObject Enum Int Integer Numeric EnumName EnumString EnumToString()</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

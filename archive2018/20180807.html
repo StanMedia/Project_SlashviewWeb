@@ -1,0 +1,36 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>攔截ASP.NET中應用程式層級的執行期錯誤例外</h1><p>這篇文章不是要討論web.config中的customErrors（頁面層級錯誤），而是要討論ASP.NET中有些錯誤太內層（應用程式層級），導致就算你指定了customErrors依然會跳出黃底紅字的ASP.NET經典錯誤頁面。</p><p><img src=https://content.slashview.com/img/2018/20180807_01.jpg alt="" /></p><pre><code class=language-txt>'/' 應用程式中發生伺服器錯誤。
+執行階段錯誤
+描述: 處理您的要求時發生例外狀況。此外，執行第一個例外狀況的自訂錯誤頁面時發生另一個例外狀況。要求已終止。
+</code></pre><p>然而這樣的情況，弱點掃描可是很不樂見的，他會吐出給你這樣的中等級弱點訊息。</p><pre><code class=language-txt>Application error message
+-----
+Description
+-----
+This alert requires manual confirmation.
+
+Application error or warning messages may expose sensitive information about an application's internal workings to an attacker.
+
+Acunetix found an error or warning message that may disclose sensitive information. The message may also contain the location of the file that produced an unhandled exception. Consult the 'Attack details' section for more information about the affected page.
+</code></pre><p>弱點掃描大概都是以擅自更改、破壞ViewState的相關Value而後PostBack，來造成ViewState Decode失敗，這時候就會引發應用程式層級的錯誤。</p><h2>錯誤處理常式</h2><p>ASP.NET的Global.asax，裡面有內建一個處理常式叫做Application_Error，我們可以利用這個事件來進行客製化錯誤畫面，達到我們想要的結果，避免再出現黃底紅字的ASP.NET Internal Server Error錯誤，以下是程式碼範例：</p><p>由於我們這邊假設的應用系統層級的錯誤是ViewState解碼失敗，因此我們只將ViewState解碼失敗的相關錯誤攔截起來而已，實際應用上，各位網友應該有自己的對策、策略才是。</p><pre><code class=language-cs>void Application_Error(object sender, EventArgs e)
+{
+  System.Web.HttpContext oContext = System.Web.HttpContext.Current.ApplicationInstance.Context;
+  System.Web.HttpException oEx = oContext.Server.GetLastError() as HttpException;
+  //如果根本沒有錯誤，就直接走了
+  if (oEx == null) { return; }
+  //如果有錯誤就攔截
+  switch (oEx.WebEventCode)
+  { //針對ViewState解碼失敗引發的錯誤，進行應用程式層級例外的攔截
+    case System.Web.Management.WebEventCodes.AuditInvalidViewStateFailure:
+    case System.Web.Management.WebEventCodes.InvalidViewState:
+    case System.Web.Management.WebEventCodes.InvalidViewStateMac:
+    case System.Web.Management.WebEventCodes.RuntimeErrorViewStateFailure:
+      //如果不清除錯誤直接導向，那依然還是會引發黃底紅字等級的錯誤
+      oContext.ClearError();
+      //因此這邊採取的策略是簡易的把錯誤訊息丟過去錯誤頁面
+      Response.Redirect($"error.aspx?msg={oEx.Message}");
+      break;
+    default:
+      //如果不是期望中的應用程式層級例外，還是交給web.config的customErrors處理即可。
+      break;
+  }
+}
+</code></pre><h6>ASP.NET InternalServerError 500 ErrorPageCustomize TryCatch ViewState Decode ApplicationError PageError</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

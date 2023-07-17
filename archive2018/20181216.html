@@ -1,0 +1,5 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>如何使用Response.Redirect創造出HTTP 301轉址</h1><p>大家都知道Response.Redirect會拋出302 Found（暫時導向），今天有遭遇到網站搬家（移轉）的問題，而且使用的平台是早期版本的.NET，因此將Response.Redirect創造出301 Moved Permanently（永久導向）的方法筆記在此，供給日後查詢。</p><h2>.NET Framework 4.0之後的做法</h2><p>ASP.NET有給一個全新的方法，基本上用這個方法就可以創造出301 Moved Permanently（永久導向）效果。</p><pre><code class=language-cs>Response.RedirectPermanent(newUrl, true);
+</code></pre><h2>.NET Framework 4.0之前的做法</h2><p>在比較舊的ASP.NET上我們只剩下Response.Redirect這個老朋友了，但這位老朋友它會覆寫HTTP Header Status至302 Found（暫時導向），因此我們需要靠下列程式碼使點小技巧將狀態碼修回來。</p><pre><code class=language-cs>Response.Redirect(newUrl, false); //false表示繼續往下執行
+Response.StatusCode = 301;
+Response.End(); //雖然有點風險，但你我都知道一旦這個網頁上這行程式碼，大概也是日薄西山了
+</code></pre><p>老朋友還是很可靠地。</p><h6>ASP.NET Response.Redirect 301InsteadOf302 302Found 301MovedPermanently Google SEO</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

@@ -1,0 +1,20 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>CAPTCHA圖片的扭曲（Twist）作法</h1><p>CAPTCHA驗證碼圖片的產生，對於使用ASP.NET進行程式設計的人應該不是什麼太大的難事，而通常，我們負責的網站也不是什麼世界級的大流量網站，所以CAPTCHA圖片通常都會順應一般使用者，以簡單明白的正常書寫字來顯現。這讓我們在實作的技巧上，或許也沒有再進一步的可能。</p><p><img src=https://content.slashview.com/img/2014/20141211_01.jpg alt="" /></p><p>日前在看reCAPTCHA網站上的資訊，突然讓我想到，我並沒有JPEG扭曲這方面的實作經驗，因此在網路上找了一些資料去實作看看，果然一開始用Sin、Cos三角函數去尋找的方向是對的，一下就找到資料了。把它放到我自有的CAPTCAH驗證過是可行的，因此把這段程式碼寫在這邊供給需要的人參考。</p><pre><code class=language-cs>//參數設定
+System.Random oRandom = new System.Random();
+int iAmplitude = oRandom.Next( 5, 10);  //振幅
+int iFrequency = oRandom.Next(30, 60);  //頻率
+//複製一個失真前的Bitmap過來參考
+System.Drawing.Bitmap oBitTemp = (System.Drawing.Bitmap)oBitmap.Clone();
+for (int y = 0; y &lt; oBitmap.Height; y++)
+{
+  for (int x = 0; x &lt; oBitmap.Width; x++)
+  {
+    int newX = (int)(x + (iAmplitude * System.Math.Sin(System.Math.PI * y / iFrequency)));
+    int newY = (int)(y + (iAmplitude * System.Math.Cos(System.Math.PI * x / iFrequency)));
+    if (newX &lt; 0 || newX >= oBitmap.Width) newX = 0;
+    if (newY &lt; 0 || newY >= oBitmap.Height) newY = 0;
+    oBitmap.SetPixel(x, y, oBitTemp.GetPixel(newX, newY));
+  }
+}
+//參考後丟棄，oBitmap為最終圖案
+oBitTemp.Dispose();
+</code></pre><p>小提醒：真的要很難被別人破解CAPTCHA的話，做完二次扭曲會更是難解，不過你極有可能也會搞死用你網站的人啦！</p><h6>C# CAPTCHA reCAPTCHA JPG JPEG Image Distortion Twist 驗證碼</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

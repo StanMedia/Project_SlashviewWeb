@@ -1,0 +1,33 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>SQL筆記：取出鍵值之最末資料集合，並將該資料之附屬欄位進行字串合併</h1><p>這篇算是之前案例「<a href=/archive2015/20150317.html>SQL筆記：SQL多次矩陣表的排序與顯示</a>」的延續，這種悲慘等級的SQL指令只能備註在此，等下次發生可以拿來回憶。</p><h2>三國資訊公司</h2><p>該公司有數名員工，有一個工作紀錄系統，員工可以隨時上線回報當前某筆專案的工作紀錄，在實務上cName可以視為唯一鍵值，例如員工代號。而後面的dReport可以視為打卡記錄之類的時間。</p><p><img src=https://content.slashview.com/img/2020/20200301_01.jpg alt="" /></p><p>下面的資料表，是工作紀錄系統中規範的工作項目，讓員工可以快速的勾選且為「複選」，表示自己在這次的工作紀錄回報中做了哪些項目。</p><p><img src=https://content.slashview.com/img/2020/20200301_02.jpg alt="" /></p><p>接下來有一張工作績效表，用來表示員工在某一次的工作紀錄時，填寫了那些工作項目。</p><p><img src=https://content.slashview.com/img/2020/20200301_03.jpg alt="" /></p><p>然後有張檢視表，把這三張表INNER JOIN起來，變成一張維度重疊，欄位資訊不斷重複的結果集。</p><p><img src=https://content.slashview.com/img/2020/20200301_04.jpg alt="" /></p><p>然後老闆跟你說，我要看到工作紀錄表裡面：</p><ol><li>以每位員工為標準。該員工「最後一次」回報之工作紀錄。</li><li>該筆最後一次工作之紀錄，把多筆工作項次之文字，合併成單一描述欄位。</li></ol><h2>藥方一：找出最後一筆資料</h2><p>首先我們利用RANK() OVER (PARTITION BY cName ORDER BY iRecord DESC)，替每名員工進行每次填報工作進行RANK()排序，這樣我們就可以得到每位員工的第一個RANK，也就是最後一筆填報資料（填報代碼逆排序）。</p><pre><code class=language-sql>SELECT
+  RANK() OVER (PARTITION BY cName ORDER BY iRecord DESC) AS 填報順序,
+  *
+FROM [工作檢視]
+</code></pre><p><img src=https://content.slashview.com/img/2020/20200301_05.jpg alt="" /></p><p>附註 1：其實可以使用ORDER BY dReport DESC會有一樣的結果，但因為不能確定系統端在寫入這些資料時是否有將時間變數統一，因此有可能造成dReport出現毫秒等級的差別，一旦時間差別就會造成統計的缺陷，例如某個工作項次就因為毫秒等級的時間差而被RANK()忽略掉了。</p><p>附註 2：除了RANK()之外也可考慮使用ROW_NUMBER()這個視窗函式，都可以達成分割的效果，例如：ROW_NUMBER() OVER (PARTITION BY cName ORDER BY iRecord DESC) AS 填報順序，應用的情境上可以自己多測試與組合。</p><h2>藥方二：利用FOR XML PATH('')將多筆資料合併結果</h2><p>例如某員工可能填寫「用計退敵」、「斬殺敵首」，我們可以用FOR XML PATH('')將這些SELECT後的結果進行字串級相加。例如我們可以利用下列的SQL將第6工作項次填報所進行的工作內容，將其進行字串相加回傳。</p><pre><code class=language-sql>SELECT
+  cWorkItem + '、'
+FROM
+  [工作檢視]
+WHERE
+  iRecord = 6
+FOR
+  XML PATH('')
+
+![](https://content.slashview.com/img/2020/20200301_06.jpg)
+
+### 將藥方一與二綜合運用，進而求出最終結果：
+
+利用SELECT FROM A SELECT，將兩種方式混合再一起，得到最終老闆想要的資料呈現方式：
+
+SELECT
+  *,
+  (
+    SELECT cWorkItem + '、' FROM [工作檢視] WHERE iRecord = RankList.iRecord FOR XML PATH('')
+  ) AS 工作總述
+FROM
+(
+  SELECT
+    *,
+    RANK() OVER (PARTITION BY cName ORDER BY iRecord DESC) AS 填報順序
+  FROM [工作檢視]
+) AS RankList
+WHERE RankList.填報順序 = 1
+</code></pre><p><img src=https://content.slashview.com/img/2020/20200301_07.jpg alt="" /></p><p>最後再包一層SELECT整理一下最終的輸出結果，包含以員工姓名將結果DISTINCT，另外也修飾了一下工作總述後面多餘的字串相加符號：</p><p><img src=https://content.slashview.com/img/2020/20200301_08.jpg alt="" /></p><p>唉～看到這麼營養的SQL指令，我整個都想吐了。</p><h6>SQL 子查詢 多重結果集合 最後一筆 結果紀錄欄位相加</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

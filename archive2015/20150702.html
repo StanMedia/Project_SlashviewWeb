@@ -1,0 +1,48 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>兩步驟驗證之相關知識與實作</h1><p>兩步驟驗證在現在的網站來說，似乎已經慢慢開始流行，許多大型的網站都已經支援這個標準。兩步驟驗證的名稱有很多，例如：兩階驗證、兩階段驗證、動態密碼、一次性密碼、2FA（Two Factor Authentication）、OTP（One Time Password）。一開始我也對這個概念很無知，經過不斷的爬文閱讀之後，才知道所有的概念源自於<a href=https://goo.gl/uLGxAf>RFC 6238</a> TOTP: Time-Based One-Time Password Algorithm與<a href=http://goo.gl/yxFlj>RFC 4226</a> HOTP: An HMAC-Based One-Time Password Algorithm這兩個標準。而現代的大型網站之兩步驟驗證的終端工具，也是實作這個標準而成。</p><p><img src=https://content.slashview.com/img/2015/20150702_01.jpg alt="" /></p><p>本來以為這裡面的實作方式有許多的複雜運算、資料庫儲存以及防禦被竊的機制，但經過啃讀RFC後發現，最終就是網站會發給使用者一組ScrectKey，然後使用者要好好的保管這一組密鑰，一旦密鑰被流出去，那麼每個人都可以利用RFC的標準產生跟你一模一樣的動態密碼。我知道這個結論的當下也是很震驚的（如此簡單！），但是仔細再想一想也沒錯。兩步驟驗證就像另外一把會不斷變換樣貌的鑰匙，當這把鑰匙被偷走時，就算你再怎麼樣變換也沒有用吧！總而言之，兩步驟驗證只能夠保護你在公共場所登入時，如果有駭客在終端sniffer你的網路連線，那麼這組密碼他就算拿到了也無法再搞怪了（30秒內失效）。但是兩步驟驗證沒有辦法保護在你產生密鑰的當下，你的密鑰被人家監聽（拿走）了。</p><h2>兩步驟驗證（2FA, Two Factor Authentication）的流程簡述如下</h2><ol><li>系統產生一組Key給使用者，並將這組Key存在資料庫內。</li><li>使用者從介面上，得到一個「otpauth://totp/{0}?secret={1}」的QRCode。其中的{0}是你的系統名稱（可亂取），{1}是一個Base32Encode過的Key值。</li><li>使用者用Google或Microsoft的驗證器App照這組QRcode，會開始得到一個每30秒跳動一次的動態密碼。</li><li>使用者回到系統登入頁面，系統會先通過常態性的「帳號密碼」驗證，來得知使用者是誰。</li><li>得知是哪個使用者後，到資料庫取出該使用者的Key。</li><li>進行RFC 6238 TOTP運算</li><li>－取出UTC制之System.DateTime(1970, 1, 1, 0, 0, 0, System.DateTimeKind.Utc)～System.DateTime.UtcNow，取總秒數再去除30秒，即為counter量。</li><li>進行RFC 4226 HOTP運算</li><li>－基礎運算System.Security.Cryptography.HMACSHA1(bytKey[]).ComputeHash(bytCounter[])。</li><li>－移位運算後，取餘數6個數字（不足者左方補0），得到答案result。</li><li>將使用者看App後所輸入的密碼，與result進行比對，正確的話就是通過了！</li><li>※ 優化你的系統</li><li>由於不可能所有的設備的時間，都與你的伺服器時間完全一致。因此如果要優化使用者的體驗，可以將count進行+1, 0, -1的運算，來得到三組六位數的密碼，再來比對，將會提高命中率，也不會讓使用者覺得輸入的膽顫心驚。</li><li>考慮到二步驟驗證在實體運行時，使用者可能在外面的網路輸入且被監聽，因此程式在正式運行時，應該考量有可能正在被監聽，因此可以加入當使用者輸入正確的密碼並送出後，系統會自動將該組密碼設為Disable，如此一來即使竊聽者仿造一組一模一樣的密碼，並在30秒或更長的時間內送出，依然會被系統判定成false，無法通過驗證。</li></ol><p>Console Main程序程式碼如下：</p><pre><code class=language-cs>static void Main(string[] args)
+{
+  string cTemp = System.Guid.NewGuid().ToString("N").ToUpper();
+  OneTimePassword oTemp = new OneTimePassword(cTemp);
+  Console.WriteLine("--------------------");
+  Console.WriteLine("  OTP Application   ");
+  Console.WriteLine("--------------------");
+  Console.WriteLine("Make QRCode below and add to Google authenticator.");
+  Console.WriteLine(oTemp.cQRCode);
+  Console.WriteLine("--------------------");
+  Console.WriteLine("Choice what do you want to do?");
+  Console.WriteLine("[1] Watch real time OTP code every 10 sec.");
+  Console.WriteLine("[2] Input your OTP code to verify.");
+  Console.Write("Your choice: "); string cInput = Console.ReadLine();
+  switch (cInput)
+  {
+    case "1":
+      Console.WriteLine("");  //在這裡顯示
+      Console.WriteLine("* Press Ctrl+C to Stop.");
+      int iTemp = Console.CursorTop - 2;
+      while (true)
+      {
+        Console.SetCursorPosition(0, iTemp);
+        Console.Write(string.Format("OTP code >> {0}", oTemp.GetPassword()));
+        System.Threading.Thread.Sleep(TimeSpan.FromSeconds(1));
+      }
+    default:
+      while (true)
+      {
+        Console.Write("Input right OTP code: "); string cAnswer = Console.ReadLine();
+        string cReference = string.Format("OTP code history: {0} {1} {2}",
+          oTemp.GetPassword(-1),
+          oTemp.GetPassword(0),
+          oTemp.GetPassword(1));
+        if (cReference.IndexOf(cAnswer) != -1)
+        {
+          Console.WriteLine("OTP code RIGHT."); break; 
+        }  else
+        {
+          Console.WriteLine("OTP code ERROR. Try it again.");
+          Console.WriteLine(cReference);
+        }
+      }
+      break;
+  }
+  Console.Read();
+}
+</code></pre><p>Console程式運行時的畫面ａ（每秒更新最正確的OTP code）</p><p><img src=https://content.slashview.com/img/2015/20150702_02.jpg alt="" /></p><p>Console程式運行時的畫面ｂ（讓使用者輸入OTP code並判定是否正確）</p><p><img src=https://content.slashview.com/img/2015/20150702_03.jpg alt="" /></p><p>OTP demo EXE download: (with .NET Framework 4.5.1)</p><p><a href=https://content.slashview.com/file/20150702/OTP.zip>C# OTP Implement &amp; Demo</a></p><h6>OneTimePassword GoogleAuthenticator MicrosoftAuthenticator 二階段驗證 二階驗證</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

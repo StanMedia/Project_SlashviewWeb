@@ -1,0 +1,14 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>LINQPad基本安裝與C# Program模式操作範例</h1><p>LINQPad的強大時有耳聞，但是因為有VisualStudio整合環境了，所以用到這套軟體的機會也不多。今天剛好有機會摸到，就把安裝、連線SQL資料庫以及初步的使用方式寫在這邊，以備不時之需可以回顧。</p><p><img src=https://content.slashview.com/img/2016/20160908_01.jpg alt="" /></p><h2>安裝LINQPad</h2><p>Step 1. 請先到<a href=https://www.LINQpad.net/>LINQPad官網</a>下載必要的軟體，這裡建議下載綠色免安裝版本即可。以撰寫此文當時為例，請選這個：Download xcopy-deploy build (LINQPad 5)。</p><p>Step 2. 下載完解壓縮丟到一個資料夾，點選「LINQPad.exe」就可以開始執行了。</p><h2>設定資料庫連線</h2><p>Step 3. 點選右上角的「Add Connection」。</p><p><img src=https://content.slashview.com/img/2016/20160908_02.jpg alt="" /></p><p>Step 4. 因為目標對象是要連到Microsoft SQL Server，所以選Default (LINQ to SQL)。</p><p><img src=https://content.slashview.com/img/2016/20160908_03.jpg alt="" /></p><p>Step 5. 輸入SQL Server IP、帳號以及密碼。</p><p><img src=https://content.slashview.com/img/2016/20160908_04.jpg alt="" /></p><p>Step 6. 看到畫面啦，如果有在用SSMS的人，對右上角的資料庫桶子群應該不陌生吧！</p><p><img src=https://content.slashview.com/img/2016/20160908_05.jpg alt="" /></p><h2>寫一段LINQ Query / LINQ Select 來測試一下</h2><p>Step 7. 請先在上方Language處，下拉選擇「C# Program」，Connection選擇你想要操作的資料庫桶子。然後在中央方框內寫下你的LINQ程式碼。要注意的事，這裡沒有Console.Write這種東西，所以要輸出的話請用「Dump();」方法。輸入完成後按下綠色的執行按鈕，就可以看到下方畫面啦！</p><p><img src=https://content.slashview.com/img/2016/20160908_06.jpg alt="" /></p><p>中央的範例程式碼條列如下：（請記得自己改一下各式中文字變數）</p><pre><code class=language-cs>void Main()
+{
+  var oCollection = 
+    from oRecords in 資料表名稱
+    where oRecords.欄位名稱 == "某字串"
+    select oRecords;
+    
+  oCollection.ToList().ForEach(oRecord => {
+    oRecord.欄位名稱_1.Dump();
+    oRecord.欄位名稱_2.Dump();
+    oRecord.欄位名稱_3.Dump();
+  });
+}
+</code></pre><h6>LINQPad Linq2Sql LinqQuery LinqSelect Intro</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

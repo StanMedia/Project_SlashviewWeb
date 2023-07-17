@@ -1,0 +1,23 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>SQL筆記：查詢當下或歷史資料庫使用者存取紀錄</h1><p>有時候我們會需要去找出這台資料庫，他的過去一段時間內（一天、一星期、一個月）的存取紀錄，這時候開SQL Server Profiler已經來不及了。此時還有一個最後救命的浮木，一般來說SQL SERVER在安裝時期都會幫你預設一個追蹤（Default Trace），當然這個TraceID就會等於1，我們可以透過這個TraceID來知道一些過去或當下的資訊。</p><h2>查詢當前的Default Trace</h2><p>請輸入下列的SQL指令</p><pre><code class=language-sql>SELECT
+  *
+FROM
+  fn_trace_getinfo(default)
+</code></pre><p>這時候你應該會在<code>property: 2</code>的資料中找到預設記錄檔存放的位置，例如：<code>...\MSSQL\log\log_XXXX.trc</code>。其實這個預設紀錄檔顯示的是最新的檔案，你可以到該目錄下，應該可以找到以前的許多預設記錄檔，都被存放成歷史。</p><h2>透過預設記錄檔，來查詢有哪些使用者登入過這台SQL主機</h2><p>有了這些紀錄檔的路徑與編號後，事情就變得簡單多了，請服用下列SQL指令：</p><pre><code class=language-sql>SELECT
+  DatabaseID, TransactionID, HostName, LoginName, StartTime, EndTime, DatabaseName
+FROM
+(
+  SELECT DatabaseID, TransactionID, HostName, LoginName, StartTime, EndTime, DatabaseName FROM fn_trace_gettable('C:\MSSQL\LOG\log_0001.trc', default)
+  UNION
+  SELECT DatabaseID, TransactionID, HostName, LoginName, StartTime, EndTime, DatabaseName FROM fn_trace_gettable('C:\MSSQL\LOG\log_0002.trc', default)
+  UNION
+  SELECT DatabaseID, TransactionID, HostName, LoginName, StartTime, EndTime, DatabaseName FROM fn_trace_gettable('C:\MSSQL\LOG\log_0003.trc', default)
+) AS LogTable
+WHERE
+  LoginName IS NOT NULL
+  AND
+  LoginName &lt;> 'sa'
+  AND
+  LoginName &lt;> 'NT AUTHORITY\SYSTEM'
+ORDER BY
+  StartTime DESC
+</code></pre><p>這樣就可以幫你透過預設紀錄檔（SQL default trace）來得知過去到底有哪些帳號登入你的網站過，時間跟主機名稱也都有。由於上面的指令採用的是UNION，因此無法合成ntext型別欄位，如果有想要看某些細節，建議可以單獨的打開一個<code>.trc</code>檔案，然後將<code>TextData</code>欄位單獨打開來看，或許會有更多有用的資訊。</p><h6>MicrosoftSqlServer DefaultTrace UserLoginHistory UserActionHistory LoginDateTime LoginHostName</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

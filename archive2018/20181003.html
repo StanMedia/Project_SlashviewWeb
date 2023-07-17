@@ -1,0 +1,42 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>System.DateTime運算小範例（迄今時間計算：年月天）</h1><p>今天遇到一個以前沒有處理過的需求，就是要計算兩個日期的差距，但必須以過了幾年、幾月、幾天來表示，這事情初步想起來很簡單，用System.TimeSpan就解決了，但仔細一想其實蠻複雜的。</p><p><img src=https://content.slashview.com/img/2018/20181003_01.jpg alt="" /></p><p>這類型需求的應用，其實並不算罕見，例如我們想要顯示：「你現在已經活了ＯＯ年ＯＯ月ＯＯ天，請把握生命！」、「這篇貼文迄今已經過了ＯＯ年ＯＯ月ＯＯ天」之類的，對於一些強迫症的老闆來說，還真的是會有這樣的要求。例如：</p><pre><code class=language-txt>Posted 0 years, 0 months, 0 days, 0 hours, 0 minutes and 0 seconds ago
+</code></pre><h2>System.TimeSpan支援方法不足</h2><p>可惜的是，我們的好朋友System.TimeSpan的Totla系列方法，並沒有提供上面的需求，他只有下列的方法：</p><ul><li>TotalMilliseconds</li><li>TotalSeconds</li><li>TotalMinutes</li><li>TotalHours</li><li>TotalDays</li></ul><p>啊，我說那個TotalMonths或是TotalYears呢？！</p><h3>計算兩個日期相差的年月日時分秒（不考慮閏年與起計月）</h3><p>在看不到System.TimeSpan提供相關方法後，一度開始想要自幹寫一些判斷閏年天數的方法，但發現不對，我可以使用System.DateTime啊！可以站在巨人的肩膀上何必自己寫演算法，況且既複雜又有可能出錯～以下就是程式碼嘍！</p><pre><code class=language-cs>public static void Main()
+{ //dArticle為文章張貼日期，可視為dStart之意
+  System.DateTime dArticle = System.Convert.ToDateTime("2000-02-29");
+  System.DateTime dNow = System.DateTime.Now;
+  System.TimeSpan oTS = new System.TimeSpan(dNow.Ticks - dArticle.Ticks);
+  //減去System.DateTime.MinValue: 1Years 1Months 1Days
+  System.DateTime oDT = System.DateTime.MinValue.AddTicks(oTS.Ticks).AddYears(-1).AddMonths(-1).AddDays(-1);
+  Console.WriteLine($"Article Date: {dArticle.ToString("yyyy-MM-dd")} to {dNow.ToString("yyyy-MM-dd")}");
+  Console.WriteLine($"Posted {oDT.Year} years, {oDT.Month} months, {oDT.Day} days, {oDT.Hour} hours, {oDT.Minute} minutes and {oDT.Second} seconds ago");
+}
+</code></pre><p>輸出結果：</p><pre><code class=language-txt>Article Date: 2000-02-29 to 2018-10-03
+Posted 18 years, 7 months, 5 days, 10 hours, 23 minutes and 30 seconds ago
+</code></pre><p>用Windows小算盤驗證結果相符：</p><p><img src=https://content.slashview.com/img/2018/20181003_02.jpg alt="" /></p><h2>注意</h2><p>上面這種運算解法，是巧妙的透過TimeSpan的Ticks轉回至DateTime類別，並由西元元年開始計算（System.DateTime.MinValue），這會導致兩個隱性的BUG：</p><ol><li>如果計算週期小於一年期，則會引爆加減日期的System.ArgumentOutOfRangeException錯誤。</li><li>重新起計的西元元年未必會對齊當前程式運算dArticle表定的閏年順序與月份順序，因此計算出來的日期也會有數天誤差。</li></ol><p>基於上面BUG，如果計算長跨度的人員不太在意這兩三天「認知等級」的差距倒也無妨，畢竟運算規則簡單好理解。但如果是涉及保險理賠或年金、或是精實老闆的喜好之計算，可能得好好的考量修正議題。</p><h2>計算兩個日期相差的年月日時分秒（閏年版）</h2><p>其實，保險或年金這種長跨度的計算，法規上都是以每個月３０日列計，沒有人在那邊跟你囉嗦閏年的問題。但如果需要考慮閏年的情況，就必須要重新撰寫計算的方法拋棄整體差值的思路，改採自起始日真實起計的思維，由於程式碼開始變長因此將其包裝成方法以利後續引用，但整體的概念仍然是站在巨人的肩膀上操弄DateTime物件：（dArticle置換成dStart較易理解）</p><pre><code class=language-cs>public static (int iYears, int iMonths, int iDays, int iHours, int iMinutes, int iSeconds) CalcDateTimeDuration(System.DateTime dStart, System.DateTime dEnd)
+{
+  //日期若錯置就交換（很重要，可以讓後面的修正程序單純化）
+  if (dEnd.CompareTo(dStart) &lt; 0)
+  { (dStart, dEnd) = (dEnd, dStart); }
+  //調用.NET方法規避掉閏年計算問題
+  int iYears = dEnd.Year - dStart.Year;
+  int iMonths = dEnd.Month - dStart.Month;
+  int iDays = dEnd.Day - dStart.Day;
+  int iHours = dEnd.Hour - dStart.Hour;
+  int iMinutes = dEnd.Minute - dStart.Minute;
+  int iSeconds = dEnd.Second - dStart.Second;
+  //修正單純運算後衍生的問題
+  if (iSeconds &lt; 0)
+  { iMinutes--; iSeconds += 60; }
+  if (iMinutes &lt; 0)
+  { iHours--; iMinutes += 60; }
+  if (iHours &lt; 0)
+  { iDays--; iHours += 24; }
+  if (iDays &lt; 0)
+  { iMonths--; iDays += System.DateTime.DaysInMonth(dEnd.AddMonths(-1).Year, dEnd.AddMonths(-1).Month); }
+  if (iMonths &lt; 0)
+  { iYears--; iMonths += 12; }
+  //回傳
+  return (iYears, iMonths, iDays, iHours, iMinutes, iSeconds);
+}
+</code></pre><p>用來計算2000-02-29 21:22:23～2018-10-03 20:21:22時間區間，可以得到下列輸出結果：</p><pre><code class=language-txt>Article Date: 2000-02-29 21:22:23 to 2018-10-03 20:21:22
+Posted 18 years, 7 months, 3 days, 22 hours, 58 minutes, and 59 seconds ago
+</code></pre><p>相關連結：</p><ul><li><a href=/archive2015/20151015.html>System.DateTime運算小範例（時間差距、同日判斷）</a></li></ul><h6>年金日期計算 年資日期計算 退休日期計算 System.TimeSpan System.DateTime DateTimeDiff DateTimeDuration DateTimeLeapYear</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

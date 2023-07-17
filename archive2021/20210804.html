@@ -1,0 +1,35 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>SQL筆記：SUBSTRING之錯誤訊息誤導？（其實是自己誤解）</h1><p>今早某隻程式突然報錯，錯誤是來自SQL的標準錯誤訊息「將 nvarchar 值 'XX' 轉換成資料類型 int 時，轉換失敗。」，顯而易見的就是可能發生轉型時的失敗，經過追查後才發現案情並不單純，因此將這個問題記錄在此供給日後參考。</p><h2>錯誤訊息的起始</h2><p>以下是報錯的SQL指令，很單純：</p><pre><code class=language-sql>SELECT
+  *
+FROM
+  TestView
+WHERE
+  SUBSTRING(cCode, 5, 1) &lt;> 5
+</code></pre><p>吐出錯誤訊息如下，很顯然的就是第五個字元出現不可自動轉型成數字的問題，理論上只要修正成字元比對模式「'5'」即可。</p><pre><code class=language-txt>將 nvarchar 值 'X' 轉換成資料類型 int 時，轉換失敗。
+</code></pre><p>但，調查下去發現案情並不單純...</p><h2>檢視表VIEW中，並沒有那筆資料？</h2><p>把檢視表中「所有資料」查找一次，發現根本沒有錯誤訊息指出的'X'字元，阿是在報錯三小？</p><pre><code class=language-sql>SELECT
+  *
+FROM
+  TestView
+</code></pre><pre><code class=language-txt>iSN cCode     bState
+1   12345678  1
+2   22345678  1
+4   42345678  1
+</code></pre><p>經過東翻西找後，確定並不是語法問題而是在SQL自己本身查詢的機制，以下是TestView的產生指令，從指令中可以發現是以JOIN的方式來生成：</p><pre><code class=language-sql>SELECT
+  dbo.TestTable.iSN, dbo.TestTable.cCode, dbo.TestState.bState
+FROM
+  dbo.TestTable
+  INNER JOIN
+    dbo.TestState
+    ON
+    dbo.TestTable.iSN = dbo.TestState.iSN
+WHERE
+  dbo.TestState.bState = 1
+</code></pre><p><img src=https://content.slashview.com/img/2021/20210804_01.jpg alt="" /></p><p>再往下追TestTable資料表，就發現兇手了：</p><pre><code class=language-sql>SELECT
+  *
+FROM
+  TestTable
+</code></pre><pre><code class=language-txt>iSN cCode
+1   12345678
+2   22345678
+3   3234X678 &lt;&lt; 兇手在此
+4   42345678
+</code></pre><h2>心得</h2><p>若檢視表有使用到JOIN指令，當我們針對檢視表進行WHERE查詢時，SQL的動作未必如我們想像中是「先針對」VIEW產生「結果」，再基於這個結果去進行查詢動作。我們可以從下圖「顯示估計執行計畫」中看到，SQL的確把SUBSTRING的指令放到TestTable中查找。</p><p><img src=https://content.slashview.com/img/2021/20210804_02.jpg alt="" /></p><h6>SQL Command Select Substring NoData ErrorData</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

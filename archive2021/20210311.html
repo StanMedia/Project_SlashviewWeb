@@ -1,0 +1,19 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>SQL筆記：挑選日期區間、篩選數值範圍的語法</h1><p>這篇文章沒啥營養，純粹是自己老了，每次要撰寫這種SQL範圍內的語法都要想個10來秒來確認，有時候腦筋打結甚至還要去SSMS驗證一下才放心，將其筆記在這邊日後方便查詢。有些人可能會問為何不用BETWEEN？我的答案是BETWEEN無法解決剛好在那個點上（等於；等號）的問題，因此變相的你要反過來去調整範圍兩端的參數，並不會比較省力氣。</p><h2>挑選日期區間範圍內的SQL語法</h2><p>假設從前端傳過來兩個參數，分別為日期起日（dSearchStart）、日期迄日（dSearchEnd），假設我們要挑選目標是資料更新時間欄位（dUpdate），那麼在SQL WHERE的語法就要這樣撰寫：</p><pre><code class=language-sql>SELECT
+  *
+FROM
+  YourTable
+WHERE
+  @dSearchStart &lt;= dUpdate AND dUpdate &lt;= @dSearchEnd
+</code></pre><p>對！我就是故意把目標日期排在SQL Syntax的中間，這樣可以讓日後看程式碼的時候可以更直觀的以數列的方式來理解。</p><p>※ 補充說明：其實SQL資料庫中是有日期精度的，以上面的例子來說dSearchEnd我們通常會選擇該日的最後時刻，也就是可能會被帶入23:59:59，但是如果很倒楣的dUpdate剛好為23:59:59.997秒，那麼這個條件式「dUpdate &lt;= @dSearchEnd」就不會成立了。換句話說，明明這筆資料應該要被SELECT進來的，卻因為這個極端的狀況被排除了。若要比較保險的作法，最好是把dSearchEnd設定成該日的下一天，也就是下一天的00:00:00。這樣我們就可以把條件改成「dUpdate &lt; @dSearchEnd」（等號被拿掉了），透過這樣的設計，那麼23:59:59.997這筆資料就可以被順利的SELECT。</p><p>再舉出一個數值範圍的例子，這個在舊版SQL Server的分頁需求裡面，這樣的語法可承擔切分頁面並取出資料的功能：</p><pre><code class=language-sql>SELECT
+  *
+FROM
+  (
+    SELECT 
+      ROW_NUMBER() OVER (ORDER BY iAutoIndex DESC) AS [iRow],
+      *
+    FROM
+      YourTable
+  ) AS TEMPTABLE
+WHERE
+  @iStartRow &lt;= iRow AND iRow &lt;= @iEndRow
+</code></pre><h6>SqlSyntax DateTimeRange DateRange ValueRange Between</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

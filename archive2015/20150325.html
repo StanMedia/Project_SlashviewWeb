@@ -1,0 +1,17 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>SQL筆記：SQL資料庫的資料表、檢視表之名稱查詢</h1><p>這一篇不是要講怎麼去查詢資料表與檢視表的內容，這不需要講大家都會吧。這篇要討論的事，如果你的SQL Server中有200個桶子（Catalogries、Databases），然後你要找的某一張表被放在這200個桶子中的其一，又或者是你根本不確定是不是有存在於這個SQL Server內，那麼到底要如何找出答案呢？</p><h2>確定是否存在於資料表或檢視表</h2><p>您可以使用下列的指令來完成某些事：</p><pre><code class=language-sql>--找出這個資料庫中所有的資料表
+  SELECT * FROM sys.tables
+--找出這個資料庫中所有的檢視表
+  SELECT * FROM sys.views
+--找出這個資料庫中所有的觸發程序
+  SELECT * FROM sys.triggers
+--找出這個資料庫中所有的預存程序
+  SELECT * FROM sys.procedures
+--找出這個資料庫中所有的物件
+  SELECT * FROM sys.all_objects
+--找出這個資料庫中所有的桶子
+  SELECT * FROM sys.databases
+</code></pre><p>從上述看來，最符合我們想要的且等級最高的查詢，應該是sys.all_objects，因此我們把指令下成這樣，就可以一次找出所有的物件中，有符合我們想要查找名字的資料了。如果有，那就是這個「brabra」關鍵字存在於這個資料庫的物件群中，如果沒有，那就是確定沒有了！</p><pre><code class=language-sql>SELECT * FROM sys.all_objects WHERE name like '%brabra%'
+</code></pre><p>從上面的語句，你可以獲得這個物件的object_id編號，你也可以用OBJECT_NAME(object_id)來反查這個物件的文字名稱，但是你永遠無法得知這個物件被放在哪？</p><h2>如何找出Object放在哪個桶子（Catalogries、Databases）內？</h2><p>很不幸的，SELECT * FROM sys.databases並無法幫上任何忙，因為裡面沒有任何的Key可以被關聯。請改服用下列的SQL語句，可以完成找出在哪個資料庫中。</p><pre><code class=language-sql>SELECT DISTINCT DB_NAME(database_id) as CatalogName
+FROM [sys].[dm_db_index_operational_stats](NULL,NULL,NULL,NULL) 
+WHERE OBJECT_NAME(object_id) like '%brabra%'
+</code></pre><h6>MicrosoftSQLServer SQLCommand sys.all_objects object_id database_id name</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

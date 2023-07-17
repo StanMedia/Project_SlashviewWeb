@@ -1,0 +1,6 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>使用SSL網站時，強制http導向到https</h1><p>當我們的網站有憑證的功能時，一般來說我們都會希望使用者盡量使用SSL技術的https來進行運作，而避免回去用明碼傳輸的http協定，這時候我們需要一個強制的方式來運行。在過去，可能要動用到URL rewrite來進行這個工作，而在Windows Server 2008與IIS 7之後，這項工作變得很簡單了。</p><p>使用方式很簡單，只要在global.asax中加入下列的程式碼即可。但千萬要記住，你的IIS要記得繫結（Binding）80埠喔，不然IIS根本收不到你的Request啊！</p><pre><code class=language-cs>protected void Application_BeginRequest()
+{
+  if (!Context.Request.IsSecureConnection)
+  { Response.Redirect(Context.Request.Url.ToString().Replace("http://", "https://")); }
+}
+</code></pre><p>至於憑證與加入方式，在這邊我就不再多寫一篇了，可以參考保哥寫的這一篇文章，非常的好用喔！</p><p><a href=http://goo.gl/EzIOO>購買與安裝SSL憑證完全攻略（以IIS7為例）</a></p><h6>WindowsServer IIS SSL HTTP HTTPS Force</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

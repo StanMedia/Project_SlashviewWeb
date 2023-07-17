@@ -1,0 +1,69 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>運用泛型委派進行基本的觀察者模式實作</h1><p>觀察者模式（Observer pattern）又稱為發布／訂閱模式（Publish / Subscribe pattern），可以讓A、B物件間的出現相依性，並且可以當A出現動作時，B就被觸發連動。這篇文章將利用泛型委派（Action）來進行基本的觀察者模式實作。</p><p><img src=https://content.slashview.com/img/2015/20150909_01.jpg alt="" /></p><p>首先我們先建立狗類別，類別中有一個事件是OnBarking，而當我們讓狗叫Barking();的時候，他就會觸發這個OnBarking事件。</p><pre><code class=language-cs>class dog
+{
+  public event Action OnBarking;
+  public void Barking()
+  {
+    OnBarking();
+  }
+}
+</code></pre><p>接著我們建立人類別，一開始的建構子我們就參考一隻狗實體，當狗叫事件出現時，就去觸發Scare();方法。</p><pre><code class=language-cs>class human
+{
+  public human(dog d)
+  {
+    d.OnBarking += Scare;
+  }
+  public void Scare()
+  {
+    Console.WriteLine("Scared!");
+  }
+}
+</code></pre><p>回到主控台，我們建立oldMan1、oldMan2實體，然後都參考到同一隻狗。當狗叫的時候，主控台上就可以看到這兩個老人都同時嚇一跳了！</p><pre><code class=language-cs>static void Main(string[] args)
+{
+  dog oldDog = new dog();
+  human oldMan1 = new human(oldDog);
+  human oldMan2 = new human(oldDog);
+  oldDog.Barking();
+}
+</code></pre><p>執行畫面如下圖：</p><p><img src=https://content.slashview.com/img/2015/20150909_02.jpg alt="" /></p><h2>取消事件的觀察（取消訂閱）</h2><p>在真實的世界裡，一個人被狗嚇到一定是一開始的突然事件，也就是你不太可能當狗吠叫第二聲還會再嚇到一次，因此我們就用剛才的範例，接著來講事件的取消觀察、取消訂閱。</p><p>當一個人被同一隻實體的狗嚇到後，就不會在嚇到了，因此我們在嚇到的事件中，去取消訂閱。而因為我們要共用建構子中引入的狗實體，因此我們要把狗實體的指標拉升到全類別都可存取的範圍。</p><pre><code class=language-cs>class human
+{
+  dog _d;
+  public human(dog d)
+  {
+    _d = d;
+    _d.OnBarking += Scare;
+  }
+  public void Scare()
+  {
+    Console.WriteLine("Scared!");
+    _d.OnBarking -= Scare;
+  }
+}
+</code></pre><p>然而，每次當狗吠叫時，Barking();方法每次都會去呼叫一次OnBarking();，我們可以從一開始的程式碼觀察到，Action OnBarking一開始根本就是一個空的匿名方法，更正確地來說根本是null才對。而如果我們去將唯一的訂閱方法Scare();從OnBarking中拿掉，然後又去呼叫OnBarking();，這馬上就會產生NullException了，因此，我們最好做一下檢查是否為null的防錯機制。</p><pre><code class=language-cs>class dog
+{
+  public event Action OnBarking;
+  public void Barking()
+  {
+    if (OnBarking != null)
+      OnBarking();
+  }
+}
+</code></pre><p>接下來就是實驗時刻了，無論這隻狗吠多少次聲音，兩個老人永遠只會嚇一跳！</p><pre><code class=language-cs>static void Main(string[] args)
+{
+  dog oldDog = new dog();
+  human oldMan1 = new human(oldDog);
+  human oldMan2 = new human(oldDog);
+  oldDog.Barking();  //有用；會嚇一跳
+  oldDog.Barking();  //無用
+  oldDog.Barking();  //無用
+  oldDog.Barking();  //無用
+  oldDog.Barking();  //無用
+}
+</code></pre><p>補充一下！如果你真的懶得寫if (OnBarking != null)，你也可以選擇建立一個空白的匿名函式來當底，只是我懶得去確定到底是每一次都去檢查是否null的效率比較高，還是每一次都去跑一個空的匿名函式效率比較高。實作上建議還是使用檢查null這個方式比較好，因為你永遠不知道引用你的類別元件的使用者，要怎麼惡搞你的元件？（例如連你預設的空白匿名方法，都把它移除光了！）</p><pre><code class=language-cs>class dog
+{
+  public event Action OnBarking = () => { };
+  public void Barking()
+  {
+      OnBarking();
+  }
+}
+</code></pre><h6>ObserverPattern PublishAndSubscribePattern</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

@@ -1,0 +1,102 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>使用C#取得Client端非IPv6的IP（非::1或127.0.0.1）</h1><p>當在本機用VisualStudio開發ASP.NET網站時，常常會遇到用使用System.Web.HttpContext.Current.Request.UserHostAddress;時，就會遇到回傳本機IP的問題（通常是::1或127.0.0.1），這會讓一些針對IP所進行的判斷程序出現異常，因此這一篇文章就是要討論有關於這方面的解決方案。</p><h2>透過C#取得本機端的真實IP</h2><p>在.NET的System.Net.Dns命名空間中，存在著可以存取到本機所有IP的方法，因此我在Console中寫下下列的範例程式，供給大家參考。</p><pre><code class=language-cs>using System;
+using System.Linq;
+using static System.Console;
+namespace Simply
+{
+  class Program
+  {
+    public static void Main()
+    {
+      foreach (var oItem in ClientIP.getList)
+      {
+        WriteLine("是否為私有：" + oItem.bIsPrivate);
+        WriteLine("是否為本機：" + oItem.bIsLocal);
+        WriteLine("是否為IPv6：" + oItem.bIsIPv6);
+        WriteLine("ＩＰ位址：" + oItem.cValue);
+        WriteLine("－－－－－");
+      }
+      Read();
+    }
+  }
+
+  /// /// 取得Client端IP類別
+  /// 
+  public class ClientIP
+  {
+    public static System.Collections.Generic.List getList
+    {
+      get
+      {
+        System.Collections.Generic.List oData = new System.Collections.Generic.List();
+        System.Net.IPHostEntry oClient = System.Net.Dns.GetHostEntry(System.Net.Dns.GetHostName());
+        foreach (System.Net.IPAddress oItem in oClient.AddressList)
+        {
+          oData.Add(new IP()
+          {
+            bIsPrivate = IsPrivate(oItem),
+            bIsLocal = IsLocal(oItem),
+            bIsIPv6 = (oItem.AddressFamily == System.Net.Sockets.AddressFamily.InterNetworkV6) ? true : false,
+            cValue = oItem.ToString()
+          });
+        }
+        return oData;
+      }
+    }
+
+    /// /// 檢查是否為私有IP
+    /// 
+    private static bool IsPrivate(System.Net.IPAddress oIPAddress)
+    {
+      //如果不是IPv4就踢出去
+      if (oIPAddress.AddressFamily != System.Net.Sockets.AddressFamily.InterNetwork) { return false; }
+      int[] iIP;
+      try
+      { //分割並利用LINQ驗證IP正確性
+        iIP = oIPAddress.ToString().Split(new String[] { "." }, StringSplitOptions.RemoveEmptyEntries).Select(s => int.Parse(s)).ToArray();
+      }
+      catch
+      { //如果有出錯一律回傳false
+        return false;
+      }
+      //判斷是否為私有IP
+      if
+      (
+        (iIP[0] == 10) ||
+        (iIP[0] == 192 &amp;&amp; iIP[1] == 168) ||
+        (iIP[0] == 172 &amp;&amp; (iIP[1] >= 16 &amp;&amp; iIP[1] &lt;= 31))
+      )
+      { return true; }
+      else
+      { return false; }
+    }
+
+    private static bool IsLocal(System.Net.IPAddress oIPAddress)
+    {
+      if (oIPAddress.AddressFamily == System.Net.Sockets.AddressFamily.InterNetwork)
+      {
+        if (oIPAddress.ToString().IndexOf("127.0.0.1, ::1") != -1)
+        { return true; }
+        else
+        { return false; }
+      }
+      else
+      {
+        if (oIPAddress.IsIPv6LinkLocal || oIPAddress.IsIPv6SiteLocal || oIPAddress.IsIPv6Multicast)
+        { return true; }
+        else
+        { return false; }
+      }
+    }
+  }
+
+  /// /// IP ORM類別
+  /// 
+  public class IP
+  {
+    public bool bIsPrivate;  //是否為私有（只有在IPv4時，才有可能為True）
+    public bool bIsLocal;   //是否為本機IP
+    public bool bIsIPv6;    //是否為IPv6
+    public string cValue;    //IP位址
+  }
+}
+</code></pre><p>基本上我已經建立起一個類別叫做IP，所以你可以從IP中去拿到是否為私有IP？是否為IPv6？並且將其排除</p><p>除了很特別的情況，不然基本上你應該可以很順利的把本機的IPv4的真實IP值抓出來了。</p><p>程式運行畫面如下：</p><p><img src=https://content.slashview.com/img/2017/20170104_01.jpg alt="" /></p><p>備註：有一些網站會介紹一些程式碼，用System.Net.Dns下面所屬的方法，利用IP或HostName來尋訪主機的網卡（例如上面的程式碼範例），藉以用Linq取出（或稱為轉換）::1、127.0.0.1或是一些延伸判斷。要注意的是這些論點都是基於你的主機網卡非常的乾淨，也就是網卡數量可能只有一片而定，若你的機器上面有很多網卡（例如虛擬網卡），那這樣的方式根本行不通的，因為你根本不知道你會抓到哪一片網卡所屬的私有ＩＰ，這樣不穩定、因環境而設事的做法，其實毫無道理可言。</p><h6>C# ASP.NET IIS IP IPv4 IPv6 LocalHost ::1 127.0.0.1</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

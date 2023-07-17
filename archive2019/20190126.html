@@ -1,0 +1,35 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>Enum用於位元邏輯運算的寫法</h1><p>知道Enum可以用邏輯運算的寫法來讓程式碼的表達更加的簡明清楚，但一直都沒有機會自己實作一下，今天剛好有這方面的需求，因此將寫法陳列在此，以利日後參考。</p><p><img src=https://content.slashview.com/img/2019/20190126_01.jpg alt="" /></p><h2>關鍵在於套用System.Flags屬性（Attribute）</h2><p>套用了FlagsAttribute後，Enum就可以開始進行位元等級的邏輯運算了。</p><pre><code class=language-cs>[System.Flags]
+enum Day
+{ //其實不一定要用16進制表示，事實上用int也可以達到一樣的效果，在這邊用16進制只是為了效率罷了
+  NonDay = 0x00,
+  MON    = 0x01,
+  TUE    = 0x02,
+  WED    = 0x04,
+  THU    = 0x08,
+  FRI    = 0x10,
+  SAT    = 0x20,
+  SUN    = 0x40
+}
+</code></pre><h2>將Enum進行位元等級的邏輯運算</h2><p>分別可以利用OR（最常使用）、XOR、AND進行運算，其意義在程式碼註解中表示。</p><pre><code class=language-cs>static void Main(string[] args)
+{
+  Day oDay;
+
+  //加法
+  oDay = Day.MON | Day.TUE;
+  WriteLine(oDay.ToString()); //MON, TUE
+
+  //加法（OR）
+  oDay = Day.MON | Day.TUE | Day.FRI | Day.SAT;
+  WriteLine(oDay.ToString()); //MON, TUE, FRI, SAT
+
+  //減法（XOR）
+  oDay = oDay ^ Day.FRI ^ Day.TUE;
+  WriteLine(oDay.ToString()); //MON, SAT
+
+  //若存在則留下（AND）
+  oDay = oDay &amp; (Day.MON | Day.TUE | Day.SUN);
+  WriteLine(oDay.ToString()); //MON
+
+  ReadKey();
+}
+</code></pre><p>這樣寫法最棒的點就是OR運算式的寫法，在程式碼中很簡明易了解。另外就是.ToString()方法直接吐出所有存在列舉中日期的字串也是很讚的。在減法（XOR）的使用方式上要小心，如果你試圖去減一個不存在的列舉值，則依據互斥或閘的運算，反而會適得其反的被加上去，這可能會造成程式上的BUG，請多加注意！</p><p>需要再多加解釋的是AND的使用方式，後面再帶入一個OR的運算可以用來確認「若存在OOO、XXX則將其保留下來」的運算，若有需要時可以多加利用。</p><h6>Enum Boolean LogicOperation System.Flags OR XOR AND</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

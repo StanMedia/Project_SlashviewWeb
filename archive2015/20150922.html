@@ -1,0 +1,52 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>C# 6.0的新語法：StringInterpolation、ExpressionBodiedFunctionMembers、UsingStatic、NullConditionalOperators</h1><p>C# 6.0的新語法，我覺得沒有用的就不寫在這上面了，例如「增強System.Collections.Generic.Dictionary(TKey, TValue) 類別使用方式的Index Initializers」、或者是「將Try-Catch加上過濾器的Exception Filters」，這些我都覺得普普的，所以就沒有介紹了，在這邊我將用一段小小的程式碼來展示其他C# 6.0的新語法的使用方式。</p><p>程式碼如下列所示：</p><pre><code class=language-cs>using static System.Console;
+
+class Car
+{
+  public string cName { set; get; } = "BMW";
+  public string cWheelsBrand { set; get; } = "Bridgestone";
+  public string cBeep(string cSound) => $"{this.cName} says {cSound}";
+}
+class Program
+{
+  static void Main(string[] args)
+  {
+    Car oCar = new Car();
+    WriteLine($"The Car is {oCar.cName, 9}.");
+    WriteLine($"Wow! {oCar.cBeep("BaBaBa")}!");
+
+    WriteLine($"TEST-1: {GetWheelsBrandLength(oCar)}");
+    oCar.cWheelsBrand = null;
+    WriteLine($"TEST-2: {GetWheelsBrandLength(oCar) ?? 0}");
+    oCar = null;
+    WriteLine($"TEST-3: {GetWheelsBrandLength(oCar) ?? 0}");
+
+    Read();
+  }
+
+  static int? GetWheelsBrandLength(Car oCar)
+  {
+    int? oResult = oCar?.cWheelsBrand?.Length;
+    return oResult;
+  }
+}
+</code></pre><p>輸出結果如下：</p><pre><code class=language-txt>The Car is       BMW.
+Wow! BMW says BaBaBa!
+TEST-1: 11
+TEST-2: 0
+TEST-3: 0
+</code></pre><h2>程式碼特別之處如下：</h2><ol><li>String Interpolation：用來增強原本的string.Format();的寫法。我們可以從mian程序中看到$"{變數}"這樣的寫法。字串插值可以進行即時性運算，例如：{變數, int}表示空白幾格、{變數 ?? var}可以用來進行null的判斷，如果變數是null的話就丟出var。</li><li>Expression Bodied Function Members：我們在Car類別中可以明顯看到，資料欄位可以直接在後面宣告預設值，而不用再建立一個建構子來處理。另外，我們也可以看到後面也可以直接銜接黏巴達表示式，例如cBeep(string);方法就是一個很好的例子。</li><li>Using Static：我們可以發現，不需要再寫Console.WriteLine();了，因為一開始已經下了using static System.Console;</li><li>Null Conditional Operators（?.、?[）：見GetWheelsBrandLength函式，我們可以看到一開始下int?回傳值，這表示他可能回傳整數或者是null。接下來的第一行程式碼「int? oResult = oCar?.cWheelsBrand?.Length;」就是這次改革的重點，下面程式碼直接列出等效式，請自己感受一下這種寫法縮得多精簡了。</li></ol><pre><code class=language-cs>if (oCar != null)
+{
+  if (oCar.cWheelsBrand != null)
+  {
+    return oCar.cWheelsBrand.Length;
+  }
+  else
+  {
+    return null;
+  }
+}
+else
+{
+  return null;
+}
+</code></pre><h6>C#6.0 StringInterpolation ExpressionBodiedFunctionMembers UsingStatic NullConditionalOperators</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

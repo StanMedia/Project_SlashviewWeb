@@ -1,0 +1,149 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>改善System.Web.Optimization進行壓縮時，引發將重要註解移除、CSS變數解析出錯、壓縮排序混亂之問題</h1><p>System.Web.Optimization的好大家都知道，但是缺點也是無敵多，與其說是缺點，應該是說創造者賦予它太多相關的規定制度，或者是對於其彈性使用零封裝參數來對應，這在大家實際的應用過程中，是一種非常痛苦的經驗。</p><h2>把重要註解全部移除，但某些情境需要</h2><p>在Javascript、Css的原始檔案裡面，註解通常被區分成兩種，一種是真正的註解，另外一種是版權（版本）宣告，並不是說真的要尊重版權到將其保留（jQuery團隊也不見得會去責難你這間小公司），而是有時候我們真的需要這個plug-in套件的相關資訊時，很不幸的這些資訊都被移除了。當然，你可以選擇關閉不要用壓縮它，或者直接跑回Server端的資訊查看即可，但是，這樣的需求在某些環境下，確實有其存在的必要。</p><p>一個典型的Javascript、Css重要註解（Important Comments）如下：</p><pre><code class=language-js>/*!
+ * 這裡是重要註解，通常記錄著套件名稱、版權與版本資訊
+ */
+</code></pre><p>但...是的，System.Web.Optimization預設就將註解全部移除掉，且沒有留下任何修改通道的參數。唯一的解決方式就是自己把System.Web.Optimization.IBundleBuilder介面全部實作一次，蠻無奈的。</p><h2>CSS變數（Css Variables；Css CustomProperties）的寫法，導致解析出錯</h2><p>這算是一種語法解析器未更新，導致於新的語法出現時，引發剖析失敗的問題。例如在Bootstrap ver.4以後，就開始使用新式的Css Variables寫法，例如下面的範例</p><pre><code class=language-css>:root {
+  --global-color: #666;
+  --pane-padding: 5px 42px;
+}
+</code></pre><p>這樣的「--」寫法將會導致System.Web.Optimization裡面的CSS語法解析器崩潰，進而跳出Exception。同樣的，這樣的問題System.Web.Optimization並沒有留一條退路讓你注入一些設定文件，你必須自己實作System.Web.Optimization.IBundleBuilder介面，然後在Microsoft.Ajax.Utilities.CssSettings()中，將其IgnoreAllErrors。</p><h2>System.Web.Optimization引入Javascript順序問題</h2><p>Javascript這種東西本身就有次序性問題，例如最常見的jQuery Framework一定是擺放在第一位，接著才有可能是套件或其餘的框架之類的。System.Web.Optimization最大的問題就是他自己有實作自己的順序引入規則，但這些規則都是用名稱來決定的，所以往往你會不小心踩到雷，例如你裡面有一個套件名稱相近，會被它識別為JS核心框架，於是它就先將這個錯誤的套件先引入了。</p><p>我認為這個特性蠻好笑的，大概是「過度設計」的最佳典範。試想，會使用System.Web.Optimization來進行整體網站打包作業的，不知道前端的引入順序有幾人？（如果你真的不知道順序，那你還會用System.Web.Optimization嗎？）內建的優先框架排序作業，在根本上就是一個完全沒有必要的設計。</p><p>這個問題算是有解，可以使用注入的方式，把自己實作的介面掛上去即可。</p><h2>將以上問題的解決方式，綜合成下列的類別程式碼：</h2><pre><code class=language-cs>namespace Slashview.Bundle
+{
+  /* -----
+   * 本類別用來實作保留Javascript、Css之重要註解（Important Comments）
+   * 如果沒有此需求，應該回歸使用System.Web.Optimization.XXXBundle。
+   * -----
+   */
+
+  /* ***** Javascript 保留重要註解 實作區 ***** */
+
+  /// &lt;summary>
+  /// （繼承）Javascript Bundle
+  /// &lt;/summary>
+  public class CommentScriptBundle : System.Web.Optimization.Bundle
+  {
+    public CommentScriptBundle(string virtualPath) : base(virtualPath)
+    { this.Builder = new CommentScriptBundler(); }
+
+    public CommentScriptBundle(string virtualPath, string cdnPath) : base(virtualPath, cdnPath)
+    { this.Builder = new CommentScriptBundler(); }
+  }
+
+  /// &lt;summary>
+  /// （實作介面）Javascript Bundler
+  /// &lt;/summary>
+  public class CommentScriptBundler : System.Web.Optimization.IBundleBuilder
+  {
+    public virtual string BuildBundleContent(System.Web.Optimization.Bundle oBundle, System.Web.Optimization.BundleContext oContext, System.Collections.Generic.IEnumerable&lt;System.Web.Optimization.BundleFile> oFiles)
+    {
+      var oContent = new System.Text.StringBuilder();
+      foreach (var oItem in oFiles)
+      {
+        var oFile = new System.IO.FileInfo(System.Web.HttpContext.Current.Server.MapPath(oItem.VirtualFile.VirtualPath));
+        var oMini = new Microsoft.Ajax.Utilities.Minifier();
+        string cTemp = "";
+        using (var oSR = oFile.OpenText()) { cTemp = oSR.ReadToEnd(); }
+        string cSuccess = oMini.MinifyJavaScript(
+          cTemp,
+          new Microsoft.Ajax.Utilities.CodeSettings()
+          {
+            RemoveUnneededCode = true,
+            StripDebugStatements = true,
+            PreserveImportantComments = true,
+            TermSemicolons = true
+          }
+        );
+        if (oMini.ErrorList.Count > 0)
+        { oContent.Insert(0, PrependErrors(cTemp, oMini.ErrorList)); }
+        else
+        { oContent.Append(cSuccess); }
+      }
+      return oContent.ToString();
+    }
+    //準備錯誤資訊
+    private string PrependErrors(string cFile, System.Collections.Generic.ICollection&lt;Microsoft.Ajax.Utilities.ContextError> oErrors)
+    {
+      var oContent = new System.Text.StringBuilder();
+      oContent.Append("\r\n/* Minification Error \r\n");
+      oContent.Append(string.Join(" \r\n", oErrors));
+      oContent.Append("\r\n Minification Error */\r\n");
+      oContent.Append(cFile);
+      return oContent.ToString();
+    }
+  }
+
+  /* ***** CSS 保留重要註解  實作區 ***** */
+
+  /// &lt;summary>
+  /// （繼承）Css Bundle
+  /// &lt;/summary>
+  public class CommentStyleBundle : System.Web.Optimization.Bundle
+  {
+    public CommentStyleBundle(string virtualPath)  : base(virtualPath)
+    { this.Builder = new CommentStyleBundler(); }
+
+    public CommentStyleBundle(string virtualPath, string cdnPath)  : base(virtualPath, cdnPath)
+    { this.Builder = new CommentStyleBundler(); }
+  }
+
+  /// &lt;summary>
+  /// （實作介面）Css Bundler
+  /// &lt;/summary>
+  public class CommentStyleBundler : System.Web.Optimization.IBundleBuilder
+  {
+    public virtual string BuildBundleContent(System.Web.Optimization.Bundle oBundle, System.Web.Optimization.BundleContext oContext, System.Collections.Generic.IEnumerable&lt;System.Web.Optimization.BundleFile> oFiles)
+    {
+      var oContent = new System.Text.StringBuilder();
+      foreach (var oItem in oFiles)
+      {
+        var oFile = new System.IO.FileInfo(System.Web.HttpContext.Current.Server.MapPath(oItem.VirtualFile.VirtualPath));
+        var oMini = new Microsoft.Ajax.Utilities.Minifier();
+        string cTemp = "";
+        using (var oSR = oFile.OpenText()) { cTemp = oSR.ReadToEnd(); }
+        string cSuccess = oMini.MinifyStyleSheet(
+          cTemp,
+          new Microsoft.Ajax.Utilities.CssSettings()
+          {
+            CommentMode = Microsoft.Ajax.Utilities.CssComment.Important,
+            IgnoreAllErrors = true
+          }
+        );
+        if (oMini.ErrorList.Count > 0)
+        { oContent.Insert(0, PrependErrors(cTemp, oMini.ErrorList)); }
+        else
+        { oContent.Append(cSuccess); }
+      }
+      return oContent.ToString();
+    }
+    //準備錯誤資訊
+    private string PrependErrors(string cFile, System.Collections.Generic.ICollection&lt;Microsoft.Ajax.Utilities.ContextError> oErrors)
+    {
+      var oContent = new System.Text.StringBuilder();
+      oContent.Append("\r\n/* Minification Error \r\n");
+      oContent.Append(string.Join(" \r\n", oErrors));
+      oContent.Append("\r\n Minification Error */\r\n");
+      oContent.Append(cFile);
+      return oContent.ToString();
+    }
+  }
+
+  /* ***** 其他 實作區 ***** */
+
+  /// &lt;summary>
+  /// 實作IBundleOrderer介面，藉以重新依照我們自己的意願進行檔案排序
+  /// &lt;/summary>
+  public class CommentBundleOrder : System.Web.Optimization.IBundleOrderer
+  {
+    public virtual System.Collections.Generic.IEnumerable&lt;System.Web.Optimization.BundleFile> OrderFiles(System.Web.Optimization.BundleContext oContext, System.Collections.Generic.IEnumerable&lt;System.Web.Optimization.BundleFile> oFiles)
+    { return oFiles; }
+  }
+}
+</code></pre><p>使用方式範例：</p><pre><code class=language-cs>public static void Register(System.Web.Optimization.BundleCollection oBundles)
+{
+  Slashview.Bundle.CommentScriptBundle oJsBundle = new Slashview.Bundle.CommentScriptBundle("cKey");
+  oJsBundle.Orderer = new Slashview.Bundle.CommentBundleOrder();
+  oJsBundle.Include(
+    "~/include/jquery.js",
+    "~/include/bootstrap.js"
+  );
+  oBundles.Add(oJsBundle);
+}
+</code></pre><h6>System.Web.Optimization ScriptBundle StyleBundle ImportantComments CssVariables IncludeSort</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

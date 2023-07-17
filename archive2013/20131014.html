@@ -1,0 +1,34 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>Hashbang與PushState的比較</h1><p>網頁的前端工程，在2013年代的熱門程度已經是不爭的事實了，事實上，在這個網站上，你可以看到很多前端工程手工鑿作出來的痕跡，不信你按右鍵看一下網頁原始碼就會略知一二。</p><p>在這樣的浪潮下，為了追求更高的使用者操作體驗，AJAX已經變成是網站在實作時，不得不面對的技巧了。但是如果考量到搜尋引擎最佳化（Search Engine Optimization, SEO）後，你就會發現AJAX根本就是致命傷。有鑑於此，搜尋引擎龍頭Google在一篇「<a href=https://developers.google.com/webmasters/ajax-crawling/>Making AJAX Applications Crawlable</a>」文中提出，利用HashBang的實作，可以有效的讓Google把你AJAX後的新內容截取走。</p><p>但HashBang的實作並不是那麼的盡如人意，除了他對使用者在觀看網址上並不是那麼友善之外，另外一點就是它在跨瀏覽器上的支援度並不是那麼的好，像IE瀏覽器就不會自動在新增Hash變更之時，自動幫你push記錄到下一頁的資訊，讓使用者可以透過上／下頁的切換，就可以回去之前的HashBang狀態。尤其是IE8以下並不支援OnHashChange()事件的建立，使得你必須又要再設計一個輪詢的方式來達成跨瀏覽器的功能。下列就是一個很典型的HashBang Update實作：（說真的，實在是蠻蠢的。）</p><pre><code class=language-js>var cPreviousUrl;
+
+$(document).ready(function(){
+  cPreviousUrl = window.location.hash;
+  if("onhashchange" in window){
+    window.onhashchange = updateAjaxInformation;
+  }else{
+    setInterval(oldBrowserOnHashChange, 500);
+  }
+});
+
+function oldBrowserOnHashChange() {
+  if(cPreviousUrl != window.location.hash){
+    cPreviousUrl = window.location.hash;
+    updateAjaxInformation();
+  }
+}
+
+function updateAjaxInformation() {
+  //Do something here ...
+}
+</code></pre><p>到了HTML5時代，推出了Histroy API讓AJAX的SEO問題，一切都變的不同了，這種方法業界統稱為PushState，這種方法完全的解決掉HashBang的一些缺陷。Google當然又出了一篇文章，叫大家可以轉換設計到PushState了！詳見下面影片：</p><div class="ratio ratio-16x9"><iframe class=embed-responsive-item width=560 height=315 frameborder=0 allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture" allowfullscreen src=https://www.youtube.com/embed/yiAF9VdvRPw></iframe></div><p>PushState範例程式可以參考下方：</p><pre><code class=language-js>$(document).ready(function(){
+  window.onpopstate = updateAjaxInformation;
+});
+
+function updateAjaxInformation() {
+  //Do something here ...
+}
+
+$(document).ready(function(){
+  history.pushState({webPage: 1}, "Employee-1", "?id=1");
+  history.replaceState({webPage: 2}, "Employee-2", "?id=2");
+});
+</code></pre><p>但是，有一好沒兩好，前端工程師總是命苦的，PushState要到IE10才有支援，以目前2013推出Windows 8.1的冷門程度狀態來看，相信有很多Windows 7的使用者還是沒更新停留在IE9吧，所以苦命的工程師如果不想被老闆或使用者罵，我認為此時最佳解還是HashBang。</p><p>※ 註：網路上有套件可以一次性解決相容問題，但我沒有用過，有興趣的人可以試看看！可以試著Google：History.js</p><h6>HashBang PushState HTML5 HistoryAPI</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

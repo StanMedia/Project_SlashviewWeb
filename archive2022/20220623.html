@@ -1,0 +1,29 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>利用AASBS徹底解決Windows下藍芽音箱自動關閉問題</h1><p>一直以來都使用用藍芽音箱來做為自己Windows電腦的音源播放設備，用起來一切都好，但有一個非常惱人的問題，就是這個喇叭會因為節能省電的問題，就算播放設備已經透過藍芽配對完成，過了一段時間若沒有播放音樂就會自動關閉（關機、斷線），這問題幾乎發生在所有品牌的藍芽音箱上（畢竟音箱最初的目的是被設計用來可攜，所以節能是必要因素）。</p><p>網路上跟我一樣有「固定放在電腦旁，用USB長時間給個電源就完事了」想法的人不少，但沒有任何有效的解決方案。在不可能為了這件鳥事情大費周章改硬體的前提下，我們往軟體之路解決。</p><h2>利用AASBS透過Windows Serveices來進行背景播放</h2><p>網路上有一些文章教你用播放器去長時間播放空白音樂，但我的要求是無腦解決方案，總不可能每次開機都要去固定跑這隻程式吧？於是我想到自己寫一個Windows服務，就算是登出也會持續在背景播放藍芽喇叭也無法表現的頻率聲音，這樣一來人類聽不到，二來藍芽喇叭就不會自動關機啦。</p><h2>AASBS每分鐘自動播放音頻</h2><p>這支Windows服務原本預計使用 System.Console.Beep(); 來每分鐘（60秒）播放40Hz為期0.25秒的音效，40Hz應該沒有幾個藍芽音箱可以播放得出來，每分鐘起來播放一次這麼短的秒數，不僅適用全部的藍芽音箱斷電策略亦不會造成系統效能上的負擔。但經過實測後發現Windows Services在Login的狀態下根本就不播放Beep，更別提Logout的情況了。後來輾轉在網路上找到大家推薦使用System.Media.SoundPlayer來進行音效播放，由於這個播放器只能播放WAV檔案，因此順手把兩個名為sound（測試音效）與silent（靜音音效）的WAV檔案塞入了資源檔中，也順便修正了一些程式碼。安裝方法如下：</p><p>Step 1. Windows電腦上至少有安裝到.NET Framework 4，並請在電腦環境變數（PATH）中設定下列路徑：「C:\Windows\Microsoft.NET\Framework64\v4.0.30319」。</p><p>Step 2. 下載「<a href=https://content.slashview.com/file/20220623/20220623.zip>AASBS ZIP</a>」檔案，解壓縮後會看到一隻名為「AntiAutoShutdownOfBluetoothSpeakers.exe」的小檔案，由於有崁入WAV資源所以檔案有點大。</p><p>Step 3. 在Windows下面開設一個資料夾把這個EXE檔案放進去（例如），並給予資料夾「Local Service」的權限如下圖。</p><p><img src=https://content.slashview.com/img/2022/20220623_01.jpg alt="" /></p><p>Step 4. 用最高管理權限開啟cmd視窗，並進入到Step 3的資料夾下，進行下列指令將EXE安裝成Windows服務：</p><pre><code class=language-txt>installutil AntiAutoShutdownOfBluetoothSpeakers.exe
+</code></pre><p><img src=https://content.slashview.com/img/2022/20220623_02.jpg alt="" /></p><p>Step 5. 進入Windows服務管理介面，找到「Anti-AutoShutdown Of Bluetooth Speakers」並打開，將服務啟動即可，如下圖：</p><p><img src=https://content.slashview.com/img/2022/20220623_03.jpg alt="" /></p><p>安裝成功後，Windows服務就算是登出的狀態下也是會執行的，沒意外的話藍芽音箱這下永遠都不會因為省電策略而斷線了，播放策略為每60秒播放一次WAV靜音音效。</p><p>程式附帶了測試模式，只要在服務下方啟動參數區打入「test」字樣，即可定時聽到一段鼓聲，如下圖：</p><p><img src=https://content.slashview.com/img/2022/20220623_04.jpg alt="" /></p><h2>附註</h2><p>信不過EXE執行檔案的人，可以利用.NET反組譯的方式去看一下原始碼，或者是直接Copy下列的原始碼自己動手做，反正也沒幾行，只是資源檔案要你自己製作就是了。</p><pre><code class=language-cs>namespace AntiAutoShutdownOfBluetoothSpeakers
+{
+  public partial class Service1 : ServiceBase
+  {
+    private System.Timers.Timer _oTimer = new System.Timers.Timer();
+
+    public Service1()
+    { InitializeComponent(); }
+
+    protected override void OnStart(string[] args)
+    {
+      System.IO.UnmanagedMemoryStream oResource = Resource.silent;
+      if (args != null &amp;&amp; args.Length == 1 &amp;&amp; args[0] == "test")
+      { oResource = Resource.sound; }
+      var oPlayer = new System.Media.SoundPlayer(oResource);
+      _oTimer.Interval = 60000;
+      _oTimer.Elapsed += (oSender, eArgs) => { oPlayer.Play(); };
+      _oTimer.Start();
+    }
+
+    protected override void OnStop()
+    {
+      _oTimer.Stop();
+      _oTimer = null;
+    }
+  }
+}
+</code></pre><h6>Windows Bluetooth Speakers Players AutoOff AutoShutdown PowerOff Xiaomi 小米藍芽音箱 小米藍芽喇叭 自動關閉 自斷關機 自動關電 解決方案 修正方式</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

@@ -1,0 +1,54 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>利用Powershell修改Windows檔案建立、修改、存取日期</h1><p>程式設計師在進行無論是前端還是後端的Cache設計時，有時候會用到依存檔案日期（e.g. File Modified Dependency）來進行測試，這時候就會遇到一個很困難的問題，就是Windows的檔案日期屬性並沒有一個有效的工具可以讓我們方便測試變更，這時候往往就要去網站找相關的小程式來運行，但又不知道這個小程式是否有病毒只好開VM，為了這個小小的動作真的是被搞得有夠煩，每次只要處理到cache方面的事情我就會遇到這樣的困擾，今天發怒自己用powershell寫一隻script，順便練習一下powershell。</p><p>免安裝程式，利用powershell來變更Windows的檔案建立日期、檔案修改日期、檔案存取日期。</p><p>Step 1. 打開一個具備BOM的UTF-8編碼的空白文字檔案。</p><p>Step 2. 將下列的程式碼貼上去並儲存成「ChangeDate.ps1」，要注意的是PowerShell有出現中文的話，應該要以「UTF8 with BOM」的格式儲存，沒有BOM的話他的語法解析器會爛掉喔。該寫的註解我都寫了，應該都看得懂才對。</p><pre><code class=language-txt>#利用Powershell修正Windows檔案的「建立日期」、「修改日期」、「存取日期」屬性
+#Use Powershell to change Windows files CreationTime, LastWriteTime(a.k.a ModifyDate), LastAccessTime date.
+# -name FileName
+# -date yyyy-MM-dd HH:mm:ss datetime wanna change
+
+param (
+  [string]$name = "",
+  [string]$date = ""
+)
+
+if ([string]::IsNullOrEmpty($name))
+{
+  Write-Host "請指定欲變更「修改日期」的檔案名稱。";
+  exit;
+}
+
+$name = "$($PSScriptRoot)\$($name)";
+if (!([System.IO.File]::Exists($name)))
+{
+  Write-Host "指定的檔案不存在。";
+  exit;
+}
+
+[DateTime]$newDate = New-Object DateTime;
+if ([string]::IsNullOrEmpty($date))
+{
+  $newDate = (Get-Date);
+}
+else
+{
+  if (!([DateTime]::TryParseExact(
+    $date,
+    "yyyy-MM-dd HH:mm:ss",
+    [System.Globalization.CultureInfo]::InvariantCulture,
+    [System.Globalization.DateTimeStyles]::None,
+    [ref]$newDate)
+  ))
+  {
+    Write-Host "欲變更的日期格式不正確。";
+    exit;
+  }
+}
+
+#變更檔案之「修改日期」屬性
+$file = Get-Item $name;
+$file.CreationTime   = $newDate;  #建立日期
+$file.LastWriteTime  = $newDate;  #修改日期
+$file.LastAccessTime = $newDate;  #存取日期
+Write-Host "成功將「$($name)」之修改日期變更為「$($newDate.ToString("yyyy-MM-dd HH:mm:ss"))」。";
+</code></pre><h2>使用方式</h2><p>Step 1. 進入powershell，或進入cmd輸入powershell切換過去也行。</p><p>Step 2. 輸入下列指令</p><pre><code class=language-txt>//變更成當下電腦時間
+.\ChangeDate.ps1 -name 檔案名稱
+</code></pre><pre><code class=language-txt>//變更成指定時間
+.\ChangeDate.ps1 -name 檔案名稱 -date "2020-05-15 12:34:56"
+</code></pre><p>若只需要變更檔案建立日期、檔案修改日期、檔案存取日期之中的某一項目，可以自己用#把指令碼註解掉就可以了。</p><h2>檔案下載</h2><p>如果看不懂上面在寫甚麼的人，也可以透過 <a href=https://content.slashview.com/file/20200515/ChangeDate.zip>檔案下載 FileDownload</a> 的方式取得。</p><h6>Windows PowerShell WindowsFiles FileCreationDate FileModifyDate FileAccessDate NoNeedSoftware GreenSoftware 3rdSoftware Safty NoVirus</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

@@ -1,0 +1,29 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>Bootstrap 4讓按鈕在行動裝置時期才轉換成btn-block模式</h1><p>Bootstrap 4的Grid系統中，有關於按鈕的配置讓我很困擾，就是當系統在同一列div（col-12）內提供的多數量的按鈕並且讓其自適性化大小RWD流動排列，但又想要讓它在行動裝置上變成btn-block方式的排列，以目前的Bootstrap Class提供的類別來說不太可能辦的到。</p><p><img src=https://content.slashview.com/img/2020/20200316_01.jpg alt="" /></p><h2>需求：讓按鈕群能夠流動性的排列</h2><p>前端UI布局目標就是要讓為數眾多的按鈕，可以在桌上型電腦模式下，依照按鈕的字面長度自適性化的延伸或縮短，但當至手機裝置時，就將其轉換成btn-block模式，讓其可以在手機模式下每個按鈕一行行的條列顯示。</p><pre><code class=language-html>&lt;div class="text-center col-12 mt-4">
+  &lt;a href="#" class="mt-1 btn btn-lg btn-primary">&lt;i class="fab fa-apple fa-fw">&lt;/i> 按鈕Ａ&lt;/a>
+  &lt;a href="#" class="mt-1 btn btn-lg btn-danger">&lt;i class="fab fa-aws fa-fw">&lt;/i> 按鈕Ｂ&lt;/a>
+  &lt;a href="#" class="mt-1 btn btn-lg btn-dark">&lt;i class="fab fa-microsoft fa-fw">&lt;/i> 按鈕Ｃ&lt;/a>
+  &lt;a href="#" class="mt-1 btn btn-lg btn-warning">&lt;i class="fab fa-docker fa-fw">&lt;/i> 按鈕Ｄ&lt;/a>
+  &lt;a href="#" class="mt-1 btn btn-lg btn-success">&lt;i class="fab fa-github fa-fw">&lt;/i> 按鈕Ｅ&lt;/a>
+&lt;/div>
+</code></pre><p>這樣做的好處是在一般寬度夠的情況，可以如同下圖這樣排列：</p><p><img src=https://content.slashview.com/img/2020/20200316_02.jpg alt="" /></p><p>但在按鈕數量暴增時，按鈕會自動被擠下去（圖片中用寬度來模擬按鈕變多的情況），這對一個工程師來說是很重要的，美醜一回事，但系統功能按鈕不可消失啊！</p><p><img src=https://content.slashview.com/img/2020/20200316_03.jpg alt="" /></p><p>好了，但在手機這麼小的寬度下，這樣的流動布局已經無意義了。這時候我們會需要每一列一個按鈕的布局，當你去查詢Bootstrap 4的文件時，它會叫你使用btn-block類別，但「一次btn-block，終身btn-block」啊！內建類別沒有因應螢幕的寬度才btn-block的解法。</p><p>經過搜尋，Bootstrap作者群已經明確的表示（<a href=https://github.com/twbs/bootstrap/issues/13647>btn-block class for different breakpoints #13647</a>）那是你家的事情，最後一句話還給你放話挑釁哩！大家也可以從討論串中看出，到2014年就Closed掉的Issues到2019年還有人在那邊+1，表示大家都很需要這個需求啊！</p><pre><code class=language-txt>mdo commented on 23 May 2014
+@cvrebert We make one, folks will want all the rest of them. Plus it's a class that can be mixin-ed for folks who want it responsive. That doesn't account for every use case, but I don't think that's our goal anyway.
+
+Make sense or am I being a stickler?
+</code></pre><h2>生命總會自己找到出口</h2><p>如果你的HTML裡面的按鈕是A標籤，那恭喜可以使用下列的類別套入解決，答案如下：</p><pre><code class=language-css>d-block d-md-inline-block
+</code></pre><p>套入後的結果，果然利用BS4 CSS的inline-block類別巧妙地解決掉了。在低於md寬度下的按鈕一律都被d-block化了。</p><p><img src=https://content.slashview.com/img/2020/20200316_04.jpg alt="" /></p><p>但是如果你的HTML裡面的按鈕是傳統的button標籤，帶有不同的type（button、submit），這下問題又出現了。</p><pre><code class=language-html>&lt;div class="text-center col-12 mt-4">
+  &lt;button type="submit" class="mt-1 btn btn-lg btn-primary d-block d-md-inline-block">&lt;i class="fab fa-apple fa-fw">&lt;/i> 按鈕Ａ&lt;/button>
+  &lt;button type="button" class="mt-1 btn btn-lg btn-danger d-block d-md-inline-block">&lt;i class="fab fa-aws fa-fw">&lt;/i> 按鈕Ｂ&lt;/button>
+  &lt;button type="submit" class="mt-1 btn btn-lg btn-dark d-block d-md-inline-block">&lt;i class="fab fa-microsoft fa-fw">&lt;/i> 按鈕Ｃ&lt;/button>
+  &lt;button type="button" class="mt-1 btn btn-lg btn-warning d-block d-md-inline-block">&lt;i class="fab fa-docker fa-fw">&lt;/i> 按鈕Ｄ&lt;/button>
+  &lt;button type="submit" class="mt-1 btn btn-lg btn-success d-block d-md-inline-block">&lt;i class="fab fa-github fa-fw">&lt;/i> 按鈕Ｅ&lt;/button>
+&lt;/div>
+</code></pre><p>button標籤沒有辦法因為d-block類別的引入而產生寬度的變化，從下圖中可以發現是block化了沒錯，但是寬度還是依照文字的長度適性化了。</p><p><img src=https://content.slashview.com/img/2020/20200316_05.jpg alt="" /></p><h2>祭出大招：依照media加入新的CSS類別</h2><p>在Medium裝置（≥768px）之後，讓自訂的「btn-block-sm」CSS類別生效，並將套用該類別的HTML元素一律進行block設定與寬度的變更，也就是SM（Small）、XS（Extra small）兩種模式都會中獎。</p><pre><code class=language-css>&lt;style>
+  @media (max-width: 767px)
+  {
+    .btn-block-sm {
+      display: block;
+      width: 100%;
+    }
+  }
+&lt;/style>
+</code></pre><p>完工後，button們已經乖乖地聽我們的話，在sm、xs模式下，乖乖地把寬度擴展到100%了。</p><p><img src=https://content.slashview.com/img/2020/20200316_06.jpg alt="" /></p><p>瞧瞧HTML、CSS、JS發展迄今的這場鬧劇，可憐哪～</p><h6>Boostrap BS3 BS4 BS5 Button btn-block btn-block-xs btn-block-sm CssHack</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

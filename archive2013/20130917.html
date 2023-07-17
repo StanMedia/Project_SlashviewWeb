@@ -1,0 +1,9 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>SQL筆記：在SQL中查詢某個主鍵欄位值於資料表中重覆之語法</h1><p>這種情況很常發生在給使用者匯入某一批資料時。舉例來說，使用者最喜歡用Excel檔案來編輯然後上傳，儘管之前你以經耳提面命的告訴他說，系統是以身分證號（ID）做為主鍵值（Primary Key, PK），請不要重覆。但是最後你一定會發現這樣的宣告是沒有用的，因為使用者依然會上傳重覆的鍵值資料，然後再用奪命連環Call要你的命。</p><p>最佳的做法是如實的先把資料整個上傳到某暫存資料表，然後再下以下的指令來查詢即可。</p><pre><code class=language-sql>SELECT
+  userID, count(*)
+FROM
+  userUploadData
+GROUP BY
+  userID
+HAVING
+  count(*) > 1
+</code></pre><p>如果還需要進階版消除各資料表之間出現重複的PK問題，那你可能就要好好的拜讀一下這篇文章：<a href=https://support.microsoft.com/zh-tw/help/139444/how-to-remove-duplicate-rows-from-a-table-in-sql-server>如何從SQL Server中的資料表中移除重複的資料列</a></p><p>也可以參考我寫的這一篇文章： <a href=/archive2018/20180214.html>SQL刪除沒有主鍵（Primary Key）的重複資料</a></p><h6>SQL Command PrimaryKey Value Duplicate</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

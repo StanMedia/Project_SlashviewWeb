@@ -1,0 +1,30 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>利用正規表示式，去除字串中開始與結束過多的換行</h1><p>這是一篇極短的小文章，最主要是要利用正規標示式（Regular Expression）去刪除使用者傳入的天地過長的換行字串，並將其替換成一個換行即可。</p><p>舉例來說，有一個使用者在TextArea中輸入下列字串：</p><pre><code class=language-txt>
+
+（上面一堆換行）您好，
+
+Testing...
+
+aaaaaaa
+bbbbbbb
+
+
+謝謝。（下面一堆換行）
+
+
+
+
+</code></pre><h2>利用正規表示式將天地的多餘換行清除乾淨</h2><pre><code class=language-cs>cBody = System.Text.RegularExpressions.Regex.Replace(
+  cBody,
+  @"^[\r\n]+|[\r\n]+$",
+  System.Environment.NewLine
+);
+</code></pre><p>輸出的結果會變成下列：</p><pre><code class=language-txt>（上面一堆換行）您好，
+
+Testing...
+
+aaaaaaa
+bbbbbbb
+
+
+謝謝。（下面一堆換行）
+</code></pre><p>將「開頭的天與結束的地之所有換行」都找出來並取代成一個換行，簡單清爽。</p><h3>延伸參考</h3><ul><li><a href=/archive2021/20211217.html>利用正規表示式，去除字串中所有的換行以及所有的空白</a></li><li><a href=/archive2018/20180421.html>利用正規表示式，去除字串中開始與結束過多的換行</a></li></ul><h6>RegularExpression TextStart TextEnd \r\n NewLine Replace</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

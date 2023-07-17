@@ -1,0 +1,27 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>用Magick.NET產生符合Google PageSpeed Insights要求的圖片</h1><p>因為某些因素還是得回來使用ImageMagick，並通過Google PageSpeed Insights（GPI）對於圖片品質獨到的見解，就開始把Magick.NET的知識拿出來再翻一次並記錄在此。</p><h2>Google PageSpeed Insights中提到的Optimize Images</h2><p>Google對於最佳化影像的網址在這裡：<a href=https://developers.google.com/speed/docs/insights/OptimizeImages#optimizations-for-gif,-png,-and-jpeg-images>Optimize Images</a>，要特別聲明的是這種「標準」隨時會改要有心理準備。所提的「意見標準」如下：</p><ol><li>裡面提到使用一個叫做convert的工具來實作轉換，這個工具就是由ImageMagick出品。</li><li>JPEG壓縮品質不要超過85，個人實測JPEG壓縮品質90以下都會過GPI。</li><li>降低色度（4:2:0）。</li><li>使用漸進式（progressive）檔案格式。</li></ol><p>關於Magick.NET的背景知識</p><ol><li>Magick.NET源自於ImageMagick。</li><li>作者dlemstra算是一個非常有熱情的開發者，回覆問題效率超高且沒有架子。</li><li>作者在各式回覆中建議使用ImageOptimizer類別的LosslessCompress()或Compress()來滿足GPI，但相信我，過不了！</li><li>作者甚至在範例裡面寫了一個<a href=https://github.com/dlemstra/Magick.NET/blob/master/samples/Magick.NET.Samples/LosslessCompression.cs>MakeGooglePageSpeedInsightsHappy()</a>，看到方法名稱快笑死了！</li></ol><h3>產生符合Google PageSpeed Insights要求的圖片</h3><p>其實沒有偏方，因為標準是Google制定的，既然他認為它就是標準我們也只能遵守，因此把建議的指令列出來，跟著建議的參數實作就對了：</p><pre><code class=language-txt>convert INPUT.jpg -sampling-factor 4:2:0 -strip [-resize WxH] [-quality N] [-interlace JPEG] [-colorspace Gray/sRGB] OUTPUT.jpg
+
+convert puzzle.jpg -sampling-factor 4:2:0 -strip -quality 85 -interlace JPEG -colorspace sRGB puzzle_converted.jpg
+</code></pre><p>程式碼如下（壓出來的圖片可過GPI）：</p><pre><code class=language-cs>using (var oImage = new ImageMagick.MagickImage("OriginalImagePath.jpg"))
+{
+  oImage.Settings.SetDefine(ImageMagick.MagickFormat.Jpeg, "sampling-factor", "4:2:0");
+  oImage.ColorSpace = ImageMagick.ColorSpace.sRGB;
+  oImage.Interlace = ImageMagick.Interlace.Jpeg;
+  oImage.Format = ImageMagick.MagickFormat.Jpeg;
+  oImage.Quality = 85;
+  oImage.Strip();
+  oImage.Write("DestinationImagePath.jpg");
+}
+</code></pre><p>由於網路範例不多，在這邊特別順帶提一下串流型態的無損壓縮（Stream LosslessCompress）與存檔的寫法，給大家參考一下。</p><pre><code class=language-cs>var oStream = XXX; //maybe HttpPostedFile.InputStream ...
+using (System.IO.MemoryStream oMS = new System.IO.MemoryStream())
+using (System.IO.FileStream oFS = System.IO.File.Create("DestinationImagePath.jpg"))
+{ //從網路過來的串流幾乎都是唯獨（readonly），但這個ImageOptimizer類別中的方法會採用WriteBack的方式把串流內容覆寫（Overwrite），因此需要複製一份新的串流物件使其可運作
+  oStream.CopyTo(oMS);
+  //把指標指向位置0
+  oMS.Seek(0, System.IO.SeekOrigin.Begin);
+  //呼叫無損壓縮方法
+  var oImage = new ImageMagick.ImageOptimizer();
+  oImage.LosslessCompress(oMS);
+  //串流回寫檔案
+  oMS.CopyTo(oFS);
+}
+</code></pre><h3>相關連結</h3><p><a href=/archive2018/20180529.html>利用Magick.NET來進行圖片的重新採樣與壓縮</a></p><h6>ImageMagick Magick.NET GooglePageSpeedInsights OptimizeImages</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

@@ -1,0 +1,6 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>適用於密碼或機敏資訊屏蔽的正規表示式</h1><p>在講究個人資料保護的年代，在輸出時期就把不必要的資訊屏蔽已經成為必要的工作項目，這篇文章展現出如何不使用Substring的方式，而是利用正規表示式的分析後，留下字串頭尾，將中間的資訊進行隱藏。</p><p><img src=https://content.slashview.com/img/2018/20180112_01.jpg alt="" /></p><h2>利用正規表示式（RegEx）將機敏性資料隱藏</h2><p>最主要就是將頭、中、尾進行群組化（Group），接著將中間的群組直接拋棄就好，程式碼一行就解決了：</p><pre><code class=language-cs>System.Text.RegularExpressions.Regex.Replace(
+  cPassword,
+  @"(^[\s\S]{2})([\s\S]*)([\s\S]{1}$)",
+  "$1***資訊隱藏***$3"
+);
+</code></pre><p>喜歡的人可以自己拿去組合運用。</p><h6>RegularExpression RegEx RegExp Password Email PersonalInformation Hide Block Replace String</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

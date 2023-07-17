@@ -1,0 +1,9 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>SQL筆記：.NET的DateTime與SQL的DateTime是不一樣的型別</h1><p>在.NET Framework中，我們都會很天真的以為，只要把SQL Parameter設定好，變數代入.NET Framework中的DateTime型別為值直接寫入SQL 資料庫內，就可以被完整被保存，這是對的，但只有對一半。</p><p>一般的應用上不會有多大的問題，因為一般的應用上對於時間的精度並不是那麼的絕對。但是如果你是要把某個絕對的時間點記錄，後續又有可能自資料庫取出「證明」，那就會出大錯了！舉例來說：記錄現在時間A，並取A.Ticks()再進行雜湊運算出B，將A時間與B雜湊值，都記錄回資料庫內。出現特定的狀況時，把A取出來運算，得到與B相等的值，就可以證明某些不可否認性之類的事...</p><p>當發生這個情況，你真正取出時就會很訝異，明明Hash(A.Ticks())應該要等於B的東西，為何會不相等？答案就是A存進去SQL後，發生了值變。錯的地方有兩處：</p><ol><li>在秒之後的東西，精密度不一樣。</li><li>SQL DateTime 還會幫你做四捨五入，會出現進位，嚴重一點甚至會產生換天的問題。</li></ol><p>所以結論是，如果要儲存跟.NET DateTime類別完整對應的的變數，要在SQL的該欄位型別設定成DateTime2。詳情請參考http://msdn.microsoft.com/en-us/library/ms187819.aspx</p><pre><code class=language-txt>time
+12:35:29. 1234567
+
+datetime
+2007-05-08 12:35:29.123
+
+datetime2
+2007-05-08 12:35:29.1234567
+</code></pre><h6>.NETFramework SQL DateTime</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

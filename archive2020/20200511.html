@@ -1,0 +1,30 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>在WebForm下使用ModelBinding（PostBack遭遇之問題）</h1><p>在之前的文章中（<a href=/archive2020/20200430.html>進行物件Reflection反射後，將值Value寫入到物件屬性中</a>）我提到用自幹的方式來處理Query String，賦值綁入我們自定義的ORM類別中，這樣的做法若前後端交易的程式碼都是自己在控制的，其實倒也沒有太大的問題。在該篇文章中大家也可以看到其實在屬性型別的轉換上寫的很粗糙很目的導向，這種寫法往往可能會引爆日後不知名的Bug，而這篇文章就正式引用ASP.NET MVC時期所添加的Model Binding相關類別，讓我們不用再重新造輪子。</p><p><img src=https://content.slashview.com/img/2020/20200511_01.jpg alt="" /></p><h2>原生 WebForm Model Binding</h2><p>如果你是單純寫ASPX，那麼可以直接在.NET Framework的函式庫裡面找到這個類別「System.Web.ModelBinding」，基本上所有的Model Binding方法就可以透過這類別來存取實作。例如下方一個簡易的呼叫：</p><pre><code class=language-cs>//ORM
+public class user
+{
+  public string cName  { get; set; }
+  public string iMoney { get; set; }
+}
+
+//Model Binding
+protected void uBtn_Click(object sender, EventArgs e)
+{
+  var oUser = new user();
+  var bIsSuccess = this.TryUpdateModel(
+    oUser,
+    new System.Web.ModelBinding.FormValueProvider(this.ModelBindingExecutionContext)
+  );
+}
+</code></pre><p>當你寫完這段程式碼後，在Client端點擊Button觸發uBtn_Click事件，你會發現oUser其實並沒有被正確的進行Model Binding，盡管你已經進行了id的對應「cName、iMoney」，也嘗試著設定ClientIDMode="Static"，這並不會帶來任何Model Binding的效果，在此我個人未經證實的推測，應該是PostBack的回傳格式根本沒有被FormValueProvider支援，畢竟PostBack回傳的參數基底是以「name」屬性為基準，因此就算你把ID固定起來也無助於name屬性被添加成PostBack的格式（例如：ctl00$oClientContent$cName）。</p><p>基於上述的問題觀察，因此我建議使用Javascript進行AJAX的資料發布，這樣的做法就可以正確的進行工作了。例如：</p><pre><code class=language-js>$("#uBtn").click(function () {
+  $.ajax({
+    url: "YourPage.aspx",
+    type: "POST",
+    data: {
+      cName:  $("#cName").val(),
+      iMoney: $("#iMoney").val()
+    },
+    success: function (data) {
+      //your Message
+    }
+  });
+});
+</code></pre><p>或許有些人會覺得，那失去PostBack後還叫做WebForm嗎？這點說來蠻悲傷的，就算這麼熱愛WebForm架構的我來說，大約在2012年左右就開始慢慢拋棄PostBack的寫法，迄今幾乎已經完全不用了。我早已純粹把ASP.NET WebForm當作是一個運算框架，進行Restful-JSON的拋接其實自由度超高，而且完全可以接上現代的前端框架，因此上面的jQuery AJAX撰寫方式對我來說反而是非常日常的作法，若您還有這方面的困擾，那麼是不是開始該考慮轉換一下WebForm框架的思維或轉換到MVC？</p><h3>相關參考</h3><ul><li><a href=/archive2020/20200430.html>進行物件Reflection反射後，將值Value寫入到物件屬性中</a></li><li><a href=/archive2020/20200511.html>在WebForm下使用ModelBinding（PostBack遭遇之問題）</a></li><li><a href=/archive2020/20200512.html>在WebForm下使用ModelBinding（打造ASHX可用的通用類別）</a></li><li><a href=/archive2022/20220307.html>利用ModelBinding處理FormData回傳表單「多值集合」與「多重檔案」之作法</a></li></ul><h6>ASP.NET WebForm MVC System.Web.ModelBinding ModelBinding BindModel</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

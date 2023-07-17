@@ -1,0 +1,23 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>亂數產生Unicode中文範圍的中文字元</h1><p>今天突然有一個需求需要用到這一方面的程式，大概就是產生一個現在Unicode字碼表內的中文字，然後是用亂數的型態產生的，由於之前對於文字的處理僅止於編碼的轉換（例如Big5轉Unicode），對於Unicode亂數後產生回中文字的功能是連碰都沒碰過，於是上網先搜尋一下必要的知識後，就開始寫個Console的程式來驗證。</p><p>Unicode中文字碼（CJK Unified Ideographs；中日韓統一表意文字）的範圍落在0x4E00至0x9FFF（UTF-32），但迄今（Unicode v11.0）最末的0x9FF0～0x9FFF這16個字仍是空白。有了這些知識後，要產生出這樣構想的程式碼自然就不是問題了！程式碼如下：</p><pre><code class=language-cs>static void Main(string[] args)
+{
+  //呼叫視窗使用Unicode字串來顯示
+  Console.OutputEncoding = System.Text.Encoding.Unicode;
+  //產生1000字Unicode中文字
+  for (int i = 0; i &lt; 1000; i++)
+  { Console.Write(getRandomUnicode().Substring(0, 1)); }
+  Console.Read();
+}
+
+//取得一個亂數的Unicode中文字
+private static string getRandomUnicode()
+{
+  //Unicode中文字範圍
+  int iMin = Convert.ToInt32("4E00", 16);
+  int iMax = Convert.ToInt32("9FFF", 16); //不考慮最末16個空白
+  //隨機一個中文字之整數
+  System.Random oRnd = new System.Random(System.Guid.NewGuid().GetHashCode());
+  int iChar = oRnd.Next(iMin, iMax);
+  //整數轉成Byte[]，再轉成字串
+  return System.Text.Encoding.Unicode.GetString(System.BitConverter.GetBytes(iChar));
+}
+</code></pre><h6>Unicode 中文 文字 字元 亂數產生</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

@@ -1,0 +1,99 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>單例模式（Singleton Pattern）搭配非同步方法與驗證</h1><p>單例模式（Singleton Pattern）或者稱為單一實例模式，是一種設計模式Design Pattern，以往我在寫這種設計模式的時候都是使用lock方式來處理解決，但基於時代的演化，C#已經進化了一堆新特性與語法糖，應該藉機會來練習一下。這篇文章裡面會用到static、task、private constructor、task、async、await等混合概念。</p><p><img src=https://content.slashview.com/img/2020/20200421_01.jpg alt="" /></p><p>會取消採用lock的點是網路上的意見覺得這個會耗損很多運算資源（我個人的感覺是還好不會差很多，倒是拋棄lock寫法會讓程式碼變得更清爽一點；又其實呼叫傳入參數給予<code>isThreadSafe: true</code>其實.NET底層應該還是有實作lock），在這邊以取號機（叫號機）的概念為實作方式，並撰寫多重執行緒來進行驗證，最後證明取號機是否在多重呼叫的環境下，被單一實例規範成自動序列化成呼叫。</p><h2>單一實例類別的實踐：全部都給我排隊！</h2><p>下面這段程式碼裡面的重點是將類別sealed密封化、建構子private私有化，並透過System.Lazy使一個static readonly靜態欄位來初始化與保存NumberMachine的實例，其他的async與await寫法就不多說了。基本上這段程式碼在「實務上」的計數器基底應該依存於資料庫，這樣在可以在Web server concurrent環境下有更好的延展性。</p><pre><code class=language-cs>public sealed class NumberMachine
+{ //藉由.NET 4.0封裝成延遲載入
+  private static readonly System.Lazy&lt;NumberMachine> _oLazy = 
+    new System.Lazy&lt;NumberMachine>(
+      () => new NumberMachine(),
+      isThreadSafe: true  //確保執行緒安全
+    );
+
+  //計數欄位（這個數值在應用時期應該是資料庫的某欄位或統計資料）
+  private int iCount = 0;
+
+  //建構子設成private防止讓外界生成新實例
+  private NumberMachine() { }
+    
+  //累加方法（這個動作在應用時期應該相依於資料庫）
+  private async System.Threading.Tasks.Task&lt;int> AddCount()
+  {
+    //產生隨機延遲
+    await Task.Delay(new Random().Next(0, 5000)); 
+    //計數器累增
+    iCount += 1;
+    return await System.Threading.Tasks.Task.FromResult&lt;int>(iCount);
+  }
+
+  //開放取得NumberMachine實例的靜態方法
+  public async static System.Threading.Tasks.Task&lt;string> GetNumber(string cCaller)
+  {
+    Console.WriteLine($"{cCaller}開始取號");
+    var oMachine = _oLazy.Value;
+    int iTemp = await oMachine.AddCount();
+    return $"{cCaller}取得號碼：{iTemp}";
+  }
+}
+</code></pre><h2>驗證單一實例是否正確運行（抽號碼牌）</h2><p>下面的程式碼就是在Main方法中實驗，同時產生丟出多重執行緒（平行執行緒），觀察上面的單一實例類別是否有正確地幫我們序列化成單一呼叫。</p><pre><code class=language-cs>public static async System.Threading.Tasks.Task Main()
+{
+  //逐一TASK調用測試
+  for (int i = 1; i &lt;= 10; i++)
+  {
+    var cCaller = $"逐一：第{i.ToString("D2")}執行緒";
+    await System.Threading.Tasks.Task.Run(() => {
+      var oTask = NumberMachine.GetNumber(cCaller);
+      oTask.GetAwaiter().OnCompleted(() => {
+        Console.WriteLine($"{oTask.Result}");
+      });
+    });
+  }
+
+  //整包TASKs調用測試
+  var oTasks = new System.Collections.Generic.List&lt;System.Threading.Tasks.Task&lt;string>>();
+  for (int i = 1; i &lt;= 10; i++)
+  { oTasks.Add(NumberMachine.GetNumber($"整包：第{i.ToString("D2")}執行緒")); }
+  await Task.WhenAll(oTasks);
+  foreach (var cResult in oTasks.Select(x => x.Result))
+  { Console.WriteLine(cResult); }
+
+  //藉機等候逐一呼叫的結束回傳值
+  Read();
+}
+</code></pre><p>產生結果如下，透過結果可以看出每次調用執行緒的順序皆不一樣，回傳的結果也不盡相同，但單一實例模式仍然正確地幫我們把所有的平行調用序列化成單一執行，取號的號碼不會重複。</p><pre><code class=language-txt>逐一：第01執行緒開始取號
+逐一：第02執行緒開始取號
+逐一：第03執行緒開始取號
+逐一：第04執行緒開始取號
+逐一：第05執行緒開始取號
+逐一：第06執行緒開始取號
+逐一：第07執行緒開始取號
+逐一：第08執行緒開始取號
+逐一：第09執行緒開始取號
+逐一：第10執行緒開始取號
+整包：第00執行緒開始取號
+整包：第01執行緒開始取號
+整包：第02執行緒開始取號
+整包：第03執行緒開始取號
+整包：第04執行緒開始取號
+整包：第05執行緒開始取號
+整包：第06執行緒開始取號
+整包：第07執行緒開始取號
+整包：第08執行緒開始取號
+整包：第09執行緒開始取號
+逐一：第03執行緒取得號碼：2
+逐一：第09執行緒取得號碼：4
+逐一：第10執行緒取得號碼：7
+逐一：第07執行緒取得號碼：8
+逐一：第08執行緒取得號碼：9
+逐一：第05執行緒取得號碼：12
+逐一：第06執行緒取得號碼：13
+逐一：第04執行緒取得號碼：16
+逐一：第01執行緒取得號碼：18
+整包：第00執行緒取得號碼：10
+整包：第01執行緒取得號碼：17
+整包：第02執行緒取得號碼：6
+整包：第03執行緒取得號碼：15
+整包：第04執行緒取得號碼：14
+整包：第05執行緒取得號碼：3
+整包：第06執行緒取得號碼：5
+整包：第07執行緒取得號碼：11
+整包：第08執行緒取得號碼：1
+整包：第09執行緒取得號碼：19
+逐一：第02執行緒取得號碼：20
+</code></pre><h3>相關連結</h3><ol><li><a href=/archive2017/20170411.html>利用鎖定（Lock）來保持資源在多執行緒間安全的共用與複寫</a></li><li><a href=/archive2018/20180114.html>利用安全且非獨占的方式，將檔案內容讀取或寫回</a></li><li><a href=/archive2018/20181226.html>Task非同步作業的等候與終結</a></li></ol><h6>C# Static Task PrivateConstructor Threading Task Async Await Lazy LazyLoad NumberMachine NumberCallingMachine</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

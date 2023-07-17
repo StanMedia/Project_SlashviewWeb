@@ -1,0 +1,17 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>CSS筆記：CSS動畫的使用方式</h1><p>前端的CSS動畫一直沒有去使用過，今天剛好有個小機會需要利用CSS的動畫功能，因此就來小研究一下語法後，將其記錄在這裡。</p><h2>利用CSS動畫，做出搖晃的鈴鐺</h2><p>其實也是利用關鍵影格的概念來進行，這個以前有用過Flash甚至是更早以前的Director，都是用這個概念在運作，只不過CSS基於先天的限制，因此只能採用完整播放一次動畫的百分比來進行關鍵點的設定，若有這方面觀念的朋友，應該都可以馬上上手。</p><p>設定CSS</p><pre><code class=language-css>&lt;style>
+  //定義關鍵影格當下應進行的屬性，或應該到位的位址
+  @keyframes bellShake {
+      0%  {transform: rotate(-30deg);}
+      //如果你喜歡的話，可以在這之中的關鍵點（例如50%），繼續制定你的相關屬性
+    100%  {transform: rotate(30deg);}
+  }
+  //定義類別
+  .shake {
+    animation-name: bellShake;  //必須連動到關鍵影格的名稱
+    animation-duration: 1s;  //動畫期間秒數
+    animation-direction: alternate;  //動畫方向（這裡設定成完成後逆運動回來）
+    animation-iteration-count: infinite;  //動畫重複次數
+  }
+&lt;/style>
+</code></pre><p>套用端語法如下，基本上就是把「shake」這個CSS類別名稱加入即可。這裡我是採用FontAwesome的解決方案。</p><pre><code>&lt;i class="fa-solid fa-bell shake">&lt;/i>
+</code></pre><h2>運行範例如下</h2><style>@keyframes bellShake{0%{transform:rotate(-30deg)}100%{transform:rotate(30deg)}}.shake{animation-name:bellShake;animation-duration:1s;animation-direction:alternate;animation-iteration-count:infinite}</style><p class=my-3><i class="fa-solid fa-bell fs-1 me-4 text-warning shake"></i> 搖落去！搖落去！</p><p>缺點是，這個鈴鐺動畫只有用到很基本的0%-100%的角度循環轉換，所以搖起來的過程並不是很柔和（盪過去快返回慢），如果要看到比較平順的動畫可以參考下方連結。</p><h3>相關連結</h3><ul><li><a href=/archive2017/20171222.html>CSS筆記：CSS動畫的使用方式</a></li><li><a href=/archive2022/20220325.html>CSS筆記：讓SVG的鈴鐺圖示搖擺起來（swing）</a></li><li><a href=https://l-lin.github.io/font-awesome-animation/>font-awesome-animation</a>裡面有將很多日常會用到的動畫整理在裡面，如果有需要可以直接引入。</li><li><a href=https://unused-css.com/blog/css-shake-animation/>CSS Shake Animation</a>裡面有很多震動類型的動畫，有需要的人也可以參考。</li></ul><h6>CSS Animate NonjQuery Bootstrap FontAwesome Bell Shake Rotate</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

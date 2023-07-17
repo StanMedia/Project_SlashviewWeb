@@ -1,0 +1,111 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>利用AutoMapper進行資料物件（Data Object）的轉換、對轉方法</h1><p>在實際撰寫系統的環境中，我們很常遇見兩個資料物件的對轉問題，舉例來說，我們可能早已經定義好一個ORM（Entity）資料模型並撰寫好共用方法，可以輕易地透過調用這個共用方法來取得該ORM（Entity）資料物件或IEnumerable資料集合。而當程式碼進入開發後期或者是後續維護時期，這時候就會出現很常遇見的：這一頁面的資料表現要用另外一個角度呈現（例如不要顯示成JSON代入到前端的日期格式）、匯出的Excel檔案我要有不一樣的欄位名稱...等需求。</p><p>最困然的抉擇是，面對上述這些維護要求，程式設計師通常避免不了要另建一個相似度極高的垃圾資料模型（而且通常會怒把所有型別都設定成字串string），應用的範圍大概也僅止於這個單一個需求（用完就丟了），最幹的是建立了垃圾資料模型後還要寫一個很髒的程式碼去逐一對應，這個尷尬問題在MVC架構下的Entity與ViewModel也很容易發生，以下是相關說明。</p><p>假設我們有一個資料物件格式如下：</p><pre><code class=language-cs>public class Source
+{
+  public int iAutoIndex { get; set; }
+  public string cLastName { get; set; }
+  public string cFirstName { get; set; }
+  public bool bSex { get; set; }
+  public float iSarary { get; set; }
+  public System.DateTime? dBirthday { get; set; }
+}
+</code></pre><h2>情境：資料物件值的表現問題</h2><p>我們最常遇見的就是JSON格式丟到前端後直接展示被打槍，舉例來說DateTime型別的資料會被以ISO 8601格式（yyyy-MM-ddTHH:mm:ssZ）表示，而幾乎所有的客戶端使用者都不可能會認同這種日期資料展示的方式（這是你們工程師才懂得格式吧？），這時候要嘛你就得在前端乖乖地用Javascript慢慢轉（看要使用日期套件還是自己乖乖取字串），要嘛你就得回後端改，程式碼例如這樣...</p><p>假設我們賦予ORM物件這樣的資料：</p><pre><code class=language-cs>var oData = new System.Collections.Generic.List&lt;Source>(){
+  new Source() {
+    iAutoIndex = 998,
+    cLastName = "王",
+    cFirstName = "小明",
+    bSex = true,
+    iSarary = 123.45F,
+    dBirthday = System.Convert.ToDateTime("2022-05-02 12:34:56")
+  },
+  new Source() {
+    iAutoIndex = 999,
+    cLastName = "李",
+    cFirstName = "小英",
+    bSex = false,
+    iSarary = 789.123F,
+    dBirthday = null
+  },
+};
+</code></pre><p>那我們直轉JSON後會得到下列格式資料：</p><pre><code class=language-json>[
+  {
+    "iAutoIndex": 998,
+    "cLastName": "王",
+    "cFirstName": "小明",
+    "bSex": true,
+    "iSarary": 123.45,
+    "dBirthday": "2022-05-02T12:34:56"
+  },
+  {
+    "iAutoIndex": 999,
+    "cLastName": "李",
+    "cFirstName": "小英",
+    "bSex": false,
+    "iSarary": 789.123,
+    "dBirthday": null
+  }
+]
+</code></pre><p>這種格式打到前端直接顯示肯定會被幹爆，接下來客戶可能會開始要求，名稱要整併再一起、性別要顯示男女、沒填寫生日要顯示未填寫之類的，但其實因為我們正在操作的是系統最末端的JOSN作業，所以不建立新類別物件而直接改一下輸出程式碼倒也不是問題，直接抄起LINQ來新增匿名型別（難不成你想要用Javascript改寫？）：</p><pre><code class=language-cs>var oData2 = oData.Select(x => new {
+  x.iAutoIndex, //維持原樣
+  cName = x.cLastName + x.cFirstName, //新增屬性
+  bSex = x.bSex ? "男" : "女",  //覆寫屬性
+  x.iSarary,  //維持原樣
+  dBirthday = x.dBirthday.HasValue ? x.dBirthday?.ToString("yyyy-MM-dd") : "未填寫"  //覆寫屬性
+});
+</code></pre><p>輸出後的資料果然有依照客戶的要求來進行了：</p><pre><code class=language-json>[
+  {
+    "iAutoIndex": 998,
+    "cName": "王小明",
+    "bSex": "男",
+    "iSarary": 123.45,
+    "dBirthday": "2022-05-02"
+  },
+  {
+    "iAutoIndex": 999,
+    "cName": "李小英",
+    "bSex": "女",
+    "iSarary": 789.123,
+    "dBirthday": "未填寫"
+  }
+]
+</code></pre><p>這樣的修改後看起來沒啥問題了，但其實後面隱性帶出來的問題很大，大家可以看到出現「維持原樣」這邊的註解基本上就是照抄謄過來，而一個普通的ORM類別物件出現二十幾個屬性其實是很常見的，假設你只要修改一個屬性的數值表徵（也就是說原則上只有變動一行而已），這時候謄寫這些重複性超高的二十幾個屬性程式碼就等於是垃圾程式碼了。</p><h2>解法：利用AutoMapper來解決</h2><p>AutoMapper可以被利用來快速地進行object-object映射，非常適合用在上述的情境中，尤其是在上述的情境中又繼續發展成進行資料物件的其他更深層的操控作業（例如：匯出特別的EXCEL、更換屬性或欄位名稱...等），以上述的觀念用在AutoMapper的程式碼可以改寫如下：</p><p>１．建立目標資料類別（基本上就是複製Source類別程式碼貼上），可以看得出來故意全部都怒改成string型別：</p><pre><code class=language-cs>public class Target
+{
+  public string iAutoIndex { get; set; }
+  public string cName { get; set; }
+  public string bSex { get; set; }
+  public string iSarary { get; set; }
+  public string dBirthday { get; set; }
+}
+</code></pre><p>２．調用AutoMapper類別，利用MapperConfiguration之CreateMap建立轉換規則，如果沒有特別需求的欄位就不需要特別撰寫，AutoMapper類別會自動幫你對應名稱並且轉換：</p><pre><code class=language-cs>var oMapper = new AutoMapper.Mapper(
+  new AutoMapper.MapperConfiguration(x => {
+    x.CreateMap&lt;Source, Target>()
+      .ForMember(t => t.cName, opt => opt.MapFrom(s => $"{s.cLastName}{s.cFirstName}"))
+      .ForMember(t => t.bSex, opt => opt.MapFrom(s => $"{(s.bSex ? "男" : "女")}"))
+      .ForMember(t => t.dBirthday, opt => opt.MapFrom(s => $"{(s.dBirthday.HasValue ? s.dBirthday.Value.ToString("yyyy-MM-dd HH:mm:ss") : "未填寫")}"))
+      ;
+  })
+);
+//實現自動轉換
+var oData2 = oMapper.Map&lt;System.Collections.Generic.List&lt;Target>>(oData);
+</code></pre><p>３．轉換後輸出JSON樣式（可以看到所有值的型別都變成字串）</p><pre><code class=language-json>[
+  {
+    "iAutoIndex": "998",
+    "cName": "王小明",
+    "bSex": "男",
+    "iSarary": "123.45",
+    "dBirthday": "2022-05-02 12:34:56"
+  },
+  {
+    "iAutoIndex": "999",
+    "cName": "李小英",
+    "bSex": "女",
+    "iSarary": "789.123",
+    "dBirthday": "未填寫"
+  }
+]
+</code></pre><h3>重點筆記：</h3><p>看到這裡可能會有人覺得那這樣用AutoMapper有何了不起，用LINQ Select出另外一種類別的物件也可以啊？沒錯，可是現實的應用上其實你不會在AutoMapper時期寫過多的程式碼，畢竟產生出新的物件「理論上」九成的屬性都會一樣才對，另外大家也可以從上面的程式碼發現，AutoMapper有名稱對應的功能，因此就算屬性不一致也會自動幫你對應上去。</p><p>此外，上面的程式碼中有關於System.DateTime的ForMember區段，那邊的程式碼如果沒有特殊的需求也是可以省略的，因為AutoMapper會自動幫你轉成.ToString("yyyy-MM-dd HH:mm:ss")。</p><p>一般來說最精簡可以寫成這樣：</p><pre><code class=language-cs>var oMapper = new AutoMapper.Mapper(
+  new AutoMapper.MapperConfiguration(x => {
+    x.CreateMap&lt;Source, Target>();
+  })
+);
+//實現自動轉換
+var oData2 = oMapper.Map&lt;System.Collections.Generic.List&lt;Target>>(oData);
+</code></pre><p>此外，AutoMapper還有許多功能可以研究：</p><ol><li>Ignore：放棄某屬性的轉換</li><li>ConvertUsing：客製化轉換過程</li><li>ReverseMap：反轉類別映射（Ａ→Ｂ、Ｂ→Ａ均可）</li><li>Flattening：扁平化類別</li><li>...其他請自行研究發展...</li></ol><h3>相關參考</h3><ul><li><a href=https://docs.automapper.org/en/stable/>AutoMapper官方網站</a></li></ul><h6>ClassToClass ObjectToObject DataObjectToDataObject DataModelToDataModel AutoConvert AutoMapping DTO DataTransferObject</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

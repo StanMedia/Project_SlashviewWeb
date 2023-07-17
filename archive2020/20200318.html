@@ -1,0 +1,35 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>利用ASP.NET WebForm架構接收JSON資料並動態解析</h1><p>廣告台詞說：老藥方陪你走過新時代！這篇文章就是要教你如何在ASP.NET的WebForm架構下，進行JSON的接收與解析工作。說實在WebForm是我很欣賞的架構（MVC這個架構太專注於單一產品網站，導致個人沒有很愛），只是隨著時代潮流慢慢的被淡去，寄望未來的ASP.NET Core Blazor架構可以慢慢的文藝復興嘍。</p><p>廢話不多說，WebForm優異的架構彈性還是可以再戰十年的。</p><h2>在WebForm中收取JSON資料並動態解析</h2><p>收取資料的部分，可以參考2017年的<a href=/archive2017/20171215.html>Payload</a>文章，在那裏面已經有很清楚的過程解釋，在這邊就直接寫出程式碼。</p><pre><code class=language-cs>//ASHX
+public void ProcessRequest(System.Web.HttpContext oContext)
+{ //只支援標準ContentType之JOSN資料傳入
+  if (oContext.Request.HttpMethod.ToUpper() != "POST" || !oContext.Request.ContentType.ToLower().Contains("application/json"))
+  { return; }
+  //讀取JSON
+  string cTemp = string.Empty;
+  using (System.IO.StreamReader oSR = new System.IO.StreamReader(oContext.Request.InputStream))
+  { cTemp = oSR.ReadToEnd(); }
+}
+</code></pre><p>正確的取出到JSON字串後，若有需要正規解析（使用指定好的Data ORM型別），也是請回去參考<a href=/archive2017/20171215.html>Payload</a>文章，這篇是在討論動態型別（Dynamic）的部分。</p><p>既然要討論動態，那就要面對多重格式，一般來說JSON大部分有JSON、JSON Array兩種格式。而因為我們身處於傳統的.NET Framework環境下，沒有.NET Core的System.Text.Json可用，只好乖乖的使用老牌的Newtonsoft.Json嘍。</p><h2>一般JSON格式</h2><p>資料長的如下：</p><pre><code class=language-json>{
+  "cName":"游錫堃",
+  "iMoney":9999
+}
+</code></pre><p>解析程式碼如下：</p><pre><code class=language-cs>//解析一般JSON
+dynamic oJson = Newtonsoft.Json.Linq.JObject.Parse(cTemp);
+//因為是動態型別，因此若有正確傳入預期的資料，可以順利的使用傳入參數嘍～
+string cName = (string)oJson.cName; //游錫堃
+int iMoney = (int)oJson.iMoney;  //9999
+</code></pre><h2>JSON Array格式</h2><p>資料長的如下：</p><pre><code class=language-json>[
+  {
+    "cName":"游錫堃",
+    "iMoney":9999
+  },
+  {
+    "cName":"馬英九",
+    "iMoney":8888
+  }
+]
+</code></pre><p>解析程式碼如下：</p><pre><code class=language-cs>//解析JSON Array
+dynamic oJson = Newtonsoft.Json.Linq.JArray.Parse(cTemp);
+//因為是動態型別，因此若有正確傳入預期的資料，可以順利的使用傳入參數嘍～
+string cName = (string)oJson[1].cName;  //馬英九
+int iMoney = (int)oJson[0].iMoney;  //9999
+</code></pre><h3>參考資料：</h3><ul><li><a href=/archive2017/20171215.html>在ASP.NET WebForm中，擷取利用Request Payload進入的資料</a></li><li><a href=/archive2020/20200304.html>ASP.NET求得目前HTTP來源要求方法（GET、POST...）</a></li></ul><h6>ASP.NET WebForm Payload JSON application/json application/x-www-form-urlencoded multipart/form-data</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

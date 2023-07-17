@@ -1,0 +1,6 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>Windows Workstation開機後啟動程式的登錄檔位置</h1><p>基本上這不是什麼新知識了，只是每次要用的時候都要再找一次很麻煩，只好記錄在這裡了。</p><p>一般來說，普通使用者只要把捷徑加在開始＞啟動就可以了，這種作法是比較進階的使用者在做的事。特別要注意的是，就算你去執行「msconfig」後彈出的視窗，也只能讓你Enable／Disable啟動的程序，並不能夠進行新增與編輯動作。</p><ol><li><p>開啟 regedit 登錄編輯程式。</p></li><li><p>進入下列兩個路徑進行機碼的新增即可：</p></li></ol><pre><code class=language-txt>For Common User:
+HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\Run
+
+For Current User:
+HKEY_CURRENT_USER\SOFTWARE\Microsoft\Windows\CurrentVersion\Run
+</code></pre><h6>Windows Workstation Boot AutoRun</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

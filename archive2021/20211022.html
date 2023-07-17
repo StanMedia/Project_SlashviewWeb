@@ -1,0 +1,31 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>SQL筆記：快速寫入大量資料到資料庫中的方法</h1><p>最近有一個需求是需要在極短的時間內對Microsoft SQL Server中的某張資料表，一次寫入超過一萬筆資料，一開始是想要偷懶使用Dapper回傳的IEnumerable的集合物件直接Insert回寫，結果當然慘不忍睹，Dapper忠實地把你的資料列舉出來一筆筆翻譯成SQL INSERT指令回傳，一萬多筆寫了1x秒還不一定寫得完，後來發現這樣不行勉強包上交易（Transaction）才把時間拉回7秒左右。</p><p>七秒在網頁介面上可是一個不小的等候，上網查詢發現只有安裝需要付費的Dapper Plus才可以辦到Bulk Insert，當下馬上放棄改回經典的ADO.NET來運行。</p><h2>利用ADO.NET的BulkCopy來進行大量資料寫入</h2><p>經典的<a href=https://docs.microsoft.com/zh-tw/dotnet/api/system.data.sqlclient.sqlbulkcopy>System.Data.SqlClient.SqlBulkCopy</a>早就幫你寫好類別方法，快快樂樂的免費使用即可，只要準備好DataTable就可以順利的寫入，一萬筆資料目測不到一秒就完成，超簡單、超直覺、超暴力。</p><p>Step 1. 假設在SQL Server上要被插入資料的資料表，其名稱為TableOnSql，資料結構如下：</p><pre><code class=language-sql>iAutoIndex int (PK; AUTO INCREMENT)
+cName nvarchar(10)
+</code></pre><p>Step 2. 假設在AP端已經有一張DataTable資料表，其名稱為TableOnAp，資料結構如下：</p><pre><code class=language-sql>cNameOthers nvarchar(10)
+</code></pre><p>Step 3. BulkCopy（Bulk Insert）根本不會在乎你的DataTable（TableOnAp）裡面的欄位名稱是什麼，他在乎的是欄位的順序與型別，只要跟TableOnSql資料表的順序與型別錯誤就會馬上報錯，因此以例子中的TableOnAp.cNameOthers很顯然是要對應到TableOnSql.cName，只要是順序對一切就會正確，只可惜在TableOnSql.cName的前端還有一個自動增量的PK名為iAutoIndex擋住，這個我們會在程式碼中解決掉。</p><pre><code class=language-cs>using var oConn = new System.Data.SqlClient.SqlConnection("...");
+using var oTrans = oConn.BeginTransaction();
+try
+{
+  oConn.Open();
+  //寫入大量資料到SQLServer
+  using var oBulk = new System.Data.SqlClient.SqlBulkCopy(oConn, System.Data.SqlClient.SqlBulkCopyOptions.Default, oTrans);
+  oBulk.DestinationTableName ="TableOnSql";
+
+  //為了符合SQL端的TableOnAp資料表，所以硬插入一個新欄位名為iAutoIndex並將其移到第一欄
+  TableOnAp.Columns.Add("iAutoIndex", typeof(Int32)).SetOrdinal(0);
+
+  //測試用途：模擬針對欄位寫入資料
+  //foreach (System.Data.DataRow oRow in TableOnAp.Rows) {
+  //  oRow["iAutoIndex"] = 123;
+  //}
+
+  //寫入到資料庫
+  oBulk.WriteToServer(TableOnAp);
+
+  oTrans.Commit();
+}
+catch (Exception oEx)
+{
+  oTrans.Rollback();
+  throw new System.Exception($"寫入資料庫失敗並回滾：{oEx.Message}");
+}
+</code></pre><h2>SqlBulkCopyOptions.KeepIdentity的意思</h2><p>官方針對SqlBulkCopyOptions.KeepIdentity的中文解釋是：「保留來源識別值。 如果未指定，則識別值依目的地指派。」，以這篇文章的例子就是「如果TableOnAp.iAutoIndex有數值的話，那就用TableOnAp.iAutoIndex當作值；若TableOnAp.iAutoIndex沒有指定值那就以TableOnSql.iAutoIndex的資料定義為準」。</p><p>然而尷尬的是TableOnSql.iAutoIndex是主要鍵值（PK；PRIMARY KEY），PK在伺服器端通常都會被定義成自動增量且不能為null，這就會變成：</p><ol><li>除非你能保證TableOnAp.iAutoIndex內的值都是唯一且不與TableOnSql.iAutoIndex，不然丟上去一定錯（違反PK條件約束）。</li><li>TableOnAp.iAutoIndex就算沒有設定值就直接丟上去也會報錯（DBNull）。</li></ol><h2>SqlBulkCopyOptions.KeepIdentity動作分析表</h2><table class="table table-hover"><thead><tr><th width=32%></th><th width=34%>DataTable之自動增量欄位：有值且為單一值</th><th width=34%>DataTable之自動增量欄位：NULL</th></tr></thead><tbody><tr><td>SqlBulkCopyOptions.KeepIdentity</td><td>違反 PRIMARY KEY 條件約束 'TableOnSql'。無法在物件 'TableOnSql' 中插入重複的索引鍵。陳述式已經結束。</td><td>資料行 'iAutoIndex' 不允許 DBNull.Value。</td></tr><tr><td>SqlBulkCopyOptions.Default</td><td>成功；欄位值依照資料庫設定進行自動增量。</td><td>成功；欄位值依照資料庫設定進行自動增量。</td></tr></tbody></table><h2>結論</h2><p>因此若有PK主要索引鍵的需求，我的建議一律設定成SqlBulkCopyOptions.Default，這樣一來就算TableOnAp.iAutoIndex內的值有被汙染也不需要特別在乎（處理或清洗）。</p><h3>備註</h3><ol><li>如果不想要用欄位的「順序」來進行SqlBulkCopy的話，也可以使用欄位的「名稱」來進行對應，詳見：<a href=https://docs.microsoft.com/zh-tw/dotnet/api/system.data.sqlclient.sqlbulkcopycolumnmappingcollection.add>SqlBulkCopyColumnMappingCollection.Add</a>，例如：oBulk.ColumnMappings.Add("TableOnAp端的iAutoIndex名稱", "TableOnSql端的iAutoIndex名稱");</li><li>插入大數量資料另外有TVP（Table Value Parameter）的模式可使用，但資料庫限制是Microsoft SQL Server 2008以上，若有興趣可以參考黑大的這篇文章：<a href=https://blog.darkthread.net/blog/import-with-sql-tvp/>SQL 2008 TVP資料匯入之火力展示</a>。</li></ol><h6>SQL MSSQL BulkInsert BulkCopy Dapper DapperPlus ADO.NET</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

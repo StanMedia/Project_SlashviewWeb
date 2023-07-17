@@ -1,0 +1,14 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>IIS 7後的網頁壓縮設定（JSON, XML ...）</h1><p>以前IIS 6的壓縮設定，只能用「他媽的煩雜」來形容，有時候設定到最後甘脆就放給它爛不想設定了，反正流量大就大吧！現在到了IIS 7 後一切開始撥雲見日，這時候可能會以人覺得，這有什麼難，就進去把靜態內容跟動態內容勾一勾不就好了，何難之有？可是事實上這樣的動作只能應付IIS自己看的懂的檔案類型，也就是IIS只會壓縮它自己看的懂的檔案，像是html、txt等常見檔案類型。至於新一代的json或xml等檔案（或者是你自己定義的檔案），它是完全不壓縮如實輸出的！</p><p>例如你用到後來會發現，當你在AJAX要吐回XML或者是JSON時會無法真正的進行動態壓縮，有壓沒壓其實真的差蠻多的，有時壓縮率幾近50%以上，真的不誇張。有兩種方法可以在 IIS 7 裡面去細部設定：</p><h2>路徑式的設定</h2><p>到<code>C:\Windows\System32\inetsrv\config</code>找到applicationHost.config（注意有編碼問題，7.5是否有修正未知）。</p><pre><code class=language-xml>&lt;dynamicTypes>
+  &lt;add mimeType="text/*" enabled="true" />
+  &lt;add mimeType="text/*; charset=utf-8" enabled="true" />
+  &lt;add mimeType="message/*" enabled="true" />
+  &lt;add mimeType="message/*; charset=utf-8" enabled="true" />
+  &lt;add mimeType="application/x-javascript" enabled="true" />
+  &lt;add mimeType="application/x-javascript; charset=utf-8" enabled="true" />
+  &lt;add mimeType="application/xml" enabled="true" />
+  &lt;add mimeType="application/xml; charset=utf-8" enabled="true" />
+  &lt;add mimeType="application/json" enabled="true" />
+  &lt;add mimeType="application/json; charset=utf-8" enabled="true" />
+  &lt;add mimeType="*/*" enabled="false" />
+&lt;/dynamicTypes>
+</code></pre><h2>安裝管理包的設定</h2><p>到<a href=http://www.iis.net/download/administrationpack>http://www.iis.net/download/administrationpack</a>下載管理者包：Administration Pack。</p><p>使用方式：Configuration Editor > system.webServer/httpCompression > dynamic Types 然後自己編吧！</p><h2>純IIS介面式的設定</h2><p>若不想要自己去編輯純文字檔案，又不想安裝管理包到你自己的IIS，那麼你有一條最終的路徑可以走，就是從IIS的管理介面去設定：</p><ol><li>開啟IIS，到根設定（不要到站台去喔），點選「設定編輯器」。</li><li>下拉區段，選擇「system.webServer」＞「httpCompression」＞「dynamicType」，打開那個「Count=5」的設定，會彈出一個輸入介面。</li><li>參考「路徑式的設定」，開心地在這個介面上面輸入你要的設定吧。</li></ol><h6>IIS6 IIS7 StaticFile DynamicFile Compression JSON XML</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

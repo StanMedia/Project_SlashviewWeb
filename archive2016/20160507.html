@@ -1,0 +1,202 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>Prowill PD-S326 Plus收據機C#列印程式碼</h1><p>這幾天完成了Prowill PD-S326 Plus收據機的研究與輸出格式化工作，除了安裝外沒有甚麼特別的問題。這裡的程式沒有採用EPSON ESC指令集來控制，而是採用Windows標準的印表機驅動來撰寫，會這樣做的目的是為了日後好維護相容性，否則用ESC指令集當更換硬體時，大部分程式碼都要改寫了，這完全不符合我的偷懶原則。</p><p><img src=https://content.slashview.com/img/2016/20160507_01.jpg alt="" /></p><p>這台機器安裝在Windows 10下，驅動程式安裝完成後，其實你只會看到一個陌生的裝置，叫做「USB Printer」，這台裝置並不是真的印表機，所以Windows根本不認得它。因此，你必須要使用手動「新增印表機」的功能，自己把這台新的印表機串接到USB001之類的通訊埠，這樣才會完成驅動一台「Prowill 32xx Series」標準的Windows印表機，以上是安裝過程的分享。</p><h2>收據機列印程式碼</h2><p>這台機器我對它的輸出格式的期望是，我想要有一個企業LOGO圖，然後收據名稱，然後是要能自動無限新增的明細列表，然後是總金額，然後在印製一些相關資訊以及廣告文字。</p><p>我把這些需求包裝成一個類別如下：（PDS326Plus.cs）</p><pre><code class=language-cs>/// &lt;summary>
+/// 這個類別是針對發票收據列印機而設計的列印類別
+/// 廠牌：Prowill
+/// 型號：PD-S326 Plus
+/// &lt;/summary>
+namespace Slashview.Hardware.Print
+{
+  /// &lt;summary>
+  /// PD-S326 Plus發票收據列印機主要類別檔案
+  /// &lt;/summary>
+  class PDS326Plus
+  {
+    /// &lt;summary>
+    /// Logo圖檔路徑
+    /// 建議不要亂更換圖檔，因為這種低接的機器不若一般事務印表機那麼好調校。如果真的要更換，盡量以600 X 160像素、300 DPI為準。
+    /// &lt;/summary>
+    public string cLogoPath { get; set; }
+    /// &lt;summary>
+    /// 品項名稱以及金額的列舉
+    /// &lt;/summary>
+    public System.Collections.Generic.List&lt;Slashview.Hardware.Print.PDS326PlusData> oItemsList { get; set; }
+    /// &lt;summary>
+    /// 所有品項的加總後之金額
+    /// &lt;/summary>
+    public int iTotalAccount { get; set; }
+    /// &lt;summary>
+    /// 系統資訊
+    /// （是哪個系統來調用這次的列印？）
+    /// &lt;/summary>
+    public string cSystemName { get; set; }
+    /// &lt;summary>
+    /// 作業資訊
+    /// （是從哪一台KIOSK列印出來的？如果是一般電腦，那這邊的資訊可以寫入是由哪個承辦人員操作的。）
+    /// &lt;/summary>
+    public string cOperateInfo { get; set; }
+    /// &lt;summary>
+    /// 廣告字串
+    /// （活動廣告用途，如果給空字串，那麼紙張就不會輸出任何的字語。）
+    /// &lt;/summary>
+    public string cAdWords { get; set; }
+
+    /// &lt;summary>
+    /// 主要建構子
+    /// &lt;/summary>
+    public PDS326Plus()
+    {
+
+    }
+
+    /// &lt;summary>
+    /// 啟動列印程序
+    /// &lt;/summary>
+    public void Print()
+    {
+      /**** 檢查與調整必要資訊 ****/
+      //檢查是否有品項可以列印，如果沒有半個品項就踢出
+      if (oItemsList == null || oItemsList.Count == 0) { throw new System.Exception("沒有任何的項次資訊可供列印。");  }
+      //檢查是否超過金額欄位最大列印長度（包含正負符號、Comma符號）
+      int iPrintLimitLength = 7;
+      foreach (Slashview.Hardware.Print.PDS326PlusData oItem in oItemsList)
+      {
+        if (string.Format("{0:n0}", oItem.iPrice).Length > iPrintLimitLength)
+        { throw new System.Exception(string.Format("品項內所提供之金額，含正負號、千位逗號後，已經超過最大列印極限{0}個字。", iPrintLimitLength.ToString())); }
+      }
+      if (string.Format("{0:n0}", iTotalAccount).Length > iPrintLimitLength)
+      { throw new System.Exception(string.Format("總金額所提供之金額，含正負號、千位逗號後，已經超過最大列印極限{0}個字。", iPrintLimitLength.ToString())); }
+      //檢查是否有沒設定的參數，並適時的調整為空字串
+      if (string.IsNullOrWhiteSpace(cSystemName)) { cSystemName = ""; }
+      if (string.IsNullOrWhiteSpace(cOperateInfo)) { cOperateInfo = ""; }
+      if (string.IsNullOrWhiteSpace(cAdWords)) { cAdWords = ""; }
+
+      /**** 準備列印 ****/
+      System.Drawing.Printing.PrintDocument oDocument = new System.Drawing.Printing.PrintDocument();
+      oDocument.DefaultPageSettings.PaperSize = new System.Drawing.Printing.PaperSize("3InchPaper", 290, int.MaxValue);
+      oDocument.PrintPage += setDocumentContent;  //delegate給setDocumentContent
+      oDocument.Print();
+    }
+
+    /// &lt;summary>
+    /// 製作文件內容程序
+    /// &lt;/summary>
+    /// &lt;param name="sender">&lt;/param>
+    /// &lt;param name="e">&lt;/param>
+    private void setDocumentContent(object sender, System.Drawing.Printing.PrintPageEventArgs e)
+    {
+      //定義相關變數
+      float fPageWidth = 280F;    //紙張最大可列印寬度（以三英吋熱感應紙為基準；290 * 2.54 = 736mm）
+      float fPageHeight = 270F;   //紙張最大可列印高度（以國家規定電子發票之高度為基準；280 * 2.54 = 711mm，加上預設退紙高度，大約可以勉強等於法規電子發票的870mm高度）
+      float fPrintX = 0F;         //當前列印X軸（被用來作為左邊界位移）
+      float fPrintY = 0F;         //當前列印Y軸（必須隨時被記載）
+      float fVertical = 20F;      //垂直行距
+      float fPrintX_Item = 0F;    //品項（表格用）
+      float fPrintX_Price = 216F; //金額（表格用）
+      System.Drawing.Font oFontHeader = new System.Drawing.Font("微軟正黑體", 14F);
+      System.Drawing.Font oFontContent = new System.Drawing.Font("微軟正黑體", 10F);
+      System.Drawing.Font oFontContentSmall = new System.Drawing.Font("微軟正黑體", 8F, System.Drawing.FontStyle.Bold);
+      System.Drawing.Brush oBrush = System.Drawing.Brushes.Black;
+
+      //最佳化繪圖輸出
+      e.Graphics.CompositingQuality = System.Drawing.Drawing2D.CompositingQuality.HighQuality;
+      e.Graphics.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
+      e.Graphics.PixelOffsetMode = System.Drawing.Drawing2D.PixelOffsetMode.HighQuality;
+      e.Graphics.InterpolationMode = System.Drawing.Drawing2D.InterpolationMode.HighQualityBicubic;
+
+      //繪製輸出可視邊界（用來調整版面用）
+      //e.Graphics.DrawRectangle(Pens.Aqua, new Rectangle(1, 1, 280, 270));
+
+      //以離線的方式讀取並列印LOGO圖檔，以免系統將檔案咬死
+      System.Drawing.Image oLogo;
+      using (var oTemp = new System.Drawing.Bitmap(cLogoPath))
+      {
+        var oTemp2 = new System.Drawing.Bitmap(oTemp);
+        oTemp2.SetResolution(400F, 400F);
+        oLogo = oTemp2;
+      }
+      e.Graphics.DrawImage(oLogo, new System.Drawing.PointF(64F, fPrintY));
+      fPrintY += fVertical * 2;
+
+      //繪製單據抬頭
+      e.Graphics.DrawString("電子交易收據憑單", oFontHeader, oBrush, 59F, fPrintY);
+      fPrintY += fVertical * 1.4F;
+
+      //繪製表格標題
+      e.Graphics.DrawString("品項名稱", oFontContent, oBrush, new System.Drawing.RectangleF(fPrintX_Item, fPrintY, fPrintX_Price - fPrintX_Item, fVertical));
+      e.Graphics.DrawString("金額", oFontContent, oBrush, new System.Drawing.RectangleF(fPrintX_Price, fPrintY, fPageWidth - fPrintX_Price, fVertical), new System.Drawing.StringFormat() { Alignment = System.Drawing.StringAlignment.Far });
+      fPrintY += fVertical * 1.15F;
+
+      //繪製表格（上）分隔線
+      e.Graphics.DrawLine(new System.Drawing.Pen(oBrush, 1), fPrintX, fPrintY, 280, fPrintY);
+      fPrintY += fVertical * 0.25F;
+
+      //繪製明細金額
+      foreach (Slashview.Hardware.Print.PDS326PlusData oItem in oItemsList)
+      {
+        e.Graphics.DrawString(oItem.cName, oFontContent, oBrush, new System.Drawing.RectangleF(fPrintX_Item, fPrintY, fPrintX_Price - fPrintX_Item, fVertical));
+        e.Graphics.DrawString(string.Format("{0:n0}", oItem.iPrice), oFontContent, oBrush, new System.Drawing.RectangleF(fPrintX_Price, fPrintY, fPageWidth - fPrintX_Price, fVertical), new System.Drawing.StringFormat() { Alignment = System.Drawing.StringAlignment.Far });
+        fPrintY += fVertical;
+      }
+
+      //繪製表格（下）分隔線
+      fPrintY += fVertical * 0.25F;
+      e.Graphics.DrawLine(new System.Drawing.Pen(oBrush, 1), fPrintX, fPrintY, 280, fPrintY);
+      fPrintY += fVertical * 0.25F;
+
+      //繪製結算金額
+      e.Graphics.DrawString("總收費金額：NT$", oFontContent, oBrush, new System.Drawing.RectangleF(fPrintX_Item, fPrintY, fPrintX_Price - fPrintX_Item, fVertical), new System.Drawing.StringFormat() { Alignment = System.Drawing.StringAlignment.Far });
+      e.Graphics.DrawString(string.Format("{0:n0}", iTotalAccount), oFontContent, oBrush, new System.Drawing.RectangleF(fPrintX_Price, fPrintY, fPageWidth - fPrintX_Price, fVertical), new System.Drawing.StringFormat() { Alignment = System.Drawing.StringAlignment.Far });
+      fPrintY += fVertical * 1.2F;
+
+      //系統日期（單子的列印時間日期）
+      e.Graphics.DrawString(string.Format("列印時間：{0}", System.DateTime.Now.ToString("yyyy/MM/dd HH:mm:ss")), oFontContentSmall, oBrush, fPrintX, fPrintY);
+      fPrintY += fVertical;
+
+      //系統資訊（哪一個系統列印出這張單子）
+      e.Graphics.DrawString(string.Format("系統資訊：{0}", cSystemName), oFontContentSmall, oBrush, fPrintX, fPrintY);
+      fPrintY += fVertical;
+
+      //輸出機器資訊（例如ＫＩＯＳＫ編號）
+      e.Graphics.DrawString(string.Format("作業資訊：{0}", cOperateInfo), oFontContentSmall, oBrush, fPrintX, fPrintY);
+      fPrintY += fVertical;
+
+      //廣告區塊
+      e.Graphics.DrawString(cAdWords, oFontContentSmall, oBrush, new System.Drawing.RectangleF(fPrintX, fPrintY, fPageWidth - fPrintX, e.Graphics.MeasureString(cAdWords, oFontContentSmall).Height * 205F));
+    }
+  }
+
+  /// &lt;summary>
+  /// 傳入給PD-S326 Plus發票收據列印機的資料定義檔案
+  /// Object Rrelational Mapping（ORM）
+  /// &lt;/summary>
+  class PDS326PlusData
+  {
+    /// &lt;summary>
+    /// 品項名稱
+    /// &lt;/summary>
+    public string cName { get; set; }
+    /// &lt;summary>
+    /// 品項之金額
+    /// &lt;/summary>
+    public int iPrice { get; set; }
+  }
+}
+</code></pre><p>類別完成後，接下來只剩主控端的呼叫驗證了，以下是調用的範例程式碼：</p><pre><code class=language-cs>private void button2_Click(object sender, EventArgs e)
+{
+  //寫入資料
+  Slashview.Hardware.Print.PDS326Plus oPrinter = new Slashview.Hardware.Print.PDS326Plus()
+  {
+    cLogoPath = @"D:\Slashview\Sample.png",
+    oItemsList = new System.Collections.Generic.List&lt;Slashview.Hardware.Print.PDS326PlusData> {
+      new Slashview.Hardware.Print.PDS326PlusData() { cName = "麵包", iPrice = 12345 },
+      new Slashview.Hardware.Print.PDS326PlusData() { cName = "手續費", iPrice = 10 },
+      new Slashview.Hardware.Print.PDS326PlusData() { cName = "感光紙費", iPrice = 1 },
+    },
+    iTotalAccount = 12356,
+    cSystemName = "真好吃麵包坊收銀系統",
+    cOperateInfo = "天母分店",
+    cAdWords = "即日起，凡持有真好吃麵包坊貴賓卡之消費者，來電均可贈送真難吃麵包乙顆。"
+  };
+  //送出列印
+  oPrinter.Print();
+}
+</code></pre><h6>Prowill PD-S326Plus PD-S326+ 發票機 收據機 ReceiptPrinters C# .NetFramework</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

@@ -1,0 +1,52 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>Java初探：有關於物件類別的相關名詞介紹</h1><p>Java有許多中譯書本，並沒有仔細的去講解中文名詞跟英語名詞的對照，導致有時候讀起來會恨不得為何不甘脆寫英語名詞就好，以下就藉這個頁面，將許多的名詞好好的統一翻譯一下。</p><p>在不考慮其它exception的情況下，用小小的範例來說明相關翻譯：（請順便注意一下慣用命名法）</p><pre><code class=language-java>public class Calculator
+{
+  //實體資料成員（instance data member）
+  private int sum;
+  
+  //實體方法成員（instance method member）
+  public int runCal(int A, int B)
+  {
+    return A + B;
+  }
+  
+  //實體方法成員（instance method member）
+  public int runCal2(int A, int B)
+  {
+    //實體方法調用類別方法
+    return this.fastCal(A, B);
+  }
+  
+  //類別資料成員（static method member）
+  private static int sum2;
+  
+  //類別方法成員（static method member）
+  public static int fastCal(int A, int B)
+  {
+    //類別方法調用實體方法
+    Calculator oTemp = new Calculator();
+    sum2 = oTemp.runCal(A, B);
+    return sum2;
+  }
+  
+  //類別方法成員（static method member）
+  public static int getFinalResult()
+  {
+    return sum2;  //列出最後的總和狀態
+  }
+  
+  //主運行程序
+  public static void main(String[] args)
+  {
+    //實體型物件操作
+    Calculator oTemp1 = new Calculator();
+    //實體型物件操作-1
+    System.out.println(oTemp1.runCal(1, 2));
+    //實體型物件操作-2
+    System.out.println(oTemp1.runCal2(3, 4));
+    //類別型物件操作-1
+    System.out.println(Calculator.getFinalResult());    
+    //類別型物件操作-2
+    System.out.println(Calculator.fastCal(5, 6));
+  }
+}
+</code></pre><h2>其它相關知識</h2><ol><li>java類別（class）的命名原則，第一個字通常是大寫。</li><li>java實體資料成員、類別資料成員（instance/static data member）的命名原則，第一個字通常是小寫，之後第二個英文單字的字母開始以大寫開頭。（又稱小駝峰式命名法、Pascal命名法）</li><li>java的區域變數沒有預設值，但是實體資料成員、類別資料成員是有預設值的，推測應該是怕物件建立起來後，被外界程式立刻去取用而發生錯誤的關係。</li><li>java類別資料成員、類別方法成員，在運行時就已經被載入到記憶體中，直到程式結束前都不會消失。換句話說，就算所建構的實體物件消失了，類別資料成員、類別方法成員依然會存在於記憶體中。</li><li>java類別方法成員，在運行時不可以直接去存取實體資料成員、實體方法成員，原因很簡單，要存取哪個物件實體？甚至，你確定執行階段有物件實體讓你存取？</li><li>java實體方法成員，在運行時可以直接去存取類別資料成員、類別方法成員，原因很簡單，因為類別資料成員、類別方法成員在運行時，就已經被載入到記憶體中了。</li><li>java建構方法（Constructor）一般不被認定為成員。</li><li>void代表沒有傳回值，這個所有的C-Like語言都是一致的，應該不用再多說了。</li></ol><h6>Java SCJP InstanceDataMember InstanceMethodMember StaticDataMember StaticMethodMember</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

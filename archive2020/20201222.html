@@ -1,0 +1,46 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>Ubuntu架設VPN-PPTP伺服器</h1><p>會寫這篇文章的原因，是因為自己看了Ubuntu官方VPN架設文件（<a href=https://help.ubuntu.com/community/PPTPServer>PPTP Server</a>），怎麼搞也搞不起來，只好裝回當前官網建議的最低版本Ubuntu 16.04 LTS再照著文件做一次，沒想到竟然就可以了，一步步追蹤後才發現rc.local根本沒有起來（某些網站還叫你去裝不需要重新安裝的ppp跟iptables...），只好基於Ubuntu 20.04 LTS再寫一篇記錄，以防日後失憶。</p><h2>安裝Ubuntu 20.04 LTS</h2><p>這個就不用多說了，自己去Ubuntu官網下載安裝Ubuntu伺服器版本，並且進去console後確認伺服器可以連接到WAN。</p><p>Step 1. 起來後第一次登入先用「sudo -i」切換到root身分，以免在那邊不斷sudo來sudo去煩死了（相當於Windows UAC機制）。</p><p>Step 2. 用「apt-get update」把該更新的套件都更新一下。</p><h2>建立rc.local.service服務</h2><p>也有人喜歡用「rc-local.service」這個名稱，無論如何，這個開機後自動執行script的機制不知道在Ubuntu的哪個版本被拔掉了（確定Ubuntu 16.04 LTS時期還有），總之就是要重建這個服務起來。</p><p>Step 3. 建立rc.local.service服務檔案</p><pre><code class=language-txt>nano /etc/systemd/system/rc.local.service
+－－－－－
+[Unit]
+Description=/etc/rc.local Compatibility
+ConditionPathExists=/etc/rc.local
+
+[Service]
+Type=forking
+ExecStart=/etc/rc.local start
+TimeoutSec=0
+StandardOutput=tty
+RemainAfterExit=yes
+SysVStartPriority=99
+
+[Install]
+WantedBy=multi-user.target
+</code></pre><p>Step 4. 建立rc.local指令檔案</p><pre><code class=language-txt>nano /etc/rc.local
+－－－－－
+#!/bin/sh -e
+exit 0
+</code></pre><p>Step 5. 將rc.local轉換成可執行</p><pre><code class=language-txt>chmod +x /etc/rc.local
+</code></pre><p>Step 6. 開機自動啟用rc.local.service服務</p><pre><code class=language-txt>systemctl enable rc.local
+systemctl start rc.local
+</code></pre><h2>建立PPTP VPN服務</h2><p>step 7. 安裝pptpd</p><p>apt-get install pptpd</p><p>step 8. 設定NAT IP分派位址</p><pre><code class=language-txt>nano /etc/pptpd.conf
+－－－－－
+localip 192.168.78.1
+remoteip 192.168.78.100-200
+</code></pre><p>step 9. 更改VPN後端的DNS Services</p><pre><code class=language-txt>nano /etc/ppp/pptpd-options
+－－－－－
+ms-dns 8.8.8.8
+ms-dns 168.95.192.1
+</code></pre><p>step 10. 設定PPTP VPN連線帳號密碼</p><pre><code class=language-txt>nano /etc/ppp/chap-secrets
+－－－－－
+YourAccount * YourOwnPassword *
+</code></pre><p>step 11. 啟動一下服務看看又沒有錯，若沒有錯誤表示正常。</p><pre><code class=language-txt>/etc/init.d/pptpd restart
+</code></pre><p>step 12. 設定IP轉址。（如果沒有設定，會造成連上VPN後卻無法瀏覽WAN）</p><pre><code class=language-txt>nano /etc/sysctl.conf
+－－－－－
+net.ipv4.ip_forward=1
+</code></pre><p>step 13. 重新載入網路設定。（可順便檢查一下IP轉址是否設定正常）</p><pre><code class=language-txt>sudo sysctl -p
+</code></pre><p>step 14. 將iptables指令插入至開機自動執行檔。（注意Ubuntu預設已將eth0網卡名稱轉換成ens33）</p><pre><code class=language-txt>nano /etc/rc.local；記得將下列兩行插入在exit 0之前
+－－－－－
+iptables -t nat -A POSTROUTING -s 192.168.78.0/24 -o ens33 -j MASQUERADE
+iptables -A FORWARD -p tcp --syn -s 192.168.78.0/24 -j TCPMSS --set-mss 1380
+</code></pre><p>step 15. 開機自動啟用PPTP VPN服務</p><pre><code class=language-txt>systemctl enable pptpd.service
+systemctl start pptpd
+</code></pre><p>step 16. reboot，大功告成。</p><p>經過測試，使用Windows 10原生VPN連線程式，或者在Android手機原生VPN連線設定，都可以透過此VPN伺服器進行連線。</p><h3>相關連結：</h3><ul><li><a href=/archive2021/20210602.html>Ubuntu架設VPN-IPsec/L2TP伺服器</a></li></ul><h6>Ubuntu PPTP VPN 架設 Windows Windows10 連線</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

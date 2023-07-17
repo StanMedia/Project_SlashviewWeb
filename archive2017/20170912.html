@@ -1,0 +1,41 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>移除.NET的DataContractJsonSerializer類別輸出JSON時的__type屬性欄位</h1><p>在無法使用JSON.NET的類別，又需要有JSON的相關作業需求時，.NET Framework內建的System.Runtime.Serialization.Json.DataContractJsonSerializer類別，會是你最好的夥伴，但這篇文章不是要教你怎麼使用（初步的使用方法詳見此篇：<a href=/archive2015/20151113.html>.NET Framework官方的JSON類別簡單存取範例</a>），而是在處理使用過程中，如何移除（貼心）出現在JSON中的__type屬性欄位？</p><p>先來看下列的範例程式碼：</p><pre><code class=language-cs>class Program
+{
+  static void Main(string[] args)
+  {
+    Student oStudent = new Student()
+    {
+      cName="小明",
+      cPhone ="0911"
+    };
+
+    System.Runtime.Serialization.Json.DataContractJsonSerializer oJson = new System.Runtime.Serialization.Json.DataContractJsonSerializer(typeof(System.Collections.Generic.List&lt;Student>));
+
+    using (System.IO.MemoryStream oMS = new System.IO.MemoryStream())
+    {
+      oJson.WriteObject(oMS, oStudent);
+      Write(System.Text.Encoding.UTF8.GetString(oMS.ToArray()));
+    }
+  }
+}
+
+public class Student
+{
+  public string cName { get; set; }
+  public string cPhone { get; set; }
+}
+</code></pre><p>從上面的例子可以得知，理論上是要使用typeof(Student)，而程式碼中卻去引用一個公用的泛型類別將Student類別集合化，導致於.NET的DataContractJsonSerializer類別無法識別這是啥合約的匿名物件，因此索性在JSON裡面跟你一次講個明白（這是啥米物件名稱）。所以如此一來，最後輸出的JSON會多出一個__type屬性欄位，輸出如下方所示：</p><pre><code class=language-json>{
+  "__type":"Student:#ConsoleApp1", &lt;&lt; We wanna remove it!
+  "cName":"小明",
+  "cPhone":"0911"
+}
+</code></pre><p>※P.S 這是一個不是很好的範例，但是沒辦法，有時候我們真的會有這方面的需求。</p><h2>如何隱藏DataContractJsonSerializer自動輸出的__type屬性欄位？</h2><p>如果你把問題拋到StackOverflow，可能會得到一堆答案，叫你正規化類別並且好好的編寫合約。但是，有時候就是一個簡單的JSON輸出而已，沒有用匿名類別就很不錯了，還要編寫類別合約，有沒有搞錯？</p><p>其實，附掛參數加上EmitTypeInformation.Never屬性就可以了。</p><p>程式碼部分修改如下：</p><pre><code class=language-cs>//建立序列化參數設定物件
+var oRemoveTypeProperty = new System.Runtime.Serialization.Json.DataContractJsonSerializerSettings();
+//設定轉換時不要顯示類別資訊
+oRemoveTypeProperty.EmitTypeInformation = System.Runtime.Serialization.EmitTypeInformation.Never;
+//建立序列化物件（並且附掛參數）
+System.Runtime.Serialization.Json.DataContractJsonSerializer oJson = new System.Runtime.Serialization.Json.DataContractJsonSerializer(typeof(System.Collections.Generic.List&lt;Student>), oRemoveTypeProperty);
+</code></pre><p>經過上面兩行程式碼的修正後，輸出就變得很乾淨嘍！</p><pre><code class=language-json>{
+  "cName":"小明",
+  "cPhone":"0911"
+}
+</code></pre><h6>DataContractJsonSerializer "__type" ClassName JSON Property Remove Delete</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

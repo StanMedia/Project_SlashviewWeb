@@ -1,0 +1,11 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>有關ERR_UPLOAD_FILE_CHANGED的發生原因與解法</h1><p>最近發現了一個之前沒有處理過的檔案上傳問題，就是當檔案被瀏覽器處理過後，同時間使用者又去修改那個檔案，將會發生瀏覽器等級的報錯，生成原因如下文。</p><h2>使用瀏覽器對檔案進行AJAX上傳報錯議題：ERR_UPLOAD_FILE_CHANGED</h2><p>由下列程序可以觸發這個錯誤：</p><p>Step 1. 於HTML部署一個檔案上傳的INPUT，並指定一個文字檔案給它。</p><p>Step 2. 接著點選送出之類的按鈕，透過AJAX將這個檔案的內容送出（此時瀏覽器認為已經有對這個檔案進行「操作」行為）。</p><p>Step 3. 切換到文字檔，打開這個檔案隨意補上一個字後儲存並關閉。</p><p>Step 4. 再重複進行步驟2的點選按鈕，若此時使用的是jQuery的AJAX就會在error區段報錯。</p><pre><code class=language-txt>jQuery AJAX Error function segment:
+[error]
+Type: Function(jqXHR jqXHR, String textStatus, String errorThrown)
+</code></pre><p>此時如果你去error區段觀看報錯的原因會一頭霧水，因為jqXHR.status給你「0」；textStatus給你「error」，errorThrown給你「空字串」，這是三小？此時打開瀏覽器進入console後才會看到：</p><pre><code class=language-txt>net::ERR_UPLOAD_FILE_CHANGED
+</code></pre><h2>處理方式</h2><p>網路上大都在教你怎麼規避這個錯誤，大致上的作法就是先在第一次對檔案進行操作時，就把檔案快取起來（Cache to BASE-64之類的），但我認為這樣的做法是不對的，萬一使用者的「意志」是要上傳處理他最後一次儲存的資料，你這個程式設計師就死定了。</p><p>因此我的想法是我要捕捉這個錯誤並提示給使用者看，請他們自行負責，但很不幸的是這是瀏覽器本身基於安全機制下的錯誤，Javascript目前我暫時找不到可以攔截的方式，因此建議把上面描述的錯誤特徵來當作判斷，應至少可達成八九不離十的錯誤訊息。例如：</p><pre><code class=language-js>jQuery AJAX segments...
+error: function (jqXHR, textStatus, errorThrown) {
+  if (jqXHR.status === 0 &amp;&amp; textStatus === "error" &amp;&amp; !errorThrown.length)
+  { console.log("所指定的檔案可能已經被修改過，請確認檔案狀態後重新指定。"); }
+},
+...
+</code></pre><h6>Browser Chrome Edge Firefox HTML Input File Upload AJAX Modified Modify Error Catch ERR_UPLOAD_FILE_CHANGED</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

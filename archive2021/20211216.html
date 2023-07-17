@@ -1,0 +1,15 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>SQL筆記：利用迴圈刪除超大量資料</h1><p>偶爾會遇到需要刪除數千萬筆等級的資料表之內部資料的情況，而通常這時候下SQL指令會遇到「刪除到連線逾時」的問題，無論你怎麼下WHERE條件就是無法順利地把資料砍掉，在這種需要超長工作時間的狀況下，正是WHILE迴圈指令的適用之處，這篇文章就是用來說明如何利用SQL的WHILE迴圈指令，順利的將數千萬筆資料進行刪除的方法。</p><h2>利用WHILE與@@ROWCOUNT參數來完成</h2><p>利用迴圈大量刪除資料的SQL指令如下：</p><pre><code class=language-sql>DECLARE @iRow INT
+DECLARE @iDel INT
+DECLARE @cMsg NVARCHAR(100)
+
+SET @iDel = 10000; --DeleteRowsPerTimes
+SET @iRow = 1;  --InitialParameter
+
+WHILE @iRow &lt;> 0
+BEGIN
+  DELETE TOP(@iDel) FROM TableWannaDelete WHERE YourCondition
+  SET @iRow = @@ROWCOUNT
+  SET @cMsg = 'Deleting ... ' + CONVERT(NVARCHAR(100), @iRow)
+  RAISERROR(@cMsg, 0, 1) WITH NOWAIT
+END
+</code></pre><p>程式碼裡面需要特別說明之處為：</p><ul><li>@@ROWCOUNT就是我們常在SSMS裡面看到的「OOOO個資料列受到影響」的那個數值，他特別難搞之處是每一行SQL指令都會影響（更新）到這個變數，因此在上面的SQL程式碼中特別設計了一個整數變數將其暫存與利用。</li><li>在SQL裡面如果下PRINT指令就可以把字串印出在SSMS的「訊息頁籤」中，但這個指令並不會即時執行，而是會透過緩衝區的方式定時拋出，但這樣將會導致SSMS操作端不會看到即時的訊息，在大量資料的運行時期管理者會以為跑到當機了，因此SQL程式碼中改用RAISERROR方法來即時將訊息拋出。</li></ul><p>下圖展示實際測試執行後的畫面，但實際上這種刪除方式應該用在百萬或千萬筆等級的資料刪除，這種幾萬筆應該下指令直接砍就可以了。</p><p><img src=https://content.slashview.com/img/2021/20211216_01.jpg alt="" /></p><h6>MSSQL SSMS DeleteHugeData DeleteHugeRows DeleteLargeData ROWCOUNT SqlPrintWithoutBuffer SqlPrintFlush RAISERROR</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

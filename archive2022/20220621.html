@@ -1,0 +1,5 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>將Windows連接藍芽音箱的音量控制，改由作業系統端控制</h1><p>這個問題困擾我很久了，就是當Windows透過藍芽連接藍芽喇叭播放音樂，但是音量的控制端只能透過藍芽音箱上面的音量按鈕（AVRCP）來調整，調整時候Windows會跳出系統總音量的符號。但，當我們跑去點選Windows的喇叭符號試著調整音量，這時候藍芽音箱是不會理你的。</p><p>上面的模式稱為絕對音量模式（Absolute Volume），而一般來說我們比較習慣的是可以在PC端調整音量，然後藍芽喇叭的音量控制按鈕（＋－符號）調整的是整體的放大功率。（其實手機連接藍芽音箱後也是這樣的運作模式）</p><p>所幸，這問題在Windows上是可以調整解決的。</p><h2>從藍芽音箱奪回Windows的音量控制權</h2><p>請服用下列註冊檔之設定：</p><pre><code class=language-txt>Windows Registry Editor Version 5.00
+
+[HKEY_LOCAL_MACHINE\SYSTEM\ControlSet001\Control\Bluetooth\Audio\AVRCP\CT]
+"DisableAbsoluteVolume"=dword:00000001
+</code></pre><p>設定後重開機，就可以奪回Windows音量控制權了，藍芽音箱上面的音量變成現有音源的放大功率倍數，而Windows的音量調整成為音源輸出至喇叭的功率微調。這樣的設定對我來說可以更直觀、更細微的調整音量大小。</p><h6>Windows Windows10 BluetoothSpeaker VolumeControl OsVolumeControl WindowsVolumeControl Xiaomi 藍芽音箱 藍芽喇叭 小米藍芽音箱 小米藍芽喇叭</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

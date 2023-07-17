@@ -1,0 +1,26 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>快速撰寫C#工作排程模型（Parallel.ForEach）</h1><p>在之前的文章<a href=/archive2016/20160202.html>再論具總量控管之.NET非同步工作排程模型</a>中，我展示了如何利用SemaphoreSlim撰寫具備工作排程的非同步多執行緒程式，但在某些情境裡面其實並不太需要這麼複雜的非同步程式碼。舉例來說，你可能需要批次的把幾千個、特定的小型檔案複製到某一個資料夾中，這時候你就會發現使用ForEach去進行逐一複製是一個慢到想哭的過程。</p><p>那麼.NET Framework 4.0之後推出的System.Threading.Tasks.Parallel.ForEach()靜態方法，是一個非常適合在這種批次情境下的快速多執行緒工作排程。由於程式碼實在簡單到爆炸，所以我就直接把程式碼寫在下方給大家自己意會即可。</p><pre><code class=language-cs>//把你要進行的工作列入IEnumerable(T)裡面
+System.Collections.Generic.List&lt;string> oList = new System.Collections.Generic.List&lt;string>()
+{
+  "AAAAA",
+  "BBBBB",
+  "CCCCC",
+  "DDDDD",
+  "EEEEE",
+  "FFFFF"
+};
+
+//調用Tasks.Parallel幫你一行多工多執行緒化
+System.Threading.Tasks.Parallel.ForEach(
+  //等待處理的工作佇列
+  oList,
+  //設定每次最大執行的數量
+  new System.Threading.Tasks.ParallelOptions() { MaxDegreeOfParallelism = 2 },
+  //Func委派（基本上這邊就寫每個幫你自動開出來的執行緒內要進行的程式，例如：複製檔案）
+  x => {
+    Console.WriteLine($"Now processing in {x}");
+  }
+);
+
+//等到上面執行緒內的工作全部完成，才會再繼續往下進行
+Console.WriteLine("Completed!");
+</code></pre><p>程式碼就這樣，簡單到爆炸吧！如果你的工作並非真的要絕對的非同步，例如複製大量的特定檔案、為所有的影像檔案加上浮水印，那麼這個寫法會是最單純且最好閱讀。</p><h6>async await non-async non-await SemaphoreSlim Tasks.Parallel 平行處理 多工 執行緒</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

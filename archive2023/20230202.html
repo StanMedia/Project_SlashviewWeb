@@ -1,0 +1,56 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>執行外部EXE檔案時考量逾時、路徑錯置、檔案資源釋放之方法</h1><p>每次遭遇到必須利用C#執行外部檔案，而這個外部檔案寫的奇差無比，狀況連連罄竹難書，所以乾脆把以前的知識集結在此篇整理成一個統一方法，日後遇到狀況再隨時修補更新，供後續參考用。</p><h2>運行外部執行檔案時可能會遭遇的問題</h2><p>運用System.Diagnostics.Process處理外部檔案時，常常會遭遇到下列問題：</p><ul><li>基於某些不明原因執行過久，而應用端不可能等這麼久。</li><li>同上，執行至逾時。</li><li>拒絕使用記憶體交換（RedirectStandardOutput）資料方式，堅持使用檔案或資料庫交換。</li><li>使用外部資源來交換資料卻不好好的實作資源關閉，導致明明執行檔都結束了，資源卻未被釋放。</li><li>未考慮本身被引用的地位與可能的資安衝擊，草率的處理<a href=/archive2015/20150608.html>取得程式本身執行期的路徑與檔名</a>之議題。 基於上述議題，結合之前的經驗知識，將運行外部可執行檔案包裝成一個方法，供給日後維護與參考使用。另由於這類型的應用通常都是需要線性的執行，所以在設計上規避掉ASYNC之類的架構，以免搬石頭砸自己的腳。</li></ul><pre><code class=language-cs>public static (bool bIsError, string cMessage) Execute(string cPath, string cExeFileName, string cResultFileName, int iWaitingExecuteSeconds = 6_000)
+{
+  var oResult = (bIsError: true, cMessage: string.Empty);
+  var tEventHandled = new System.Threading.Tasks.TaskCompletionSource&lt;bool>();
+  using var oProcess = new System.Diagnostics.Process()
+  {
+    StartInfo = new System.Diagnostics.ProcessStartInfo()
+    { //設定確實的執行檔運行路徑
+      WorkingDirectory = cPath,
+      FileName = System.IO.Path.Combine(cPath, cExeFileName),
+      //防止利用DLL Hook運行其他認知之外的檔案
+      UseShellExecute = false,
+      //背景執行
+      CreateNoWindow = true,
+    },
+    EnableRaisingEvents = true,
+  };
+  oProcess.Exited += (s, e) =>
+  {
+    var oSender = (System.Diagnostics.Process)s;
+    var dExecuteStart = oSender.StartTime;
+    oProcess.Close();
+    var dCheckFileStart = System.DateTime.Now;
+    while ((System.DateTime.Now - dCheckFileStart).TotalMilliseconds &lt; iWaitingExecuteSeconds)
+    {
+      try
+      { //能夠開啟代表檔案資源已經釋放
+        using var oFile = new System.IO.FileStream(System.IO.Path.Combine(cPath, cResultFileName), System.IO.FileMode.Open, System.IO.FileAccess.Read, System.IO.FileShare.None);
+        break;
+      }
+      catch
+      { System.Threading.Thread.Sleep(500); } //防止執行緒壅塞
+    }
+    //回傳執行緒運行狀況
+    oResult.cMessage = $@"執行成功，運行時間{System.Math.Round((System.DateTime.Now - dExecuteStart).TotalMilliseconds)}ms";
+    tEventHandled.TrySetResult(true);
+  };
+
+  try
+  { //執行EXE檔案
+    oProcess.Start();
+    //超過預設的時間就不等了
+    if (!tEventHandled.Task.Wait(iWaitingExecuteSeconds))
+    { throw new System.Exception($"執行超過{iWaitingExecuteSeconds}毫秒"); }
+    //成功訊息
+    oResult.bIsError = false;
+  }
+  catch (System.Exception oEx)
+  { //失敗訊息
+    oResult.bIsError = true;
+    oResult.cMessage = $"執行錯誤｜{oEx.Message}";
+    oProcess.Close();
+  }
+  return oResult;
+}
+</code></pre><p>方法包裝大概長得像這樣，至於是哪間噁心的公司寫出這種API執行檔我就不講了，多說都是淚，只能祝福那個開發噁心執行檔的開發者離職後，有一天被自己寫的程式碼婊，That's all。</p><h3>相關參考</h3><ul><li><a href=/archive2016/20160517.html>利用C#呼叫一個外部執行檔，並且偵測是否已經完成執行</a></li><li><a href=/archive2017/20170206.html>透過Console執行Exe檔案，並動態取回回傳值</a></li><li><a href=/archive2023/20230202.html>執行外部EXE檔案時考量逾時、路徑錯置、檔案資源釋放之方法</a></li></ul><h6>.NetFramework C# CallEXE CallExecute DetectHadFinish DetectHadExit WaitingTime DataExchange FileExchange FileReleased ResourceReleased</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

@@ -1,0 +1,211 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>Java初探：父類別與子類別在建構時的運行流程</h1><p>在物件導向的建構子，有一項很重要的要點常常被忽略，那就是「建構子是怕事的！」，舉例來說，如果你今天宣告了一個類別，但是沒有進行任何建構子的程式碼撰寫，那麼當你實體化（new）一個物件時，建構子會自動產生，這個大家都知道。但是也就是因為這個「大家都知道」，產生了後面的誤會。</p><p>所謂的誤會就是，當你去實體化一個不存在的建構子時（亦即不存在這個Overloading），這時候你不要以為建構子會自動去產生一個空的程式碼讓你引用，而是會引發編譯錯誤！這個我都稱它為「怕事原則」！例如下面的程式碼：</p><pre><code class=language-java>public class TEST
+{
+  public TEST() { System.out.println("Hi!"); }
+  
+  public static void main(String[] args)
+  {
+    //就算沒有TEST()建構子所有的程式碼，跑這行也不會錯！
+    TEST oTemp1 = new TEST();
+    //編譯與運行都沒問題，因為我們本來就有寫預設建構子
+    TEST oTemp2 = new TEST();
+    //編譯出錯（無論有沒有寫TEST()建構子）
+    //因為找不到Overloading的TEST(String)建構子，加上怕事，所以連預設建構子都不給你了
+    TEST oTemp3 = new TEST("ABC");
+  }
+}
+</code></pre><h2>父子類別的建構子呼叫程序順序</h2><p>不多說什麼，直接用範例比較快！下面這個例子是無誤的，因為父親沒有建構子，因此孩子在實例化時會先去調用父親建構子，形成預設（也就是什麼都沒有），因此孩子再來調用自己的建構子，形成預設（還是什麼都沒有），因此通過編譯啦！</p><pre><code class=language-java>class Father
+{
+  
+}
+
+public class Child extends Father
+{
+  public static void main(String[] args)
+  {
+    Child oTemp = new Child();
+    System.out.println("OK!");
+  }
+}
+</code></pre><p>承上，下例這次父親有一個以String為引數的建構子，依據「怕事原則」，因此孩子在實例化第一時間去調用父親的空建構子當然是失敗的，所以編譯就失敗啦！</p><pre><code class=language-java>class Father
+{
+  Father(String cTemp)
+  {
+    
+  }
+}
+
+public class Child extends Father
+{
+  public static void main(String[] args)
+  {
+    Child oTemp = new Child();
+    System.out.println("OK!");
+  }
+}
+</code></pre><p>再承上，為父親加上一個空的建構子，當然就通過編譯啦！</p><pre><code class=language-java>class Father
+{
+  Father()
+  {
+    
+  }
+  Father(String cTemp)
+  {
+    
+  }
+}
+
+public class Child extends Father
+{
+  public static void main(String[] args)
+  {
+    Child oTemp = new Child();
+    System.out.println("OK!");
+  }
+}
+
+接下來我們試著幫孩子也加入建構子，如下方程式碼！我們刻意把父親的空建構子拿掉，猜猜會發生什麼？答案是當孩子實例化後，會去調用孩子的建構子，而孩子的建構子中並沒有去指定要跑父親的哪一個建構子，依據「怕事原則」，父親類別拒絕提供空建構子，所以當然編譯又錯嘍！
+
+```java
+class Father
+{
+  Father(String cTemp)
+  {
+    
+  }
+}
+public class Child extends Father
+{
+  public Child()
+  {
+  
+  }
+  public static void main(String[] args)
+  {
+    Child oTemp = new Child();
+    System.out.println("OK!");
+  }
+}
+</code></pre><p>承上，這次我們主動的告知孩子的建構子中，要去跑父親的哪一個建構子（使用super()指令），如此一來就合法編譯通過嘍！</p><pre><code class=language-java>class Father
+{
+  Father(String cTemp)
+  {
+    
+  }
+}
+
+public class Child extends Father
+{
+  public Child()
+  {
+    super("RunConstructor!");
+  }
+  public static void main(String[] args)
+  {
+    Child oTemp = new Child();
+    System.out.println("OK!");
+  }
+}
+</code></pre><p>讓我們最後再來看看下面這個程式碼，它編譯是失敗的，猜猜為什麼？</p><pre><code class=language-java>class Father
+{
+  Father(String cTemp)
+  {
+    
+  }
+}
+
+public class Child extends Father
+{
+  public Child()
+  {
+    super("RunConstructor!");
+  }
+  public Child(String cTemp)
+  {
+    //Do Nothing!
+  }
+  public static void main(String[] args)
+  {
+    Child oTemp = new Child("TEST");
+    System.out.println("OK!");
+  }
+}
+</code></pre><p>答案是因為進行new Child("TEST")時，並沒有指定要去super()哪一個Overloading建構子。所以編譯器在編輯期就會跟你說錯誤了。解決的方式有兩種：</p><ol><li>在父類別中建立一個空的建構子。</li><li>在子類別public Child(String cTemp)中建立一個super指向到某一個存在父類別的建構子，例如是super(cTemp);。</li></ol><p>下面來個實際使用super的範例：</p><pre><code class=language-java>class Father
+{
+  private String _UserName;
+  public Father()
+  {
+    _UserName = "John";
+  }
+  public String getName()
+  {
+    return _UserName;
+  }
+}
+
+public class Child extends Father
+{
+  public String cUserName;
+  public Child()
+  {
+    cUserName = "Hi! " + super.getName();
+  }
+  public static void main(String[] args)
+  {
+    Child oTemp = new Child();
+    System.out.println(oTemp.cUserName);
+  }
+}
+</code></pre><p>下面再來另外一個更複雜點的super與this範例：</p><pre><code class=language-java>class Father
+{
+  public String cUserName;
+  public Father(String cTemp1, String cTemp2)
+  {
+    cUserName = "Hello! " + cTemp1 + cTemp2;
+  }
+}
+
+public class Child extends Father
+{
+  public String cUserName;
+  public Child()
+  {
+    this("John", "Cheng");
+  }
+  public Child(String cTemp1, String cTemp2)
+  {
+    super(cTemp1, cTemp2);
+    cUserName = super.cUserName;
+  }
+  public static void main(String[] args)
+  {
+    Child oTemp = new Child();
+    System.out.println(oTemp.cUserName);
+  }
+}
+</code></pre><h2>總結</h2><p>任何的實例過程中，如果子類別有繼承父類別，那麼Java會先想辦法依據子類別之合適的建構子（或許有Overloading），在其中循線去找到被呼叫的父類別建構子，如果沒有任何super(OOOXXX)指令的情況下，他會自動呼叫super()。但是父類別依據怕事原則，如果並沒有對應的空建構子出現，那麼就會出錯。</p><p>如果父類別有對應的建構子、或者有空建構子，那麼這個父類別的建構子中的程式碼會先運行一次，接著Java才會返回子類別的建構子中，開始運行寫在子類別中的建構子中的程式碼。</p><p>如果子類別的建構子，在一開始就試圖用this(OOO, XXX)去導向到其它Overloading的建構子，這是可以的，但最終Java還是會在this(OOO, XXX)這個建構子中，再試著去運行父類別的建構子（無論是super()或是super(OOO, XXX)...等）。如果在this(OOO, XXX)這個建構子中最終找不到任何可運行父類別的建構子，那麼最終還是會編譯錯誤！</p><p>例如下面這個範例，它最終會錯在Child(String cTemp1, String cTemp2)這個建構子運行時，自動隱性的去運行super()，但是因為Father類別並沒有空建構子，按照怕事原則就不提供啦！因此super()的調用就失敗了，所以編譯器是不會讓你通過的！</p><pre><code class=language-java>class Father
+{
+  public String cUserName;
+  public Father(String cTemp1, String cTemp2)
+  {
+    cUserName = "Hello! " + cTemp1 + cTemp2;
+  }
+}
+
+public class Child extends Father
+{
+  public String cUserName;
+  public Child()
+  {
+    this("John", "Cheng");
+  }
+  public Child(String cTemp1, String cTemp2)
+  {
+    cUserName = "BraBra...";
+  }
+  public static void main(String[] args)
+  {
+    Child oTemp = new Child();
+    System.out.println(oTemp.cUserName);
+  }
+}
+</code></pre><h6>Java SCJP SuperClass SubClass Constructor Flow Dependency</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

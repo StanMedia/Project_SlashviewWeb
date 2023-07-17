@@ -1,0 +1,27 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>利用fetch來解決AJAX取得檔案型態（二進制）回傳資料</h1><p>該來的終究是要來，今天又遇到了與之前相同的問題，就是要利用XMLHttpRequest（也就是大家熟悉的AJAX）來進行POST後，取得伺服器端打出來的二進制檔案，例如Excel、ZIP等類型的檔案。</p><h2>強烈建議：利用動態建立Form POST來解決</h2><p>如果你沒有特別「崎嶇」的道路要走，建議用我之前這篇文章處理，由於是採用最標準的HTML Form POST寫法，因此也最高度相容所有的瀏覽器，如果你不想沒事找事做的話，請愛用：<a href=/archive2020/20200210.html>解決AJAX Request沒有辦法收取檔案回應（檔案下載）的問題</a></p><h2>那麼，為何要再寫這篇文章？</h2><p>因為目前遇到下列幾個無解的問題，進而形成死路：</p><ol><li>前端想要精簡收取表單資料的寫法，不想寫兩套（JSON + FormData）收集表單資料的程式碼。</li><li>後端一定要收取前端AJAX送出的「JSON格式」資料，且沒有任何可能再針對Form POST進行相容性的寫法修正。</li><li>後端在「輸出JSON格式的資料」與「輸出二進制檔案資料」的流程程式碼幾乎相同，因盡量精簡化緣故所以太會寫成兩個檔案分開服務。</li></ol><p>而前方的死路就是，XMLHttpRequest（AJAX）只能接收文字型態的回傳訊息，除非要無視IE瀏覽器，選擇新世代支援XMLHttpRequest的responseType: blob設定之瀏覽器（請愛用：<a href=/archive2020/20200210.html>解決AJAX Request沒有辦法收取檔案回應（檔案下載）的問題</a>）。</p><h2>XMLHttpRequest不行，那就換新時代的fetch來試試</h2><p>fetch就是叫瀏覽器幫你建立一條可以用來操作request和response的HTTP pipeline，且因為支援promise讓程式碼寫起來舒服閱讀，不像XMLHttpRequest動不動就出現波動拳程式碼...，程式碼如下請參考：</p><pre><code class=language-cs>var cFileName = "YourDefaultFileName.FileExtensionName";
+fetch(cUrl, {
+  method: "POST",
+  headers: { "Content-Type": "application/json" },
+  body: JSON.stringify(oJSON),
+})
+  .then(oResponse => {
+    var cContentDisposition = oResponse.headers.get("Content-Disposition");
+    var cNameIndexStart = "filename*=utf-8''";
+    var iNameIndexStart = cContentDisposition.indexOf(cNameIndexStart);
+    if (iNameIndexStart !== -1) {
+      cFileName = decodeURIComponent(cContentDisposition.substring(iNameIndexStart + cNameIndexStart.length));
+    }
+    return oResponse.blob();
+  })
+  .then(oBlob => {
+    var oFile = window.URL.createObjectURL(oBlob);
+    var oLink = document.createElement("a");
+    oLink.href = oFile;
+    oLink.download = cFileName;
+    oLink.click();
+    window.URL.revokeObjectURL(oFile);
+  })
+  .catch(oError => {
+    alert(oError);
+  });
+</code></pre><p>程式碼中有幾點需要特別提出來說明：</p><ol><li>fetch後拿到的response檔案資料，其實還是透過HTML download屬性來完成背景的點擊與下載。</li><li>透過createObjectURL建立的blob資料會得到一串GUID當作儲存檔案名稱，因此才需要透過彆扭的方式先去Header拿資料。</li><li>現代的瀏覽器拿Header的Content-Disposition都是直接幫你把UTF-8的filename解譯儲存成檔名，但javascript就是無法（會變成亂碼），所以你的後端程式碼必須實作<a href=https://datatracker.ietf.org/doc/html/rfc5987#section-3.2.2>RFC5987</a>規範的<code>filename*=utf-8''</code>格式（偷偷說：這個RFC編號念起來與內容規範挺相符的），讓非ASCII語系的檔案名稱得以被正確的處理。</li></ol><h3>相關參考</h3><ul><li><a href=/archive2020/20200210.html>解決AJAX Request沒有辦法收取檔案回應（檔案下載）的問題</a></li><li><a href=/archive2022/20220419.html>利用fetch來解決AJAX取得檔案型態（二進制）回傳資料</a></li></ul><h6>XMLHttpRequest AJAXRequest jQueryRequest SendJsonData CanNotSendFormData CanNotSubmitFormData GetFiles GetZipFiles GetExcelFiles GetResponseFiles GetBinaryFiles SaveNonTextData SaveFiles</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

@@ -1,0 +1,18 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>在ASP.NET WebForm中，擷取利用Request Payload進入的資料</h1><p>今日同事發出了一個問題，在前端利用Request Payload傳入的資料，無法利用Request.Form來擷取內容，經過稍微研究一下發現必須利用Request.InputStream自己解析，因此筆記在此以利回顧。</p><p><img src=https://content.slashview.com/img/2017/20171215_01.jpg alt="" /></p><h2>Request Payload小知識</h2><p>假設有一個前端想要直接用下列JSON送出資料到後端伺服器，他可能寫成下列格式：</p><pre><code class=language-json>//前端
+var options = {
+  iId: 999,
+  cName: "foo"
+};
+</code></pre><p>在送出當下，我們可以觀察一下瀏覽器的資訊，發現他的Http Header已經不如我們以往的標記。</p><pre><code class=language-txt>//POST Http Header
+Content-Type: application/json; charset=utf-8
+</code></pre><p>因為採用的Content-Type並不是傳統POST方法的「application/x-www-form-urlencoded」或「multipart/form-data」，這種送法叫做「Request Payload」，如果在Chrome的F12下，會顯示直接送出成直白的JSON資料樣式：</p><pre><code class=language-json>{ iId: 999, cName: "foo" }
+</code></pre><h2>回到ASP.NET WebForm後端來討論</h2><p>然而，「Request Payload」的POST方式，在傳統的ASP.NET WebForm是無法透過既有的包裝方法接收的（無法被解析成System.Collections.Specialized.NameValueCollection），所以只能夠自己去接串流來解決嘍！程式碼如下：</p><pre><code class=language-cs>//後端解析串流
+void Page_Load(object sender, EventArgs e)
+{
+  string cJson;
+  using (var oStream = new System.IO.StreamReader(Request.InputStream)) { cJson = oStream.ReadToEnd(); }
+  var oJson = Newtonsoft.Json.JsonConvert.DeserializeAnonymousType(cJson, new { iId = 0, cName = "" });
+  Response.Write(oJson.iId);
+  Response.Write(oJson.cName);
+}
+</code></pre><p>大功告成！</p><h3>參考資料：</h3><ul><li><a href=/archive2020/20200304.html>ASP.NET求得目前HTTP來源要求方法（GET、POST...）</a></li><li><a href=/archive2020/20200318.html>利用ASP.NET WebForm架構接收JSON資料並動態解析</a></li></ul><h6>jQuery Vue Http-Post application/x-www-form-urlencoded multipart/form-data Request-Payload C# ASP.NET WebForm MVC</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

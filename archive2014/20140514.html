@@ -1,0 +1,124 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>C#之委派之演進史與匿名函式之應用</h1><p>匿名函式在這一兩年間，大量的出現在各式程式碼的論壇之中，因為之前不太碰觸到這一塊，因此一直沒有去仔細的研究，今天終於受不了，花了一些時間去讀MSDN文件並寫在這邊記錄起來，讓日後好查閱。</p><p>講到匿名函式（Anonymous Functions），一定要先講到委派（Delegate），委派最基本的思想就是定義一個函式A，當呼叫A時，透過指派的路徑派到B那邊工作，很難理解吧！在講白一點好了，如果你今天看到有一個寫好的FFFFFFFF(string s)函式不爽（例如這個函式名字很長），但是你又不確定其它的程式碼裡面是否有調用它，你就可以利用委派的方式指定一個叫作F的函式，並讓F(FFFFFFFF)成立，當你調用的時候就利用F("abcd")來進行即可，因此F可視為是FFFFFFFF的包皮！當然，這不是委派主要的應用方式（只是其一），在這邊舉這個例子是要告訴大家快速的觀念與宣告語法。委派真正的存在應用方式，很向C++的指標（Pointer）。</p><p>委派與匿名函式之間的寫法，是有版本的區別，不是你想怎麼寫就怎麼寫，以下的例子從C# 1.0舉到C# 3.0，委派寫法的逐漸演變史，其中要特別注意的是「=>」運算子，英文口語念「goes to」，在C#中的這種寫法的正式名稱是<code>lambda expressions</code>，簡寫為希臘符號：<code>λ</code>。在中文上我都習慣叫他「黏巴達」寫法，因為無論是括號內<code>(x => x.Contains() == "OO")...</code>或是串接<code>.Where(OOO).Select(XXX)</code>，都有緊緊黏在後面的意思，還蠻好記憶的，不過這跟認知中的拉丁舞蹈黏巴達（lambada）還是差一個字母喔！下圖是快打炫風2（Street Fighter II）凱爾（Guile）著名的黏巴達BUG。</p><p><img src=https://content.slashview.com/img/2014/20140514_01.jpg alt="" /></p><p>好了，廢話不多說，來看一下程式碼吧！運行環境是Console視窗</p><pre><code class=language-cs>//Basic delegate define
+public delegate void TestDelegate(string s);
+/* C# 1.0 */
+public static void ShowMsg(string s) { Console.WriteLine("C#1.0: " + s); }
+
+static void Main(string[] args)
+{
+  /* C# 1.0 */
+  TestDelegate oTempA = new TestDelegate(ShowMsg);
+  oTempA(Console.ReadLine());
+
+  /* C# 2.0 */
+  TestDelegate oTempB = delegate(string s) { Console.WriteLine("C#2.0: " + s); };
+  oTempB(Console.ReadLine());
+
+  /* C# 3.0 */
+  TestDelegate oTempC = x => { Console.WriteLine("C#3.0: " + x); };
+  //單一Parameter下，x不需括號；複數參數就要使用括號，例如：(x, y)
+  oTempC(Console.ReadLine());
+
+  Console.ReadKey();
+}
+</code></pre><p>從上面的程式碼我們可以發現，「delegate(string s) {...};」這種寫法就是所謂的匿名函式（Anonymous Functions）寫法，而到了「x => {...};」就是所謂的黏巴達表示式（Lambda Expressions）了。可見版本越高寫法越來越精簡，至於可讀性嘛，見人見智嘍！或許這種寫法需要時間的消化吧！至於意義性嘛，在上面的程式碼看起來更弱了，事實上委派出現在一般的應用程式中的機會本來就不是很高，或者應該是說，絕大多數的案例裡，你可以用很傳統的C語言寫法來取代它。精簡與可讀，需要取得一定的平衡。</p><h2>委派與匿名的應用範例</h2><p>在某些時刻，我們想要鬆耦合或簡化某「函式名稱方法」之調用，例如兩數的四則運算，你可以用最傳統的函式寫法來完成，但是你就要取四種函式名稱供其調用，當你的函式名稱修改時，就是你苦腦的時刻了！因為可能你的系統裡面有一大堆的舊原始碼都有用到這個名稱。以下這個範例示範怎麼使用單一個函式名稱呼叫，來完成所要操作的功能，程式的重點會擺在把委派的函式實體化時，拿來當作類似C++的指標（pointer）在運作的概念。另外，這個程式用起來也會很像介面（interface）的運作方式。</p><pre><code class=language-cs>//Basic delegate define
+public delegate int cal(int a, int b);
+
+static void Main(string[] args)
+{
+  int a = Convert.ToInt32(Console.ReadLine());
+  int b = Convert.ToInt32(Console.ReadLine());
+  string c = Console.ReadLine();
+  
+  //宣告一個委派實體
+  cal myCal;
+  //進行四則運算：黏巴達（Lambda）之匿名函式（Anonymous Functions）之內行式（inline）宣告
+  switch (c)
+  {
+    case "-":
+      myCal = (A, B) => { return (A - B); };
+      break;
+    case "*":
+      myCal = (A, B) => { return (A * B); };
+      break;
+    case "/":
+      myCal = (A, B) => { return (A / B); };
+      break;
+    default:
+      myCal = (A, B) => { return (A + B); };
+      break;
+  }
+  
+  //真正調用myCal起來運算，非常精簡
+  Console.WriteLine(myCal(a, b));
+
+  Console.ReadKey();
+}
+</code></pre><p>再修改成更精簡的寫法，不過這樣一改，似乎已經失去Delegate委派應用的意義了。</p><pre><code class=language-cs>//Basic delegate define
+public delegate int cal(int a, int b, string c);
+
+static void Main(string[] args)
+{
+  int a = Convert.ToInt32(Console.ReadLine());
+  int b = Convert.ToInt32(Console.ReadLine());
+  string c = Console.ReadLine();
+  
+  //宣告一個委派實體
+  cal myCal = (A, B, C) =>
+  {
+    switch (C)
+    {
+      case "-":
+        return (A - B);
+        break;
+      case "*":
+        return (A * B);
+        break;
+      case "/":
+        return (A / B);
+        break;
+      default:
+        return (A + B);
+        break;
+    }
+  };
+  
+  //真正調用myCal起來運算，非常精簡
+  Console.WriteLine(myCal(a, b, c));
+
+  Console.ReadKey();
+}
+</code></pre><p>然後我們靈機一動，改成這種寫法，雖然有點脫褲子放屁，不過這樣的寫法目的是為了要把Delegate委派的精神完整表達出來。</p><pre><code class=language-cs>delegate int helpMeCalc(int x, int y);
+class Program
+{
+  static int Add(int x, int y) { return x + y; }
+  static int Sub(int x, int y) { return x - y; }
+  static int Mul(int x, int y) { return x * y; }
+  static int Div(int x, int y) { return x / y; }
+  static void Main(string[] args)
+  {
+    Calc(1, 2, Add);
+    Calc(3, 4, Sub);
+    Calc(5, 6, Mul);
+    Calc(8, 2, Div);
+  }
+  static void Calc(int x, int y, helpMeCalc d)
+  {
+    Console.WriteLine(d(x, y));
+  }
+}
+</code></pre><p>接下來，我們當然要懶上加懶，不想再宣告Delegate委派的語句了，於是我們調用了泛型委派（General Delegates），看一下下面的程式碼，程式設計師說不心動是騙人的啦！。</p><pre><code class=language-cs>static void Main(string[] args)
+{
+  Func&lt;int, int, int> Add = (x, y) => { return x + y; };
+  Func&lt;int, int, int> Sub = (x, y) => { return x - y; };
+  Func&lt;int, int, int> Mul = (x, y) => { return x * y; };
+  Func&lt;int, int, int> Div = (x, y) => { return x / y; };
+  Calc(1, 2, Add);
+  Calc(3, 4, Sub);
+  Calc(5, 6, Mul);
+  Calc(8, 2, Div);
+}
+static void Calc(int x, int y, Func&lt;int, int, int> d)
+{
+  Console.WriteLine(d(x, y));
+}
+</code></pre><p>慢慢的我們會發現，寫到最後委派似乎已經變成了關我（Class Methods）屁事，請自己處理！事實上在最終的使用上，委派的確就是走上這一條路，詳見相關參考資料。</p><p>相關連結：</p><ul><li><a href=/archive2014/20141117.html>泛型委派（General Delegates）之研究</a></li><li><a href=/archive2014/20141201.html>利用Predicate泛型委派，進行類別方法委派之實作</a></li><li><a href=/archive2019/20190111.html>新舊委派的撰寫與呼叫方式：以購物車折扣為例</a></li><li><a href=/archive2021/20210111.html>利用委派讓List(T)可以使用Lambda運算式寫法</a></li></ul><h6>C# AnonymousFunctions LambdaExpressions Delegate Lambda 黏巴達表示式 匿名函式</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

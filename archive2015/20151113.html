@@ -1,0 +1,44 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>.NET Framework官方的JSON類別簡單存取範例</h1><p>這幾年來在操作JSON資料這一塊領域上，一直以來都是依賴好用到爆的Newtonsoft - Json.NET，缺點沒有，倒是要持續一直參考一個外部的.dll檔案，讓人覺得不是很方便。今天剛好有一點時間，讓我們來看看.NET Framework官方的JSON類別現在進化到甚麼樣的程度。</p><p>在網路上隨便搜尋關鍵字，連到MSDN映入我眼簾的就是DataContractJsonSerializer這個類別，決定就是你了皮卡丘，用這個類別前要先參考System.Runtime.Serialization.dll，如此一來你才可以調用到System.Runtime.Serialization.Json.*下面的類別。</p><h2>DataContractJsonSerializer類別的存取範例程式碼</h2><p>我們可以發現，DataContractJsonSerializer的寫入JSON字串，或者是讀取JSON字串，基本上都要透過串流，因此大量地使用到System.IO.MemoryStream是不可避免之事，當然，自己轉換字串也是躲不了的事情，話不多說，直接看程式碼吧！</p><pre><code class=language-cs>class Program
+{
+  static void Main(string[] args)
+  {
+    //假資料
+    Person[] oTemp = new Person[]
+    {
+      new Person { cName = "王小名", iAge = 18 },
+      new Person { cName = "李大華", iAge = 25 }
+    };
+    
+    //啟動.NET官方JSON序列化物件
+    System.Runtime.Serialization.Json.DataContractJsonSerializer oJson = new System.Runtime.Serialization.Json.DataContractJsonSerializer(typeof(Person[]));
+    
+    //將物件轉成字串
+    string cJsonResult;
+    using (System.IO.MemoryStream oMS = new System.IO.MemoryStream())
+    {
+      oJson.WriteObject(oMS, oTemp);
+      cJsonResult = System.Text.Encoding.UTF8.GetString(oMS.ToArray());
+    }
+    WriteLine(cJsonResult);
+    
+    //將字串轉回物件
+    Person[] oPersons;
+    using (System.IO.MemoryStream oMS = new System.IO.MemoryStream(System.Text.Encoding.UTF8.GetBytes(cJsonResult)))
+    {
+      oPersons = (Person[])oJson.ReadObject(oMS);
+    }
+    foreach (var p in oPersons)
+    {
+      WriteLine(p.cName);
+      WriteLine(p.iAge);
+    }
+  }
+}
+
+//ORM
+public class Person
+{
+  public string cName { get; set; }
+  public int iAge { get; set; }
+}
+</code></pre><h2>結論</h2><p>DataContractJsonSerializer連個泛型或支援Anonymous Type都沒有，也就是說如果沒有特殊狀況或需求，以後我還是會繼續使用Json.NET，謝謝再聯絡。</p><h6>JsonData .NETFramework DataContractJsonSerializer</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

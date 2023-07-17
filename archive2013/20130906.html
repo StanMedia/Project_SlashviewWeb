@@ -1,0 +1,5 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>解除VMware中Windows Server出現CDROM啟動錯誤</h1><p>當你掛載CDROM後通常安裝完就把設備移掉，來節省效能，可是windows似乎已經永遠記住了有這一台CDROM，儘管裝置管理員中早就沒有這個設備了。</p><p>於是你會在事件檔中，一直看到CDROM啟動錯誤。解決方法就是去改reg檔如下：</p><pre><code class=language-txt>Windows Registry Editor Version 5.00
+
+[HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\services\CDROM]
+"Start"=dword:00000003
+</code></pre><h6>VMware WindowsServer CDROM Error EventLog</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

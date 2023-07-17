@@ -1,0 +1,106 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>C#的IS與AS運算子之撰寫方法</h1><p>C#的IS在C# 7.0之後被賦予運算式（Expression）的能力後，事情開始變得複雜，透過此篇文章將IS與AS運算子的寫法複習一下，給日後有需要的人參考。</p><p>基本上IS運算子在目前被賦予三種撰寫模式：</p><ol><li>類型模式：Type pattern</li><li>常數模式：Constant pattern</li><li>Var模式：Var pattern</li></ol><h2>類型模式（Type Pattern）</h2><p>這個模式基本上就是把類別Type拿出來比對，這對於介面類別用很大的程式碼很有用途，在這裡面我有偷渡了一下as的用法，若以類型Type比對的面向來說，基本上as的用法相對直覺很多，大家可以自己研究一下程式碼。</p><pre><code class=language-cs>public static string Decision(IAnimal oTemp)
+{
+  if (oTemp is Cat oObj)
+  { return oObj.cAction; }
+
+  //展現出命中類別並接續判斷的寫法
+  if (oTemp is Dog oDog1 &amp;&amp; oDog1.cSay != "Woo")
+  { return $"Cute dog say {oDog1.cSay}"; }
+
+  //故意展示不out出臨時類別的寫法（比較麻煩要多寫一次轉型）
+  if (oTemp is Dog)
+  { return ((Dog)oTemp).cSay; }
+
+  //AS語法的使用
+  var oBird = oTemp as Bird;
+  if (oBird != null)
+  { return $"Fly {oBird.bFly}"; }
+
+  //故意找不到烏龜
+  return "Can not defined!";
+}
+</code></pre><p>調用這個方法的程式碼如下：</p><pre><code class=language-cs>IAnimal oTemp;
+
+//類型模式
+oTemp = new Dog() { cName = "巴哥", cSay = "Awo" };
+Console.WriteLine($"0. {Decision(oTemp)}");
+
+oTemp = new Dog() { cName = "柴犬" };
+Console.WriteLine($"1. {Decision(oTemp)}");
+
+oTemp = new Cat() { cName = "摺耳貓" };
+Console.WriteLine($"2. {Decision(oTemp)}");
+
+oTemp = new Bird() { cName = "麻雀" };
+Console.WriteLine($"3. {Decision(oTemp)}");
+
+oTemp = new Turtle() { cName = "忍者龜" };
+Console.WriteLine($"4. {Decision(oTemp)}");
+
+oTemp = new Dog() { cName = "巴哥", cSay = "Awo" };
+Console.WriteLine($"5. {Decision2(oTemp)}");
+
+oTemp = new Dog() { cName = "柴犬" };
+Console.WriteLine($"6. {Decision2(oTemp)}");
+
+oTemp = new Cat() { cName = "摺耳貓" };
+Console.WriteLine($"7. {Decision2(oTemp)}");
+
+oTemp = new Bird() { cName = "麻雀" };
+Console.WriteLine($"8. {Decision2(oTemp)}");
+
+oTemp = new Turtle() { cName = "忍者龜" };
+Console.WriteLine($"9. {Decision2(oTemp)}");
+</code></pre><p>輸出結果：</p><pre><code class=language-txt>0. Cute dog say Awo
+1. Woo
+2. Grab
+3. Fly True
+4. Can not defined!
+5. Cute dog say Awo
+6. Woo
+7. Grab
+8. Fly True
+9. Just Turtle
+</code></pre><h2>使用C# 9.0 SwitchExpression重新改寫Decision函式</h2><p>都已經練習到這田地了，當然是要採用SwitchExpression寫法來順便練習一下，下列函式與Decision的輸出結果是等效的。</p><pre><code class=language-cs>public static string Decision2(IAnimal oTemp) => oTemp switch
+{
+  Cat x => x.cAction,
+  Dog x when (x.cSay != "Woo") => $"Cute dog say {x.cSay}",
+  Dog x => x.cSay,
+  Bird x => $"Fly {x.bFly}",
+  Turtle => "Just Turtle",
+  _ => "Can not defined!"
+};
+</code></pre><p>可以比對一下新寫法，優點是真的精簡很多，缺點嘛.....。</p><h2>常數模式（Constant Pattern）</h2><p>IS在常數模式下可以被用來判斷常數變數（Const）、常數運算式、列舉（Enum,）、null等。</p><pre><code class=language-cs>//常數模式
+Console.WriteLine($@"ConstantPattern 1.: g = {IsMyLetter('g')}");
+Console.WriteLine($@"ConstantPattern 2.: # = {IsMyLetter('#')}");
+Console.WriteLine($@"ConstantPattern 3.: (""AAA"", 10) = {IsMyTuple(("AAA", 10))}");
+Console.WriteLine($@"ConstantPattern 3.: (""BBB"", 30) = {IsMyTuple(("BBB", 30))}");
+
+/* ***** 常數模式 ***** */
+public static bool IsMyLetter(char x) => x 
+  is (>= 'a' and &lt;= 'z') or (>= 'A' and &lt;= 'Z');
+
+public static bool IsMyTuple((string, int) x) => x
+  is ("AAA", 10) or ("BBB", 20);
+</code></pre><p>輸出結果：</p><pre><code class=language-txt>ConstantPattern 1.: g = True
+ConstantPattern 2.: # = False
+ConstantPattern 3.: ("AAA", 10) = True
+ConstantPattern 3.: ("BBB", 30) = False
+</code></pre><h3>Var模式（Var Pattern）</h3><p>var模式的優點是可以在Lambda運算式（Lambda Expression）中，將動態篩選過珍貴的運算結果進行暫時性的保存，並接續進行判斷運算，這樣的寫法在有需要的時刻，可以讓LINQ語法變得更精簡與易讀。</p><pre><code class=language-cs>//var模式
+Console.WriteLine($"VarPattern: {string.Join("、", IsVarPattern().ToArray())}");
+
+/* ***** var模式 ***** */
+public static IEnumerable&lt;string> IsVarPattern()
+{
+  var oList = new System.Collections.Generic.List&lt;string>() { "Abc", "Def", "Ghi", "Jkl" };
+  return oList.Where(x => RepeatProcess(x).ToList() is var oTemps &amp;&amp; oTemps.Count() > 2 &amp;&amp; (oTemps.Where(y => y.StartsWith("Abc") || y.StartsWith("Ghi")).Count() > 0));
+}
+
+private static IEnumerable&lt;string> RepeatProcess(string cTemp)
+{
+  var oRnd = new System.Random();
+  for (int i = 0; i &lt; oRnd.Next(1, 10); i++)
+  { yield return $"{cTemp}|{i}"; }
+}
+</code></pre><p>上面的程式碼精華大致上就是當我們在LINQ中得到一個動態運算過的新集合，我們將其暫存在一個oTemps，接著我們可以用oTemps去進行一些運算判斷，讓我們可以更精確的過濾掉我們不想要的集合項目。（範例中的邏輯很沒有意義，請忽略！）</p><p>輸出結果：</p><pre><code class=language-txt>VarPattern: Abc、Ghi（因為有亂數成分，故不一定是這個結果）
+</code></pre><h3>相關連結</h3><ol><li><a href=/archive2021/20210224.html>在C#的SwitchExpression下使用模式比對（Pattern Matching）</a></li><li><a href=/archive2022/20220331.html>利用SwitchExpression來進行switch流程程式碼判斷的優化</a></li><li><a href=/archive2019/20190827.html>利用C#的switch case when語法來忽略字串大小寫</a></li><li><a href=/archive2021/20210301.html>C#的IS與AS運算子之撰寫方法</a></li><li><a href=/archive2022/20221108.html>C#的NULL運算演化：?.、??、??=、以及模式比對增強功能</a></li><li><a href=https://docs.microsoft.com/zh-tw/dotnet/csharp/language-reference/proposals/csharp-8.0/patterns>遞迴模式比對</a></li><li><a href=https://docs.microsoft.com/zh-tw/dotnet/csharp/whats-new/csharp-9#pattern-matching-enhancements>C# 9.0 中的新增功能</a></li><li><a href=https://docs.microsoft.com/zh-tw/dotnet/csharp/language-reference/keywords/is>is（C#參考）</a></li><li><a href=https://docs.microsoft.com/zh-tw/dotnet/csharp/language-reference/operators/type-testing-and-cast#is-operator>is 運算子</a></li><li><a href=https://docs.microsoft.com/zh-tw/dotnet/csharp/language-reference/operators/type-testing-and-cast#as-operator>as 運算子</a></li></ol><h6>C# 7.0 IsOperator AsOperator IsExpressionsTypePattern IsExpressionsConstantPattern IsExpressionsVarPattern</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

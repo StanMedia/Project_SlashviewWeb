@@ -1,0 +1,29 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>Java初探：基於package之import使用方式</h1><p>Java import指令跟C#的using很像，基本上就是指定編譯器去固定的地方找到類別來整合編譯，但很煩人的是因為java的package對於目錄的要求實在是有夠煩，因此還是寫下來以防止日後忘記。</p><p>首先，我們先基於<a href=/archive2013/20130702.html>Java初探：package與classpath</a>這篇文章之目錄結構，來進行PrintString這個類別的改寫，以利程式進行交叉引用，程式碼如下：</p><pre><code class=language-java>package System.Utility;
+
+public class PrintString {
+  private String _cTemp;
+  
+  public PrintString(String cName) {
+    _cTemp = cName;
+  }
+  
+  public String who() {
+    return _cTemp;
+  }
+}
+</code></pre><p>然後我們在C:\javaTest目錄下，建立一個叫做test.java的檔案，檔案內容的程式碼如下所示。其中的import就是要跟編譯器講說，要去「\System\Utility」這個目錄找到這個類別檔案。而後面「.*」的意思就是指，只要是在這個目錄（其實就是名稱空間）下的class，全部都給我找一次是否有PrintString這個類別出現。當然啦，如果你這個目錄下有兩個名字一樣的類別，這是不行的喔！</p><pre><code class=language-java>import System.Utility.*;
+
+public class test {
+  public static void main(String[] args) {
+    PrintString oTemp = new PrintString(args[0]);
+    System.out.println("Hello " + oTemp.who());
+  }
+}
+</code></pre><p>接下來請進行下列編譯與執行的動作：</p><pre><code class=language-txt>//編譯test.java變成類別，因為程式碼有使用import的關係
+//所以編譯器不需要指定 -cp 來說明要去哪裡找類別
+C:\javaTest>javac test.java
+
+//執行test這個類別，並且給定命令列參數一個叫John的字串
+C:\javaTest>java test "John"
+Hello John
+</code></pre><p>以上就是import的用法，就這樣簡單明瞭，千萬不要再去學某些書上叫你切-cp再那邊轉來轉去，轉到都暈了。另外值得一提的事，就是剛才我們根本就沒有預先編譯過PrintString.java，我們只有對test.java這個檔案下編譯動作。當你有引用到PrintString類別時，編譯系統會自動幫你把PrintString編譯起來，這樣的編譯方式叫make，這真是令人值得欣慰啊！（淚目）</p><h6>Java SCJP package classpath import</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

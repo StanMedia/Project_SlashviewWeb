@@ -1,0 +1,11 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>在Windows命令模式下操控剪貼簿</h1><p>在Windows的Command Line下，我們可能很習以為常的使用圈選文辭來複製，或利用Ctrl+V來貼上一些指令碼。但反向思考是，我們是否可以利用指令來把一些資料送到Windows剪貼簿的記憶體裡面呢？</p><p>以往如果要把某個指令的輸出結果拿來應用，通常會使用導向符號，例如dir某個目錄變成一個文字檔案，然後再去把該檔案打開來應用。例如：</p><pre><code class=language-txt>dir > text.txt
+</code></pre><p>以上面為例子，直接送到剪貼簿的應用指令：</p><pre><code class=language-txt>dir | clip
+</code></pre><p>執行過上面的指令後，接著你開一個記事本按下Ctrl+V貼上，你就可以發現剛才目錄的內容，真的都複製到Windows的剪貼簿記憶體了。</p><p>另外再舉一個例子：</p><pre><code class=language-txt>nslookup google.com | clip
+</code></pre><p>執行後剪貼簿的內容：</p><pre><code class=language-txt>伺服器:  one.one.one.one
+Address:  1.1.1.1
+
+名稱:    google.com
+Addresses:  2404:6800:4012:1::200e
+    172.217.163.46
+</code></pre><p>另外也可以直接把某個文字檔，透過指令碼的方式灌入到剪貼簿中：</p><pre><code class=language-txt>clip &lt; coffeelint.json
+</code></pre><p>感覺沒啥用的小技巧，但如果學會了可以省下一點點小時間，希望對你有幫助。</p><h6>Windows CommandLine Console CommandLineInterface CLI Copy Paste Ctrl+C Ctrl+V Control ClipBoard</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

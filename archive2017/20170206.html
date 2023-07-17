@@ -1,0 +1,23 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>透過Console執行Exe檔案，並動態取回回傳值</h1><p>這篇文章很短，只是要說明當我們利用System.Diagnostics.Process去執行一隻外部的執行檔案（多數時候為exe）時，如何不透過導向符號「>」輸出成檔案後取回回傳結果，而是透過直接將列印在Console中的文字完整的讀取回到我們的程式碼裡面，進行後續再處理的工作。</p><p>這邊用cmd下面的「SystemInfo.exe」取得當前系統資訊為例子，進行程式碼的示範，其實關鍵就在於利用Process實例去讀取「StandardOutput.ReadToEnd()」而已，比起某些網路文章緣木求魚般的去取出字串（回傳值），來的非常的簡單易懂。</p><pre><code class=language-cs>static void Main(string[] args)
+{
+  using (System.Diagnostics.Process oProcess = new System.Diagnostics.Process())
+  {
+    oProcess.StartInfo = new System.Diagnostics.ProcessStartInfo()
+    {
+      FileName = @"C:\Windows\System32\SystemInfo.exe",
+      UseShellExecute = false,
+      RedirectStandardOutput = true,
+      CreateNoWindow = true
+    };
+    //啟動程序
+    oProcess.Start();
+    //取得輸出字串
+    string cTemp = oProcess.StandardOutput.ReadToEnd();
+    //等候程序結束
+    oProcess.WaitForExit();
+    //列印字串
+    Console.WriteLine(cTemp);
+  }
+  Read();
+}
+</code></pre><p>※註：這篇文章不討論非同步（Async）取值或System.ComponentModel.Win32Exception等問題，有需要這方面的程式碼請自行撰寫。</p><h3>相關參考</h3><ul><li><a href=/archive2016/20160517.html>利用C#呼叫一個外部執行檔，並且偵測是否已經完成執行</a></li><li><a href=/archive2017/20170206.html>透過Console執行Exe檔案，並動態取回回傳值</a></li><li><a href=/archive2023/20230202.html>執行外部EXE檔案時考量逾時、路徑錯置、檔案資源釋放之方法</a></li></ul><h6>System.Diagnostics.Process System.Diagnostics.ProcessStartInfo Execute Exe Output NoFile DirectGetString DirectGetValue</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

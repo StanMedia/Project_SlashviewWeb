@@ -1,0 +1,382 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>使用System.Drawing（GDI+）進行圖片縮放、壓縮類別的設計</h1><p>這幾天又開始再搞System.Drawing（GDI+）這方面的設計，發現無論在怎麼小心與釋放資源，總還是會有「記憶體不足」或「在GDI+中發生泛型錯誤」等訊息會在後端伺服器的記錄檔出現，因此下定決心在把網路上所有的文章再度爬過一遍，發現又有幾個新的論點出現，因此，將其彙整成一篇文章，供給有需要的人員參考。</p><p>這篇文章所有的工作輸出重點，都放在JPEG檔案格式，若您有別種檔案處理的需求，那只能參考一下程式碼自己實作了。</p><h2>先建立一個JPEG圖像品質方面的列舉</h2><pre><code class=language-cs>namespace Slashview.Image
+{
+  /// /// 列舉：影像品質
+  /// 
+  [System.Serializable]
+  public enum Quality
+  {
+    Highest = 75,
+    High    = 70,
+    Medium  = 65,
+    Low     = 50,
+    Lowest  = 25
+  }
+}
+</code></pre><h2>純壓縮影像類別</h2><p>這裡要注意的重點有下列幾點：</p><ol><li>所有有關於圖像檔案的取入、輸出，能夠盡量不要用到System.Drawing本身的檔案存取方法最好，因為這樣做有很高的機率會發生「記憶體不足」或「在GDI+中發生泛型錯誤」等錯誤，建議一律掛上MomoryStream或FileStream來動作會最佳。</li><li>在伺服器後端運作時，同一組DLL似乎會受到CLR進行某一種程度的記憶體管控（儘管你的伺服器記憶體還剩很多，耗用過多的記憶體仍會被GDI+判定為記憶體不足），這方面最好使用lock來保證執行緒的唯一，如此一來會讓錯誤率更降低。</li></ol><pre><code class=language-cs>namespace Slashview.Image
+{
+  /// &lt;summary>
+  /// 這個類別用來壓縮影像大小
+  /// &lt;/summary>
+  public class Compress : （請自己實作setException介面）
+  {
+    //建構子
+    public Compress() { }
+
+    //影像檔案來源路徑
+    private string _cFileSourcePathAndName;
+    //影像檔案目的路徑
+    private string _cFileTargetPathAndName;
+    //檔案壓縮程度
+    private Slashview.Image.Quality? _eQuality;
+    //實作資源鎖
+    private static System.Object _oLock = new System.Object();
+
+    /// &lt;summary>
+    /// 設定來源檔案路徑與檔名
+    /// &lt;/summary>
+    public string cFileSourcePathAndName
+    {
+      set
+      {
+        System.IO.FileInfo oFI = new System.IO.FileInfo(value);
+        if (!oFI.Exists) { setException("來源檔案並不存在所指定的路徑中。"); }
+        else
+        { _cFileSourcePathAndName = value; }
+      }
+      get { return _cFileSourcePathAndName; }
+    }
+    
+    /// &lt;summary>
+    /// 設定目的檔案路徑與檔名
+    /// &lt;/summary>
+    public string cFileTargetPathAndName
+    {
+      set { _cFileTargetPathAndName = value; }
+      get { return _cFileTargetPathAndName; }
+    }
+
+    /// &lt;summary>
+    /// 設定影像壓縮品質
+    /// &lt;/summary>
+    public Slashview.Image.Quality? eQuality
+    {
+      set { _eQuality = value; }
+      get { return _eQuality; }
+    }
+
+    /// &lt;summary>
+    /// 執行圖片壓縮
+    /// &lt;/summary>
+    public void Run()
+    {
+      //因為處理影像需要耗用系統很大的資源，因此限制同一時間只能有一個執行緒來進行此類別的調用
+      lock (_oLock)
+      { //檢查必要資訊
+        CheckEssential();
+        //執行壓縮圖片方法
+        CompressImage();
+      }
+    }
+
+    /// &lt;summary>
+    /// 將圖片壓縮至指定的品質（執行後結果將會把壓縮後的檔案放在指定的目錄中）
+    /// &lt;/summary>
+    private void CompressImage()
+    {
+      //開始進行影像處理（GDI+是一個很脆弱的物件，要處處呵護）
+      try
+      {
+        using (System.IO.FileStream oFSSource = new System.IO.FileStream(_cFileSourcePathAndName, System.IO.FileMode.Open, System.IO.FileAccess.Read))
+        { //採用Image.FromStream而非Image.FromFile，是因為據說「比較不會」引發記憶體不足
+          using (System.Drawing.Image oImage = System.Drawing.Image.FromStream(oFSSource, false, false))
+          {
+            //設定編碼器
+            System.Drawing.Imaging.ImageCodecInfo oJpegCodec = GetEncoder(System.Drawing.Imaging.ImageFormat.Jpeg);
+            //設定編碼參數包
+            System.Drawing.Imaging.EncoderParameters oEPs = new System.Drawing.Imaging.EncoderParameters(3);
+            oEPs.Param[0] = new System.Drawing.Imaging.EncoderParameter(System.Drawing.Imaging.Encoder.Quality,      (int)_eQuality);
+            oEPs.Param[1] = new System.Drawing.Imaging.EncoderParameter(System.Drawing.Imaging.Encoder.ScanMethod,   (int)System.Drawing.Imaging.EncoderValue.ScanMethodInterlaced);
+            oEPs.Param[2] = new System.Drawing.Imaging.EncoderParameter(System.Drawing.Imaging.Encoder.RenderMethod, (int)System.Drawing.Imaging.EncoderValue.RenderProgressive);
+            //把影像物件導向到檔案串流，再回寫至磁碟（oImage.Save方法很脆弱，只要磁碟稍忙碌或是權限出現一些問題，就會跳出「在GDI+中發生泛型錯誤」）
+            using (System.IO.FileStream oFSTarget = System.IO.File.Open(_cFileTargetPathAndName, System.IO.FileMode.Create))
+            {
+              oImage.Save(oFSTarget, oJpegCodec, oEPs);
+              oFSTarget.Flush();
+            }
+          }
+        }
+      }
+      catch (System.Exception oEx)
+      {
+        setException(string.Format(
+          "於 {0} 發生錯誤，錯誤原因為：{1}",
+          System.DateTime.Now.ToString("yyyyMMdd HH:mm:ss"),
+          oEx.Message
+        ));
+      }
+    }
+
+    /// &lt;summary>
+    /// 檢查必要資訊
+    /// &lt;/summary>
+    private void CheckEssential()
+    {
+      //檢查檔案來源路徑是否無設定
+      if (string.IsNullOrEmpty(_cFileSourcePathAndName)) { setException("來源路徑不可為空值。"); }
+      //檢查檔案目標路徑是否無設定
+      if (string.IsNullOrEmpty(_cFileTargetPathAndName)) { setException("目標路徑不可為空值。"); }
+      //檢查來源與目標路徑是否相同（不可以為相同，因為會產生咬檔的問題）
+      if (_cFileSourcePathAndName.Equals(_cFileTargetPathAndName)) { setException("來源與目標路徑不可為相同值。"); }
+      //檢查影像壓縮品質是否無設定
+      if (_eQuality == null) { setException("目標路徑不可為空值。"); }
+    }
+
+    /// &lt;summary>
+    /// 取得影像處理編碼器（codec）
+    /// &lt;/summary>
+    /// &lt;param name="oFormat">影像格式&lt;/param>
+    /// &lt;returns>編碼器&lt;/returns>
+    private System.Drawing.Imaging.ImageCodecInfo GetEncoder(System.Drawing.Imaging.ImageFormat oFormat)
+    {
+      System.Drawing.Imaging.ImageCodecInfo[] aryCodecs = System.Drawing.Imaging.ImageCodecInfo.GetImageDecoders();
+      foreach (System.Drawing.Imaging.ImageCodecInfo oCodec in aryCodecs)
+      { if (oCodec.FormatID == oFormat.Guid) { return oCodec; } }
+      return null;
+    }
+
+  }
+}
+</code></pre><p>調用方法很簡單，請參考下列的程式碼應可以意會：</p><pre><code class=language-cs>Slashview.Image.Compress oImg = new Slashview.Image.Compress()
+{
+  cFileSourcePathAndName = @"\Source.jpg",
+  cFileTargetPathAndName = @"\Target.jpg",
+  eQuality = Slashview.Image.Quality.Highest
+};
+oImg.Run();
+//最後建議將整個物件都釋放掉
+oImage = null;
+</code></pre><h2>縮放影像後再進行壓縮影像類別</h2><p>這裡要注意的重點有下列幾點：</p><ol><li>上面所有關於影像壓縮時的重點，在這邊的作法上一併繼承。</li><li>System.Drawing.Graphics在進行作圖優化時，要小心插補法模式「InterpolationMode」會耗用到更多的記憶體。在敝人處理圖檔的經驗中，發現在寬度超過15000像素以上的圖檔，進行插點運算時也會發生System.OutOfMemoryException，因此在這邊特別設計一個記憶體緩衝溢位的看門狗，試圖讓運算可以有更進一步的機會可以不要出錯。（事實證明，有效！）</li></ol><pre><code class=language-cs>namespace Slashview.Image
+{
+  /// &lt;summary>
+  /// 這個類別用來變更影像大小
+  /// &lt;/summary>
+  public class Resize : Slashview.Base.Base
+  {
+    //建構子
+    public Resize() { }
+
+    //轉換目標圖片的寬度
+    private int? _iWidth;
+    //轉換目標圖片的高度
+    private int? _iHeight;
+    //影像檔案來源路徑
+    private string _cFileSourcePathAndName;
+    //影像檔案目的路徑
+    private string _cFileTargetPathAndName;
+    //檔案壓縮程度
+    private Slashview.Image.Quality? _eQuality;
+    //實作資源鎖
+    private static System.Object _oLock = new System.Object();
+    //記憶體看門狗
+    private bool _bIsOutOfMemory = false;
+
+    /// &lt;summary>
+    /// 設定轉換目標圖片的寬度
+    /// &lt;/summary>
+    public int? iWidth
+    {
+      set { _iWidth = value; }
+      get { return _iWidth; }
+    }
+
+    /// &lt;summary>
+    /// 設定轉換目標圖片的高度
+    /// &lt;/summary>
+    public int? iHeight
+    {
+      set { _iHeight = value; }
+      get { return _iHeight; }
+    }
+
+    /// &lt;summary>
+    /// 設定來源檔案路徑與檔名
+    /// &lt;/summary>
+    public string cFileSourcePathAndName
+    {
+      set
+      {
+        System.IO.FileInfo oFI = new System.IO.FileInfo(value);
+        if (!oFI.Exists) { setException("來源檔案並不存在所指定的路徑中。"); }
+        else
+        { _cFileSourcePathAndName = value; }
+      }
+      get { return _cFileSourcePathAndName; }
+    }
+
+    /// &lt;summary>
+    /// 設定目的檔案路徑與檔名
+    /// &lt;/summary>
+    public string cFileTargetPathAndName
+    {
+      set { _cFileTargetPathAndName = value; }
+      get { return _cFileTargetPathAndName; }
+    }
+
+    /// &lt;summary>
+    /// 設定影像壓縮品質
+    /// &lt;/summary>
+    public Slashview.Image.Quality? eQuality
+    {
+      set { _eQuality = value; }
+      get { return _eQuality; }
+    }
+
+    /// &lt;summary>
+    /// 執行圖片壓縮
+    /// &lt;/summary>
+    public void Run()
+    {
+      //因為處理影像需要耗用系統很大的資源，因此限制同一時間只能有一個執行緒來進行此類別的調用
+      lock (_oLock)
+      { //檢查必要資訊
+        CheckEssential();
+        //執行縮放與壓縮圖片方法
+        ResizeAndCompressImage();
+      }
+    }
+
+    /// &lt;summary>
+    /// 將圖片縮放後，並壓縮至指定的品質（執行後結果將會把壓縮後的檔案放在指定的目錄中）
+    /// &lt;/summary>
+    private void ResizeAndCompressImage()
+    {
+      //開始進行影像處理（GDI+是一個很脆弱的物件，要處處呵護）
+      try
+      {
+        using (System.IO.FileStream oFSSource = new System.IO.FileStream(_cFileSourcePathAndName, System.IO.FileMode.Open, System.IO.FileAccess.Read))
+        { //採用Image.FromStream而非Image.FromFile，是因為據說「比較不會」引發記憶體不足
+          using (System.Drawing.Image oImageSource = System.Drawing.Image.FromStream(oFSSource, false, false))
+          {
+            using (System.Drawing.Bitmap oImageTarget = new System.Drawing.Bitmap((int)_iWidth, (int)_iHeight))
+            {
+              /* 將原始圖檔繪製到目的圖檔 */
+              using (System.Drawing.Graphics oGraph = System.Drawing.Graphics.FromImage(oImageTarget))
+              {
+                //最佳化繪圖輸出
+                oGraph.CompositingQuality = System.Drawing.Drawing2D.CompositingQuality.HighQuality;
+                oGraph.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
+                oGraph.PixelOffsetMode = System.Drawing.Drawing2D.PixelOffsetMode.HighQuality;
+                //如果發生記憶體不足的情況，就關閉下列最佳化效果
+                if (!_bIsOutOfMemory)
+                {
+                  oGraph.InterpolationMode = System.Drawing.Drawing2D.InterpolationMode.HighQualityBicubic;
+                }
+                //清除畫布
+                oGraph.Clear(System.Drawing.Color.Transparent);
+                //進行縮圖繪製
+                oGraph.DrawImage(oImageSource, 0, 0, (int)_iWidth, (int)_iHeight);
+              }
+
+              /* 進行編碼與儲存 */
+              //設定編碼器
+              System.Drawing.Imaging.ImageCodecInfo oJpegCodec = GetEncoder(System.Drawing.Imaging.ImageFormat.Jpeg);
+              //設定編碼參數包
+              System.Drawing.Imaging.EncoderParameters oEPs = new System.Drawing.Imaging.EncoderParameters(3);
+              oEPs.Param[0] = new System.Drawing.Imaging.EncoderParameter(System.Drawing.Imaging.Encoder.Quality,      (int)_eQuality);
+              oEPs.Param[1] = new System.Drawing.Imaging.EncoderParameter(System.Drawing.Imaging.Encoder.ScanMethod,   (int)System.Drawing.Imaging.EncoderValue.ScanMethodInterlaced);
+              oEPs.Param[2] = new System.Drawing.Imaging.EncoderParameter(System.Drawing.Imaging.Encoder.RenderMethod, (int)System.Drawing.Imaging.EncoderValue.RenderProgressive);
+              //把影像物件導向到檔案串流，再回寫至磁碟（oImage.Save方法很脆弱，只要磁碟稍忙碌或是權限出現一些問題，就會跳出「在GDI+中發生泛型錯誤」）
+              using (System.IO.FileStream oFSTarget = System.IO.File.Open(_cFileTargetPathAndName, System.IO.FileMode.Create))
+              {
+                oImageTarget.Save(oFSTarget, oJpegCodec, oEPs);
+                oFSTarget.Flush();
+              }
+            }
+          }
+        }
+        //如果有正確執行完成，就把記憶體看門狗開關打開
+        _bIsOutOfMemory = false;
+      }
+      catch  (System.OutOfMemoryException oEx)
+      {
+        if (!_bIsOutOfMemory)
+        { //關閉優化圖片特效，再給一次機會
+          _bIsOutOfMemory = true;
+          ResizeAndCompressImage();
+        }
+        else
+        {
+          setException(string.Format(
+            "於 {0} 發生錯誤且繪圖優化效果已經關閉，錯誤原因為：{1}",
+            System.DateTime.Now.ToString("yyyyMMdd HH:mm:ss"),
+            oEx.Message
+          ));
+        }
+      }
+      catch (System.Exception oEx)
+      {
+        setException(string.Format(
+          "於 {0} 發生錯誤，錯誤原因為：{1}",
+          System.DateTime.Now.ToString("yyyyMMdd HH:mm:ss"),
+          oEx.Message
+        ));
+      }
+    }
+
+    /// &lt;summary>
+    /// 檢查必要資訊
+    /// &lt;/summary>
+    private void CheckEssential()
+    {
+      //檢查目標圖片寬度是否無設定
+      if (_iWidth == null || _iWidth &lt;=0)    { setException("目標圖片寬度不可以無值或是小於等於零。"); }
+      //檢查目標圖片高度是否無設定
+      if (_iHeight == null || _iHeight &lt;= 0) { setException("目標圖片高度不可以無值或是小於等於零。"); }
+      //檢查檔案來源路徑是否無設定
+      if (string.IsNullOrEmpty(_cFileSourcePathAndName)) { setException("來源路徑不可為空值。"); }
+      //檢查檔案目標路徑是否無設定
+      if (string.IsNullOrEmpty(_cFileTargetPathAndName)) { setException("目標路徑不可為空值。"); }
+      //檢查來源與目標路徑是否相同（不可以為相同，因為會產生咬檔的問題）
+      if (_cFileSourcePathAndName.Equals(_cFileTargetPathAndName)) { setException("來源與目標路徑不可為相同值。"); }
+      //檢查影像壓縮品質是否無設定
+      if (_eQuality == null) { setException("目標路徑不可為空值。"); }
+    }
+
+    /// &lt;summary>
+    /// 取得影像處理編碼器（codec）
+    /// &lt;/summary>
+    /// &lt;param name="oFormat">影像格式&lt;/param>
+    /// &lt;returns>編碼器&lt;/returns>
+    private System.Drawing.Imaging.ImageCodecInfo GetEncoder(System.Drawing.Imaging.ImageFormat oFormat)
+    {
+      System.Drawing.Imaging.ImageCodecInfo[] aryCodecs = System.Drawing.Imaging.ImageCodecInfo.GetImageDecoders();
+      foreach (System.Drawing.Imaging.ImageCodecInfo oCodec in aryCodecs)
+      { if (oCodec.FormatID == oFormat.Guid) { return oCodec; } }
+      return null;
+    }
+
+  }
+}
+</code></pre><p>調用方法很簡單，請參考下列的程式碼應可以意會：</p><pre><code class=language-cs>Slashview.Image.Resize oImg = new Slashview.Image.Resize()
+{
+  cFileSourcePathAndName = @"\Source.jpg",
+  cFileTargetPathAndName = @"\Target.jpg",
+  eQuality = Slashview.Image.Quality.Highest,
+  iWidth  = 999,
+  iHeight = 999
+};
+oImg.Run();
+//最後建議將整個物件都釋放掉
+oImage = null;
+</code></pre><p>祝大家在使用System.Drawing（GDI+）不要再出現「記憶體不足」或「在GDI+中發生泛型錯誤」的錯誤訊息了（雖然說不太可能...）。如果還有哪些地方在設計上可以修改得更好之處，也歡迎大家留言分享。</p><h2>後記：使用WPF提供的JpegBitmapEncoder來進行壓縮</h2><p>WPF（Windows Presentation Foundation）的JpegBitmapEncoder其實在後端也是依存WIC（Windows Imaging Component）元件來進行存取，如果對於GDI+垃圾般的壓縮品質感到失望的話，或許可以藉由這個類別來進行某種程度的優化。（不過，還是很垃圾，不用抱太大期望）</p><p>若要進行WPF提供的JpegBitmapEncoder來進行壓縮，首先你必須要先下兩個參考：</p><pre><code class=language-xml>&lt;add assembly="PresentationCore, Version=4.0.0.0,  Culture=neutral, PublicKeyToken=31BF3856AD364E35"/>
+&lt;add assembly="WindowsBase,      Version=4.0.0.0,  Culture=neutral, PublicKeyToken=31BF3856AD364E35"/>
+</code></pre><p>使用方式其實比GDI+更簡單，品質雖然比較好一點，但是檔案瞬間臃腫的很厲害（過不了Google PageSpeed Insights的Optimize Images檢測）。因為不是此篇文章的重點，因此我並不想做太多解釋：</p><pre><code class=language-cs>using (System.IO.FileStream oFSSource = new System.IO.FileStream("original.jpg", System.IO.FileMode.Open, System.IO.FileAccess.Read))
+using (System.IO.FileStream oFSTarget = new System.IO.FileStream("target.jpg", System.IO.FileMode.Create))
+{
+  System.Windows.Media.Imaging.BitmapFrame oBF = System.Windows.Media.Imaging.BitmapFrame.Create(oFSSource);
+  System.Windows.Media.Imaging.JpegBitmapEncoder oEncoder = new System.Windows.Media.Imaging.JpegBitmapEncoder()
+  { QualityLevel = 100 };
+  oEncoder.Frames.Add(System.Windows.Media.Imaging.BitmapFrame.Create(oBF));
+  oEncoder.Save(oFSTarget);
+}
+</code></pre><h6>System.Drawing GDI+ OutOfMemoryException MemoryLeak WPF JpegBitmapEncoder WIC WindowsImagingComponent</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

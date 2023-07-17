@@ -1,0 +1,55 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>利用匿名型別來化簡JSON ORM讀取時之冗長程式碼</h1><p>每次只要寫到JSON的讀取方面程式，心裡就會犯嘀咕，雖然Newtonsoft.Json提供了很方便的類別讓我們可以直接引用、處理，但是每次都要寫一次ORM Class的確很煩，尤其是用在不可能會重覆使用的情境下，就會更有「我寫這個Class幹嘛」的感覺。這些就算了，如果在建立ORM的時候，再遭遇到那種毫無sense的JSON提供者，明明單階就可以傳遞資訊完成，就一定要幫你加個DocumentRoot的根元素，所以你就一定得建立二階ORM來對應，那種感覺只能說是無言。詳見：<a href=/archive2015/20150408.html>Server Side JSON/XML的相關寫法</a></p><p>今天突然想到，C# 3.0之後支援的匿名型別（匿名類型），再搭配Newtonsoft.Json提供的DeserializeAnonymousType方法，在讀入後利用C# 4.0的dynamic來創建物件，有可能可以用超精簡的方式來完成JSON的解析與讀入，馬上打開VisualStudio來實作，果然一次完成。</p><h2>範例程式碼如下：</h2><pre><code class=language-cs>static void Main(string[] args)
+{
+  //正常的JSON
+  string cTemp1 =
+    @"
+    {
+      ""time"": ""03:53:25 AM"",
+      ""milliseconds_since_epoch"": 1362196405309,
+      ""date"": ""07-09-2015""
+    }
+    ";
+  //多了個大腸頭、闌尾的JSON
+  string cTemp2 =
+    @"
+    {
+      ""unnecessary"": 
+      {
+        ""time"": ""03:53:25 AM"",
+        ""milliseconds_since_epoch"": 1362196405309,
+        ""date"": ""07-09-2015""
+      }
+    }
+    ";
+  //運用匿名型別，一行解回ORM（正常版）
+  var oTemp1 = Newtonsoft.Json.JsonConvert.DeserializeAnonymousType(cTemp1, new
+  {
+    date = "",
+    time = "",
+    milliseconds_since_epoch = 0L
+  });
+  //運用匿名型別，一行解回ORM（大腸頭、闌尾版）
+  var oTemp2 = Newtonsoft.Json.JsonConvert.DeserializeAnonymousType(cTemp2, new
+  {
+    unnecessary = new
+    {
+      date = "",
+      time = "",
+      milliseconds_since_epoch = 0L
+    }
+  });
+  //輸出
+  Console.WriteLine("－－－正常JSON值解回－－－");
+  Console.WriteLine(oTemp1.date);
+  Console.WriteLine(oTemp1.time);
+  Console.WriteLine(oTemp1.milliseconds_since_epoch);
+  Console.WriteLine("－－－大腸頭、闌尾JSON值解回－－－");
+  Console.WriteLine(oTemp2.unnecessary.date);
+  Console.WriteLine(oTemp2.unnecessary.time);
+  Console.WriteLine(oTemp2.unnecessary.milliseconds_since_epoch);
+  Console.Read();
+}
+</code></pre><h2>輸出的畫面</h2><p>嗯嗯，JSON值很正常的顯示嘍！</p><p><img src=https://content.slashview.com/img/2015/20150709_01.jpg alt="" /></p><p>終於脫離不需要ORM情境下還要建立ORM的幹意了！程式碼非常的簡潔清爽，如果有更好的寫法，也請您分享一下喔！</p><h3>20210216補充：</h3><p>沒有其他特殊原因的話，基本上我一律是建議使用匿名型別來處理這個問題，但是有些場合可能各程式碼之間需要共用的ORM來嵌套資料，若強行用匿名型別來處理可能要脫褲子放屁的多打一次匿名描述程式碼，萬一共用的ORM類別屬性改了可能又要回來修正，這時候可以改採用JObject的SelectToken寫法來解套。範例如下：</p><pre><code class=language-cs>var oMyORM = Newtonsoft.Json.JsonConvert.DeserializeObject(
+  Newtonsoft.Json.Linq.JObject.Parse(cTemp2).SelectToken("unnecessary").ToString()
+);
+</code></pre><h6>匿名類型 匿名型別 JSON RootClass RootElements Remove Select AnonymousTypes Newtonsoft.Json ObjectRelationalMapping</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

@@ -1,0 +1,151 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>在WebForm下使用ModelBinding（打造ASHX可用的通用類別）</h1><p>在上一篇「<a href=/archive2020/20200511.html>在WebForm下使用ModelBinding（PostBack遭遇之問題）</a>」文章中，我們試圖解決使用MVC提供的System.Web.ModelBinding來處理更之前利用Reflection土炮自幹的物件賦值行為（<a href=/archive2020/20200430.html>進行物件Reflection反射後，將值Value寫入到物件屬性中</a>），未料在一開始的PostBack就被擊沉，如果你更繼續看下去更會有下巴掉下來的反應，那就是ModelBindingExecutionContext屬性只有WebForm專屬的Page才有！而我們都知道Page是屬於System.Web.UI命名空間的類別，這意味著我高效能的.ASHX（泛型處理常式）根本無法支援啦！</p><p><img src=https://content.slashview.com/img/2020/20200512_01.jpg alt="" /></p><h2>打造ASPX、ASHX均可通用的ModelBinding類別</h2><p>既然微軟沒有提供，那我們就自己想辦法抄一份類別出來。在這邊我的處理方式是往.NET Framework原始碼的方向走，也就是我自己去抄一份原始碼到我自己的類別，再將其修改成我想要操作的方法。後來找到這個<a href=https://referencesource.microsoft.com/#system.web/UI/Page.cs,491>ModelBindingExecutionContext</a>方法簡直是太棒啦！原來他也是透過new HttpContextWrapper(Context)建構子來取得HttpContext，那就代表ASHX可以支援了。</p><p>在最小的修改狀況下，我撰寫了一個類別讓這一切變得可能。</p><h2>改寫System.Web.UI內Page Class的ModelBindingExecutionContext類別</h2><pre><code class=language-cs>public class WebFormModelBinding
+{
+  //ModelBinding：HTTP內文綁定
+  private System.Web.ModelBinding.ModelBindingExecutionContext _oModelBindingExecutionContext;
+  //ModelBinding：模組狀態描述
+  private System.Web.ModelBinding.ModelStateDictionary         _oModelState;
+
+  /// &lt;summary>
+  /// （公有）ModelBinding：HTTP內文綁定
+  /// &lt;/summary>
+  public System.Web.ModelBinding.ModelBindingExecutionContext ModelBindingExecutionContext
+  {
+    get
+    {
+      if (_oModelBindingExecutionContext == null)
+      {
+        _oModelBindingExecutionContext = new System.Web.ModelBinding.ModelBindingExecutionContext(new System.Web.HttpContextWrapper(System.Web.HttpContext.Current), this.ModelState);
+        //This is used to query the ViewState in ViewStateValueProvider later.
+        //_oModelBindingExecutionContext.PublishService&lt;System.Web.UI.StateBag>(ViewState);
+        //This is used to query RouteData in RouteDataValueProvider later.（回寫RouteData以備不時之需）
+        _oModelBindingExecutionContext.PublishService&lt;System.Web.Routing.RouteData>(System.Web.HttpContext.Current.Request.RequestContext.RouteData);
+      }
+      return _oModelBindingExecutionContext;
+    }
+  }
+
+  /// &lt;summary>
+  /// （公有）ModelBinding：模組狀態描述
+  /// &lt;/summary>
+  public System.Web.ModelBinding.ModelStateDictionary ModelState
+  {
+    get
+    {
+      if (_oModelState == null)
+      { _oModelState = new System.Web.ModelBinding.ModelStateDictionary(); }
+      return _oModelState;
+    }
+  }
+
+  /// &lt;summary>
+  /// （公有）ModelBinding：嘗試更新模組內部資料
+  /// &lt;/summary>
+  /// &lt;typeparam name="TModel">要綁定的ORM類別&lt;/typeparam>
+  /// &lt;param name="oModel">要綁定的ORM類別&lt;/param>
+  /// &lt;param name="oValueProvider">數值提供者&lt;/param>
+  /// &lt;returns>true：轉換成功；false：轉換失敗&lt;/returns>
+  public bool TryUpdateModel&lt;TModel>(TModel oModel, System.Web.ModelBinding.IValueProvider oValueProvider) where TModel : class
+  { //參數null錯誤檢查
+    if (oModel == null)
+    { throw new System.Exception($"oModel不可為空值。"); }
+    if (oValueProvider == null)
+    { throw new System.Exception("oValueProvider不可為空值。"); }
+    //宣告綁定所需類別
+    System.Web.ModelBinding.IModelBinder oBinder = System.Web.ModelBinding.ModelBinders.Binders.DefaultBinder;
+    System.Web.ModelBinding.ModelBindingContext oBindContext = new System.Web.ModelBinding.ModelBindingContext()
+    {
+      ModelBinderProviders = System.Web.ModelBinding.ModelBinderProviders.Providers,
+      ModelMetadata        = System.Web.ModelBinding.ModelMetadataProviders.Current.GetMetadataForType(() => oModel, typeof(TModel)),
+      ModelState           = ModelState,
+      ValueProvider        = oValueProvider
+    };
+    //進行綁定
+    if (oBinder.BindModel(ModelBindingExecutionContext, oBindContext))
+    { return ModelState.IsValid; }
+    //綁定錯誤
+    return false;
+  }
+}
+</code></pre><p>經過類別新增後，我們可以開始操作了。</p><pre><code class=language-cs>var oData = new SomeORM();
+var oMB = new WebFormModelBinding();
+var bIsSuccess = oMB.TryUpdateModel(oData, new System.Web.ModelBinding.FormValueProvider(oMB.ModelBindingExecutionContext));
+if(bIsSuccess)
+{
+  //驗證通過...
+}
+</code></pre><p>這邊還是要提醒一下，ModelBinding的驗證通過，不代表你的ORM物件屬性一切都完滿，因為前端有可能有屬性根本沒有傳遞進入，這時候沒有觸發綁定當然也不會引發問題，一般來說需要注意的有下列項次：</p><ol><li>HTTP前端根本沒有傳入對應的屬性名稱項次，不會引發錯誤。</li><li>就算觸發驗證失敗（被記錄在ModelState了），ORM依然會被賦予該轉型失敗的值，除非這個值根本不符型別。舉例來說傳入了「abcd1234」，cName被依據system.componentmodel.dataannotations設定屬性[System.ComponentModel.DataAnnotations.MaxLength(5, ErrorMessage = "字串不可超過5個字。")]，盡管回應了綁定失敗也記錄了相關的錯誤資訊，但ORM中的cName依然會被設定成「abcd1234」。</li><li>承上述，同樣的道理面對一個列舉（Enum）類別，HTTP傳入一個不存在的「99」數值值，盡管有設定[System.ComponentModel.DataAnnotations.EnumDataType(typeof(yourEnum))]，ORM裡面該列舉屬性依然會被值派99。</li><li>ModelBinding在無法轉型的時候才會真正阻擋對ORM寫值的動作，舉例來說「abcd1234」值預期寫入ORM的某int屬性，這時候會觸發轉型失敗，錯誤訊息會放在ModelState的ModelError.Exception，而非驗證時期慣用的Error.ErrorMessage，這個機制我個人有點無言。</li></ol><p>接下來我們會意識到實務上不可能還在那邊宣告instance完在操作，因此往偷懶的私有靜態方法發展。在這邊我們依據資料來源是FormData或是QueryString來進行不同的ValueProvider載入資料以利分析：</p><pre><code class=language-cs>/// &lt;summary>
+/// （私有靜態）ModelBinding：擷取傳入資訊並取得綁定後的物件與相關資訊
+/// &lt;/summary>
+/// &lt;typeparam name="TModel">ORM類別物件&lt;/typeparam>
+/// &lt;param name="oModel">ORM類別物件&lt;/param>
+/// &lt;returns>（是否錯誤；綁定後的ORM類別物件；錯誤資訊字典列表；綁定時期之模組資料物件）&lt;/returns>
+private static
+(
+  bool                                                  bIsError,   //是否錯誤
+  TModel                                                oData,      //綁定後的ORM類別物件
+  System.Collections.Generic.Dictionary&lt;string, string> oErrorList, //錯誤資訊字典列表（方便應用時期取用）
+  System.Web.ModelBinding.ModelStateDictionary          oModelState //綁定時期之模組資料物件（可用來求取延伸資訊）
+) ModelBinding&lt;TModel>(TModel oModel, string cMode = "Form") where TModel : class
+{
+  var oReq = new WebFormModelBinding();
+  //依據不同的來源給定不同的模組綁定方法
+  bool bIsSuccess = false;
+  switch (cMode)
+  { //GET: QueryString
+    case string x when x.Equals("QueryString", System.StringComparison.InvariantCultureIgnoreCase):
+      bIsSuccess = oReq.TryUpdateModel(oModel, new System.Web.ModelBinding.QueryStringValueProvider(oReq.ModelBindingExecutionContext));
+      break;
+    //Post: Form
+    default:
+      bIsSuccess = oReq.TryUpdateModel(oModel, new System.Web.ModelBinding.FormValueProvider(oReq.ModelBindingExecutionContext));
+      break;
+  }
+  System.Collections.Generic.Dictionary&lt;string, string> oErrorList = new System.Collections.Generic.Dictionary&lt;string, string>();
+  foreach (var cKey in oReq.ModelState.Keys)
+  { //將有出錯的綁定鍵值列舉並求取錯誤訊息
+    if (oReq.ModelState[cKey].Errors.Count > 0)
+    { 
+      oErrorList.Add(
+        cKey,
+        $@"{string.Join("|", oReq.ModelState[cKey].Errors.Select(x => $"{x.ErrorMessage}{x.Exception?.Message}"))}［{oReq.ModelState[cKey].Value.AttemptedValue}］"
+      );
+    }     
+  }
+  return (!bIsSuccess, oModel, oErrorList, oReq.ModelState);
+}
+</code></pre><p>最後我們再開出兩個公有靜態方法，讓未來方法的呼叫可以更直觀可用：</p><pre><code class=language-cs>// （公有靜態）ModelBinding：Form傳入資訊並取得綁定後的物件與相關資訊
+public static
+(
+  bool                                                  bIsError,
+  TModel                                                oData,
+  System.Collections.Generic.Dictionary&lt;string, string> oErrorList,
+  System.Web.ModelBinding.ModelStateDictionary          oModelState
+) ModelBindingForm&lt;TModel>(TModel oModel) where TModel : class
+{
+  return WebFormModelBinding.ModelBinding(oModel, "Form");
+}
+
+// （公有靜態）ModelBinding：QyeryString傳入資訊並取得綁定後的物件與相關資訊
+public static
+(
+  bool                                                  bIsError,
+  TModel                                                oData,
+  System.Collections.Generic.Dictionary&lt;string, string> oErrorList,
+  System.Web.ModelBinding.ModelStateDictionary          oModelState
+) ModelBindingQyeryString&lt;TModel>(TModel oModel) where TModel : class
+{
+  return WebFormModelBinding.ModelBinding(oModel, "QueryString");
+}
+</code></pre><p>驗證時間，使用在QueryString上：</p><pre><code class=language-cs>var oResultQ   = WebFormModelBinding.ModelBindingQyeryString(new yourORM());
+bool IsSuccess = !oResultQ.bIsError;
+var oData      = oResultQ.oData;
+string cError  = string.Empty;
+if (oResultQ.bIsError)
+{ cError = string.Join("｜", oResultQ.oErrorList.Select(x => $"{x.Key}：{x.Value}")); }
+</code></pre><p>驗證時間，使用在Form上：</p><pre><code class=language-cs>var oResultF   = WebFormModelBinding.ModelBindingForm(new yourORM());
+bool IsSuccess = !oResultF.bIsError;
+var oData      = oResultF.oData;
+string cError  = string.Empty;
+if (oResultF.bIsError)
+{ cError = string.Join("｜", oResultF.oErrorList.Select(x => $"{x.Key}：{x.Value}")); }
+</code></pre><h2>總結</h2><p>透過ASP.NET ModelBinding讓我們可以以更高速穩定的方式，快速的將程式碼中很枯燥的部分跳過，但其實在綁定後的ORM資料整理工作其實也沒有節省到多少功夫（但話說回來，同樣的條件下直接去解析Request.Form也是要做一樣的驗證工程），建議這種東西可以適量的用在內部程式交換數據上，前後端彼此信任的關係下其實可以省掉很多防範方面的程式碼。</p><h3>相關參考</h3><ul><li><a href=/archive2020/20200430.html>進行物件Reflection反射後，將值Value寫入到物件屬性中</a></li><li><a href=/archive2020/20200511.html>在WebForm下使用ModelBinding（PostBack遭遇之問題）</a></li><li><a href=/archive2020/20200512.html>在WebForm下使用ModelBinding（打造ASHX可用的通用類別）</a></li><li><a href=/archive2022/20220307.html>利用ModelBinding處理FormData回傳表單「多值集合」與「多重檔案」之作法</a></li></ul><h6>ASP.NET WebForm MVC System.Web.ModelBinding ModelBinding BindModel</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

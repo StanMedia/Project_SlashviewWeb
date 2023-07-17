@@ -1,0 +1,9 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>HTTP的HOST Header被濫用之問題</h1><p>在HTTP無論是1.0或1.1的協定中，有一個可以指定HOST的標頭指令，這個指令在某一種操作下將會影響到你的主機的效能，並且並沒有一個很有效的方法可以將其關閉，這篇文章將記錄這個問題，以及可能（可以的）解法，供日後參考。</p><p>問題發生的原因是因為你可以在進行HTTP要求時期，在中間指定HOST是要去哪一台主機要求這個資源，這樣的問題將會導致你的網站會被一些自己以為是駭客的小屁孩濫用，在要求數量極大的情況下，可能會產生不可忽視的負載。以下是實現這個攻擊手法的方式：</p><pre><code class=language-txt>//以msn網站為例，使用telnet程式進行連線
+telnet www.msn.com 80
+
+//取得中文首頁資訊
+GET /index.html HTTP/1.1
+
+//這裡是重點，指定要求要由www.yahoo.com這台機器來執行/index.html指令
+Host: www.yahoo.com
+</code></pre><p>你可能會得到下列幾種錯誤（或正確）的資訊：</p><ol><li>HTTP/1.1 301 Moved Permanently 這表示他很友善的通知你要去哪拿正確資料。</li><li>HTTP/1.1 400 Bad Request 這表示網站回應你的要求是錯的。</li><li>HTTP/1.1 200 OK 這表示網站根本不鳥你是要求哪一台主機，路徑或主機錯我還是吐給你我想要給你看的預設畫面。</li></ol><h2>重點解析</h2><p>HOST正確的使用方式是用在單一IP綁上多重DomainName的情況，但被拿來惡意使用就不是那麼有趣了。</p><p>網路有一句流行話叫「認真就輸了！」，它同樣適用在這個例子。不知你是否有發現，無論是在IIS等級處理，或者是在ASP.NET階段處理，一旦你去「理會」這種毫無道理的要求，你就輸了。輸在你必須耗用網路、CPU、記憶體等資源去回應它。不是用IIS的也別高興，這個問題發生在所有實作HTTP協定的網站伺服器上，這意味著任何平台都會發生同樣的狀況。</p><h2>解決方法</h2><p>這個問題在IIS並沒有良好的解決方式，一有派是建議安裝UrlScan Tools，有一派是建議綁定伺服器IP與名稱，當然還有其他利用IIS 7之後內建的過濾器來解決問題，但是這都不算是正式的解決。因為，最終你還是「理會」這個要求了！所以我不認為這個問題真正的被解決了。</p><p>目前的想法這種攻擊類似DDoS，所以阻擋端應該是放在頂層的IDS（Intrusion Detection System）或WAF（Web Application Firewall）設備上。有更好解決方案的網友，不妨來信分享你的想法。</p><h6>HttpHeader HttpHostHeader Attacks ProxyAbuse</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

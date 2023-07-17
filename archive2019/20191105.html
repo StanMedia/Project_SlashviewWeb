@@ -1,0 +1,15 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>將您的Android手機中占用空間的無用APPs移除</h1><p>幾乎每一間Android手機發行商，多少都會預載一些無用的垃圾軟體，這些軟體您可能到手機壞掉的那天都不可能用到，放在手機內、放在儲存空間內都是礙眼與浪費空間而已。很不幸的，這些軟體大都無法移除（不然手機發行商就少了一個抽傭金的管道了）。</p><h3>利用ADB軟體來將無用垃圾Apps移除</h3><p>ADB（Android Debug Bridge）是Google這個親生母親發行的一套工具，利用有點像是TELNET的方式，將您的手機視為一台Linux電腦，透過這個軟體切入查看與下指令。</p><p>Step 1. 下載<a href=https://dl.google.com/android/repository/platform-tools-latest-windows.zip>Google ADB（Android Debug Bridge）</a>，並將其解壓縮成為一個資料夾。</p><p>Step 2. 請到手機的：設定＞關於手機＞軟體版本號（連點數下，啟用開發人員選項）</p><p>Step 3. 請到手機的：設定＞開發人員選項＞USB偵錯（將這個選項打開）</p><p>Step 4. 請利用cmd模式，將路徑轉移步驟一所存在的資料夾，輸入adb指令。</p><p>⭐列出現有裝置，若輸入這個指令卻沒有出現如下描述的畫面，代表ADB根本找不到您的手機在哪。</p><pre><code class=language-txt>adb devices
+－－－－－
+List of devices attached
+J7EA7LE6SW4S8LFA        device
+</code></pre><p>⭐就像利用終端機切入到您的手機內，您可以在裡面輸入一些linux常見的指令，例如列舉目錄...等。</p><pre><code class=language-txt>adb shell
+</code></pre><p>⭐列出當前您手機中所有加裝的APK檔案名稱（特別是命名空間），例如：com.android.fmradio可能代表的是一個收音機APPs。</p><pre><code class=language-txt>adb shell pm list packages -f
+－－－－－
+package:/system/app/AsusGpsTest/AsusGpsTest.apk=com.huaqin.acergpsandwifitest
+package:/system/priv-app/FMRadio/FMRadio.apk=com.android.fmradio
+package:/system/app/WebStorage_2.2.7.8658/WebStorage_2.2.7.8658.apk=com.ecareme.asuswebstorage
+package:/system/app/QuickMemo_1.6.0.150710_1/QuickMemo_1.6.0.150710_1.apk=com.asus.quickmemo
+</code></pre><p>⭐移除某一個垃圾Apps，例如您根本就沒有再使用華碩的雲端儲存服務，那麼可以考慮把這個軟體移除了。</p><pre><code class=language-txt>adb shell pm uninstall -k --user 0 com.ecareme.asuswebstorages
+－－－－－
+Success （看到這個字眼代表移除Apps成功）
+</code></pre><p>最後要特別叮嚀的是，這個動作其實本身很危險，若您沒有充足的把握（或您的手機內部有重要的資料尚未備份出來）最好不要嘗試。原因是因為手機發行商在自訂開機程序中，過程可能會去調用某個常駐的服務或應用型Apps，而如果這個Apps不小心被您移除掉，那麼您的手機可能就會當在開機畫面，永遠都無法開進桌面了。</p><p>若不幸遇到這個情況，最好的方式就是上網GOOGLE一下您手機Hard Reset的方式了。</p><h6>Android ADB Remove Uninstall Apps Applications Programs</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

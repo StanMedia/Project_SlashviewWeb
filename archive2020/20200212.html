@@ -1,0 +1,48 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>利用Promise來進行前端Jacascipt之非同步且循序的工作排程</h1><p>以往都是在後端進行大型工程程序時，才會遇到這個需求，如今AJAX非同步傳輸盛行的年代，有機會在前端遇到類似的非同步且循序的工作排程問題（先做Ａ才能再做Ｂ，如果發生Ｃ的時候就去Ｄ，否則就去做Ｅ）之類的，所幸後期有Promise語法，讓Jacascipt在不使用監聽事件的寫法下，有機會可以進行更複雜的排程工作。</p><p><img src=https://content.slashview.com/img/2020/20200212_01.jpg alt="" /></p><p>或許有人會問，那為何不要用事件監聽去寫？答案很簡單，如果單一性的工作用事件監聽來寫，並進行後續的成功或失敗回調呼叫，倒也無可厚非，但如果是一連串的工作用事件監聽來寫，那麼你會得到<a href=/archive2018/20180711.html>波動拳程式碼</a>，看你有沒有辦法受的了那種愚蠢的結構（我是沒辦法）。</p><p>以下是一段來自於Mozilla MDN所展示的<a href=https://developer.mozilla.org/zh-TW/docs/Web/JavaScript/Guide/Using_promises>Callback波動拳</a>範例程式碼，讓大家感受一下。</p><pre><code class=language-js>doSomething(function(result) {
+  doSomethingElse(result, function(newResult) {
+    doThirdThing(newResult, function(finalResult) {
+      console.log('Got the final result: ' + finalResult);
+    }, failureCallback);
+  }, failureCallback);
+}, failureCallback);
+</code></pre><h3>Promise寫法簡介</h3><p>基本上Promise的寫法就是利用new Promise去產生一個實例，裡面透過一個匿名函式給予兩個引數委派，一般來說叫做resolve（代表成功回傳）、reject（代表失敗回傳）。以下是一個簡單的範例：</p><pre><code class=language-js>var oPromise = new Promise(function(resolve, reject) {
+  //做一些非同步的工作...
+  oData = { bIsError: false, cMessage: "某些訊息" };
+  if (正確工作) {
+    //透過resolve引數丟回要回傳的參數包
+    resolve(oData);
+  } else {
+    //透過reject引數丟回要回傳的參數包
+    reject(oData);
+  }
+});
+</code></pre><p>透過上面的oPromise物件建立後，接著就可以用串接的方式繼續往下進行某些流程性的工作：</p><pre><code class=language-js>//原始型態寫法
+promise.then(function(oReturn) {
+  //透過resolve引數委派的函式會在此被執行
+  console.log(oReturn.cMessage);
+}, function(oReturn) {
+  //透過reject引數委派的函式會在此被執行
+  console.log(oReturn.cMessage);
+});
+
+//個人偏好的寫法，類似Try-Catch
+oPromise.then(function(oReturn) {
+  //透過resolve引數委派的函式會在此被執行
+  console.log(oReturn.cMessage);
+}).catch(function(oReturn) {
+  //透過reject引數委派的函式會在此被執行
+  console.log(oReturn.cMessage);
+});
+</code></pre><p>上面的寫法有一個最重要的重點，就是如果在每個.then()方法的最後，你再去調用一個回傳Promise的物件回來，那麼.then()方法就可以無限的串接下去，而這也是我們所喜好的工作流程安排方式，而避開使用波動拳程式碼撰寫法。</p><pre><code class=language-js>//呼叫A流程
+SomePromiseObject(oData).then(function(oReturn) {
+  //A成功的話，就做某些回應...
+  //繼續呼叫B流程（調用新的Promise回傳物件）
+  return SomePromiseObject(oData);
+}).then(function(oReturn) {
+  //B成功的話，就做某些回應...
+}).catch(function(oReturn) {
+  //如果A或B流程出問題，會自動跳到這邊來處理例外
+}).then(function(oReturn) {
+  //甚至可以在最末端再插入一個then()，讓你的流程無論是否發生例外都可以繼續在進行下一個C流程
+});
+</code></pre><p>上面的程式碼我簡單的條列一下可能的運行流程，你也可以順便想像一下如果你在事件Callback的基礎下要實現這些工作流程，你要寫出怎樣的程式碼？</p><ol><li>A→B→C</li><li>A→錯誤→C</li><li>A→B→錯誤→C</li></ol><h2>模擬一個非同步流程的運行執行結果</h2><p>點擊下方按鈕進行模擬運行Promise程序</p><pre id=uMsg style=height:160px;overflow-y:scroll></pre><p><a id=uBtn class="btn btn-outline-primary btn-lg">模擬運行Promise</a></p><p>若要知道這隻Promise模擬程式碼怎麼寫的，請自行按下F12觀察原始碼。</p><p>另外值得一提的是，這裡面有利用Promise設計出一個原本Javascript沒有擁有的sleep();暫停函數，且因為Promise的特性使其為非線程壅塞式的函式，如果有需要在Javascript裡面用到延遲功能的朋友可以參考一下。</p><h6>Javascript JS Worker Tasks aync awit Promise non-EventListener</h6><script>$(function(){function t(n){return new Promise(function(t,r){i(n.iDelay).then(function(){n.bIsError?r("❌"+n.cMessage+"執行"+n.iDelay+"毫秒失敗。"):t("⭕"+n.cMessage+"執行"+n.iDelay+"毫秒成功。")})})}function i(n){return new Promise(t=>setTimeout(t,n))}function n(n){$("#uMsg").append((new Date).toString().split(" ")[4]+" "+n+"\n");$("#uMsg").scrollTop($("#uMsg")[0].scrollHeight)}$("#uBtn").click(function(){n("--- 開始Promise運行 ---");t({bIsError:!1,cMessage:"流程A",iDelay:1e3}).then(function(i){return n(i),t({bIsError:!1,cMessage:"流程B",iDelay:2e3})}).then(function(i){return n(i),t({bIsError:!0,cMessage:"流程C",iDelay:3e3})}).catch(function(t){n(t)}).then(function(t){t!==undefined?n(t):n("偵測到流程C執行有問題。");n("--- 跑完啦！😃 ---")})})})</script></main><footer></footer><script src=/.file/site.js></script></body></html>

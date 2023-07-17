@@ -1,0 +1,95 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>設計模式：狀態模式（State Pattern）</h1><p>在撰寫大型複雜程式的時候，通常都會被狀態這個東西困擾，因為人類社會處理一件事情所要經歷的狀態可謂是五花八門，若把這邊都寫成IF的話不僅煩人還容易出錯，日後交給菜鳥維護也肯定是漏洞百出。若你要處理的程序有嚴重的相依性（先怎樣→再怎樣→然後怎樣），這時候可以利用狀態模式（State Pattern）這個設計方法幫你完成。</p><h2>狀態模式（State Pattern）</h2><p>所謂的狀態模式（State Pattern）就是可以讓一個我們正在操作的物件，透過時序（呼叫時期）的不同，藉由設計好的機制在內部改變狀態，用來阻擋外部執行到不合乎當下狀態的方法。</p><p>假設我們需要設計一個自助加油機器的類別，需要經過「刷卡→加油→列印收據」等程序，因此我們可以定義下列State介面：</p><pre><code class=language-cs>public interface IState
+{
+  void TapCard();
+  void Refuel();
+  void Receipt();
+}
+</code></pre><p>然後我們設計了三種狀態繼承該介面，來分別定義與展現出介面中三個方法當下運行時的狀態：</p><pre><code class=language-cs>public class TapCardState : IState
+{
+  public void TapCard() => Console.WriteLine("信用卡感應成功");
+  public void Refuel() => Console.WriteLine("未允許此步驟");
+  public void Receipt() => Console.WriteLine("未允許此步驟");
+}
+
+public class RefuelState : IState
+{
+  public void TapCard() => Console.WriteLine("未允許此步驟");
+  public void Refuel() => Console.WriteLine("油槍加油完成");
+  public void Receipt() => Console.WriteLine("未允許此步驟");
+}
+
+public class ReceiptState : IState
+{
+  public void TapCard() => Console.WriteLine("未允許此步驟");
+  public void Refuel() => Console.WriteLine("未允許此步驟");
+  public void Receipt() => Console.WriteLine("列印收據完成");
+}
+</code></pre><p>接著我們設計一個加油站類別，除了繼承該介面之外，另外也實作了加油站所需要的方法：</p><pre><code class=language-cs>public class GasStation : IState
+{
+  private IState _State;
+  public GasStation()
+  {
+    Console.WriteLine("歡迎使用自助加油服務");
+    Init();
+  }
+  public void Init()
+  {
+    Console.WriteLine("請先放置感應信用卡");
+    _State = new TapCardState();
+  }
+  public void TapCard() 
+  {
+    if (_State is not TapCardState)
+    { throw new System.Exception(GetState()); }
+    _State.TapCard();
+    _State = new RefuelState();
+  }
+  public void Refuel()
+  {
+    if (_State is not RefuelState)
+    { throw new System.Exception(GetState()); }
+    _State.Refuel(); 
+    _State = new ReceiptState();
+  }
+  public void Receipt()
+  {
+    if (_State is not ReceiptState)
+    { throw new System.Exception(GetState()); }
+    _State.Receipt();
+    Init();
+  }
+  private string GetState() => $"目前的狀態是：{_State.GetType().Name}";
+}
+</code></pre><p>從上面的程式碼我們可以發現，加油站類別執行介面定義的方法的時候，程式碼會去檢查當下的狀態是否為該方法認知的狀態，舉例來說，當程式碼進入Refuel()方法時，我們會趕快去檢查當下的_State狀態是否為RefuelState，這樣寫的用意可以避免不知情（不知道流程運行過程）的程式設計師，不依據人類定義好的流程，胡亂的調用不對的方法，產生執行後未知的炸裂。而當我們逐一依據介面定義好的方法去檢查當下正確的狀態時，就可以規避掉不正確的狀態。</p><p>這樣撰寫最大的優點就是應用端再也不用寫一大堆IF-ELSE程式碼，也就是要執行每一次的指令的時候，不需要再去檢查「如果現在的狀態是OOO，那我才去運行XXX動作」，不僅應用端的程式碼寫起來清爽，又具備狀態，類別端的程式碼也比較好閱讀與理解，因為每個類別只要管理好自己所需求的狀態前提就好，不需要去擔心其他的狀態當下應該如何。有了上述的設計方法後，應用端就很好寫了：</p><pre><code class=language-cs>public static void Main()
+{
+  try
+  {
+    var oGS = new GasStation();
+    oGS.TapCard();
+    oGS.Refuel();
+    oGS.Receipt();
+   }
+  catch (System.Exception oEx)
+  {
+    Console.WriteLine($"錯誤，{oEx.Message}");
+  }
+  Read();
+}
+</code></pre><p>產生的結果：</p><pre><code class=language-txt>歡迎使用自助加油服務
+請先放置感應信用卡
+信用卡感應成功
+油槍加油完成
+列印收據完成
+請先放置感應信用卡
+</code></pre><p>未刷卡就開始拿油槍加油：</p><pre><code class=language-cs>var oGS = new GasStation();
+oGS.Refuel(); //未刷卡就開始拿油槍加油
+</code></pre><p>產生的結果：</p><pre><code class=language-txt>歡迎使用自助加油服務
+請先放置感應信用卡
+錯誤，目前的狀態是：TapCardState
+</code></pre><p>有刷卡但沒有加油就想要輸出收據：</p><pre><code class=language-cs>var oGS = new GasStation();
+oGS.TapCard();
+oGS.Receipt();  //有刷卡但沒有加油就想要輸出收據
+</code></pre><p>產生的結果：</p><pre><code class=language-txt>請先放置感應信用卡
+信用卡感應成功
+錯誤，目前的狀態是：RefuelState
+</code></pre><h2>結論</h2><p>如果有一個類別裡面具備複雜的程序，也確定日後調用這個類別的程式設計師有很高的機率會混淆弄錯方法調用順序，不妨採用狀態模式（State Pattern）來封印（管理）這個類別，以防止不知情的調用引發的災難。</p><h6>C# DesignPattern StatePattern</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

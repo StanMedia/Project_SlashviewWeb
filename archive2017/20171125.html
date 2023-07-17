@@ -1,0 +1,50 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>C#中有關於方法中的參數物件傳遞之觀念釐清</h1><p>我們都知道C#中有兩大型別，一種是實質型別（ValueType），例如：int、char、enum、struct...等；另外一種是參考型別（ReferenceType），諸如你看到所有的class、string、delegate都算是參考型別。</p><p>今天有一位朋友遇到方法的參數傳遞方面的觀念問題，因此特地寫了這篇文章來記錄一下。</p><h2>首要心法</h2><p>只要你確定程序內調用某方法之傳過去的引數（Argument）是屬於哪一種型別，那麼方法裡面的參數（Parameter）就會以那個型別的方式接收。例如，如果引數是int，那麼方法內接收的參數，就會被複製一份實質過去。反之，如果是參考型別，則會把這個參考的物件位址帶過去方法內的接收參數。</p><p>有了這個基本心法後，再來看一下下面這張程式碼圖片。</p><p>我這邊就順著程式碼，口語的方式把這個觀念順一次。</p><ul><li>第09行：宣告了oTest物件，並且呼叫Method1。</li><li>第15行：建立Hashtable物件，並加入一個項次"A"。</li><li>第17行：呼叫Method2，引數為oHT。</li><li>第22行：參數oTemp物件，其實就是參考了oHT的記憶體位址而已。而對於C#來說，這樣的行為之定義，還是被稱為「PassingReferenceTypesByValue」。（很重要！）</li><li>第24行：oTemp物件被加入了項次"B"，因為參考到同一個記憶體位址，也就是等同於oHT被加入項次"B"。</li><li>第25行：oTemp物件被指向null，自此失去了oHT記憶體位址的關聯，分道揚鑣了。此時如果你去foreach oTemp，你會得到System.NullReferenceException錯誤。</li><li>第18行：跳回Method1，foreach oHT會得到「1, 2」這兩個KeyValue。因為oHT指向的記憶體位址，一直都存在，並未受到oTemp物件的干擾。</li><li>第19行：oHT被重新指向到一個新的記憶體位址，自此再也沒有物件指向到之前oHT配置的記憶體空間，這個空間已經變成了漂流太空人，等待被System.GC.Collect()垃圾回收了。</li><li>第20行：oTemp物件被加入了項次"C"。理所當然，如果現在去foreach oHT，你只會得到單一個Key C，Value是3。</li></ul><h2>那麼，如何在方法之間，讓傳遞的參數永遠指向同一個記憶體位址？</h2><p>這問題可以改變成另外一種說法，就是我如何把方法中拿到的參數，永遠不要變更參考的記憶體位址，而是視為可以直接操作不斷開關聯的一個參考變數呢？</p><p>答案很簡單，在引數與參數的開頭，都加上「ref」關鍵字即可。例如：</p><pre><code class=language-cs>private void Method1()
+{
+  System.Collections.Hashtable oHT = new System.Collections.Hashtable();
+  oHT.Add("A", 1);
+  Method2(ref oHT);
+  foreach (var oItem in oHT.Keys)  { Console.WriteLine(oHT[oItem]); }
+}
+private void Method2(ref System.Collections.Hashtable oTemp)
+{
+  oTemp.Add("B", 2);
+  oTemp = null;
+}
+</code></pre><p>上面的程式碼中，引數與參數的開頭都被加入了ref關鍵字，代表在跟編譯器講說，以傳址的方式幫我傳遞參數，那麼，所有的參數都會被鎖住不能夠隨意的改參考到別的記憶體空間，所以當oTemp = null這一行出現的時候，也就代表了oHT的死亡。因此，在最後foreach oHT這行程式，你肯定會得到一個System.NullReferenceException。</p><p>如果你今天是在操作實質型別的參數傳遞，依然適用這個觀念喔！（不過，上面講的這些觀念，用在實質型別身上本來就天經地義了，所以好像也不用特別去在意就是了。）</p><h2>跨類別共同參考某個物件，依然適用此思維</h2><p>請參考下列程式碼，由TestDT類別產生並拋出HashTable，然後TestDT被using自我Dispose，結果最終參考到的HashTable依然可以被列印出內容（但是TestDT類別已經自爆了）。</p><pre><code class=language-cs>class Program
+{
+  public static void Main()
+  {
+    Hashtable oHT = null;
+
+    using (TestDT oTemp = new TestDT())
+    { oHT = oTemp.GetHT(); }
+
+    foreach (var item in oHT.Keys)
+    { Console.WriteLine(oHT[item]); }
+
+    Console.Read();
+  }
+}
+
+class TestDT : IDisposable
+{
+  private Hashtable _oHT = new Hashtable();
+
+  public TestDT()
+  {
+    for (int i = 0; i &lt; 10; i++)
+    {
+      _oHT.Add(System.Guid.NewGuid().ToString(), System.Guid.NewGuid().ToString());
+    }
+  }
+  
+  public Hashtable GetHT()
+  { return _oHT; }
+
+  public void Dispose()
+  {
+    _oHT = null;
+    GC.SuppressFinalize(this);
+  }
+}
+</code></pre><p>以上為C#之參數傳遞觀念小複習。</p><h6>C# Parameter Argument PassingValueTypesByValue PassingValueTypesByReference PassingReferenceTypesByValue PassingReferenceTypesByReference</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

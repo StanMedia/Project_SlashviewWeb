@@ -1,0 +1,44 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>Windows Server 2016於SMB 3.0時期的效能參數調教</h1><p>有關於Windows伺服器訊息區塊（Server Message Block 3.0, SMB 3.0）的效能調教，在微軟相關說明文件中，算是寫的很爛的，在MSDN或是官方發表的調校文件中，有很多地方的參數要不是說明的支吾其詞，不然就是根本沒列出來講，這部份真的很無力與無言。</p><p><img src=https://content.slashview.com/img/2017/20170818_01.jpg alt="" /></p><p>在網路上翻閱相關的文章後，我大致上整理出一個基於files monitor需求的調校參數，然而這些參數都未經真正操演過，如果有搜尋到本文章欲參考的人，請三思而後行，我在日後若有相關的參數調整，也會上來更新這篇文章的數據。當然，如果您願意在網站下方分享您對於某參數的調校看法，這是我更樂意見到的。</p><h3>Server端註冊檔（Regedit）參數調整：有兩處需要調整</h3><pre><code class=language-txt>[HKEY_LOCAL_MACHINE\SYSTEM\ControlSet001\Control\Session Manager\Executive]
+"AdditionalCriticalWorkerThreads"=dword:00000080
+"AdditionalDelayedWorkerThreads"=dword:00000000
+"UuidSequenceNumber"=dword:008eee2d
+"WorkerFactoryThreadIdleTimeout"=dword:00000258  
+
+[HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Services\LanmanServer\Parameters]
+"EnableAuthenticateUserSharing"=dword:00000000
+"ServiceDll"=hex(2):25,00,53,00,79,00,73,00,74,00,65,00,6d,00,52,00,6f,00,6f,\
+  00,74,00,25,00,5c,00,73,00,79,00,73,00,74,00,65,00,6d,00,33,00,32,00,5c,00,\
+  73,00,72,00,76,00,73,00,76,00,63,00,2e,00,64,00,6c,00,6c,00,00,00
+"ServiceDllUnloadOnStop"=dword:00000001
+"NullSessionPipes"=hex(7):00,00
+"autodisconnect"=dword:0000000f
+"enableforcedlogoff"=dword:00000001
+"enablesecuritysignature"=dword:00000000
+"requiresecuritysignature"=dword:00000000
+"restrictnullsessaccess"=dword:00000001
+"AdjustedNullSessionPipes"=dword:00000003
+"MaxThreadsPerQueue"=dword:0000ffff
+"TreatHostAsStableStorage"=dword:00000001
+"MaxMpxCT"=dword:0000ffff
+"MaxWorkItems"=dword:0000ffff
+"SMB2"=dword:00000001
+"AsynchronousCredits"=dword:00000400
+"Smb2CreditsMin"=dword:00000200
+"Smb2CreditsMax"=dword:0000ffff
+"srvcomment"="My-FilesServer"
+"Guid"=hex:7d,7f,83,d2,40,6b,01,40,be,8d,71,75,eb,7a,c9,44
+</code></pre><h2>Client端註冊檔（Regedit）參數調整</h2><pre><code class=language-txt>[HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Services\LanmanWorkstation\Parameters]
+"EnablePlainTextPassword"=dword:00000000
+"EnableSecuritySignature"=dword:00000001
+"RequireSecuritySignature"=dword:00000000
+"ServiceDll"=hex(2):25,00,53,00,79,00,73,00,74,00,65,00,6d,00,52,00,6f,00,6f,\
+  00,74,00,25,00,5c,00,53,00,79,00,73,00,74,00,65,00,6d,00,33,00,32,00,5c,00,\
+  77,00,6b,00,73,00,73,00,76,00,63,00,2e,00,64,00,6c,00,6c,00,00,00
+"ServiceDllUnloadOnStop"=dword:00000001
+"DisableBandwidthThrottling"=dword:00000001
+"MaximumConnectionCountPerServer"=dword:00000040
+"FileInfoCacheEntriesMax"=dword:0000ffff
+"DirectoryCacheEntriesMax"=dword:00000fff
+"FileNotFoundCacheEntriesMax"=dword:0000ffff
+"MaxCmds"=dword:0000ffff
+</code></pre><p>先簡單寫起來記憶用，日後若發現有需要補充的話，在上來修正。</p><h2>有關於SMB效能調校的相關文件</h2><ol><li><a href=https://docs.microsoft.com/en-us/windows-server/administration/performance-tuning/role/file-server/index>Performance tuning for file servers</a></li><li><a href=https://docs.microsoft.com/en-us/windows-server/administration/performance-tuning/role/file-server/smb-file-server>Performance tuning for SMB file servers</a> （這裡你可以看到，混到MaxThreadsPerQueue與AsynchronousCredit與兩個Key值，他們的註冊檔參數竟然都是一樣為HKLM\System\CurrentControlSet\Services\LanmanServer\Parameters\MaxThreadsPerQueue，讓我不禁懷疑起MSDN的品質是否開始低落？）</li><li><a href="https://technet.microsoft.com/en-us/library/dd296655(v=ws.10).aspx">IIS and File Server Configuration Scenarios for SMB Scaling (IIS 6.0)</a> （SMB 1.0時代文件的品質顯然好很多，甚至還教你在那些情境下要怎麼調整會比較好）</li></ol><h6>WindowsServer ServerMessageBlock SMB SMB1.0 SMB2.0 SMB3.0 調整 調校 最佳化 PerformanceTuning</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

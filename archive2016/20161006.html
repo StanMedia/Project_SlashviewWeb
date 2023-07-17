@@ -1,0 +1,11 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>Windows無法變更網路卡名稱或IP位址</h1><p>在Windows作業系統裡面有一個很詭異的問題，假設有一片網路卡上面曾經被指派過固定（靜態）IP，或者是被更換名稱過，而當你將舊網路卡替換成新的網路卡後，那麼你將會有極大的機會遇到無法變更網路卡名稱或原來的IP位址。這樣的情況在虛擬機器比比皆是的時代中，更加顯得好發。（例如你Clone虛擬機成為另一台）</p><p><img src=https://content.slashview.com/img/2016/20161006_01.jpg alt="" /></p><h2>發生錯誤時的故障訊息</h2><pre><code class=language-txt>無法變更網路卡（網路）名稱
+
+無法重新命名這個連線，您指定的連線名稱已經存在，請指定其他名稱。
+
+Cannot rename this connection. A connection with the name you specified already exists. Specify a different name.
+</code></pre><h2>無法變更IP名稱</h2><pre><code class=language-txt>您為此網路介面卡輸入的 IP 位址 XXX.XXX.XXX.XXX 已指派給另一張介面卡介面卡名稱。介面卡名稱已經在網路和 [撥號連線] 資料夾中隱藏。因為此介面卡並未實際存在於電腦中，或者是失效的舊版介面卡。如果將同一個位址指派給兩張介面卡，而這兩張介面卡也變成作用狀態，其中只有一張會使用此位址。這可能會導致不正確的系統設定。您是否要在 [進階] 對話方塊的 IP 位址清單中，為此介面卡輸入不同的 IP 位址？ 
+
+The IP address XXX.XXX.XXX.XXX you have entered for this network adapter is already assigned to another adapter Name of adapter. Name of adapter is hidden from the network and Dial-up Connections folder because it is not physically in the computer or is a legacy adapter that is not working. If the same address is assigned to both adapters and they become active, only one of them will use this address. This may result in incorrect system configuration. Do you want to enter a different IP address for this adapter in the list of IP addresses in the advanced dialog box? 
+</code></pre><h2>發生原因與解決方式</h2><p>簡單的說，就是你的舊網路卡裝置（包含設定）還存在你的電腦中，只是你看不到而已，只要試著把它找出來刪除就解決了。</p><p>Step 1. 打開cmd，確定使用最高管理者（Administrator）來執行。</p><p>Step 2. 輸入下列指令：</p><pre><code class=language-txt>set devmgr_show_nonpresent_devices=1
+</code></pre><p>Step 3. 直接在cmd中呼叫裝置管理員，輸入下列指令：</p><pre><code class=language-txt>DEVMGMT.MSC
+</code></pre><p>Step 4. 在裝置管理員中，將去檢視＞顯示隱藏裝置（Show Hidden Devices）打勾。</p><p>Step 5. 展開樹狀結構的「網路介面卡」（Network Adapters）。</p><p>Step 6. 把那些該死、不應該存在、呈現成透明狀的網路卡，全部解除安裝（Uninstall）吧。</p><p>完成後再進去控制台中設定網路卡，你會發現可以順利操作嘍！</p><h6>Windows WindowsServer SetIPAddressError SetNetworkInterfaceCardNameError SetNICNameError</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

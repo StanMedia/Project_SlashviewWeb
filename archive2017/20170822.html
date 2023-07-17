@@ -1,0 +1,25 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>逐步教你離線下載與安裝Visual Studio 2017</h1><p>到了VisualStudio 2017的年代，微軟已經全面拋棄ISO離線安裝檔案的發布方式，而是改採下載一個簡單的安裝器，然後讓使用者自己連上網路後，依照功能自己安裝最新版本的檔案，估計這些都是敏捷式開發（Agile Development）後的結果，因為軟體專案變成可以不斷的快速更迭，ISO格式的發行已經毫無意義。</p><p>但是，對一般人來說，在某些頻寬不大或是有特殊限制的環境，離線安裝還是有其必要性，因此我們可以利用這個下載器來幫我們進行相關的離線下載工作。</p><h2>取得Visual Studio離線下載器</h2><p>Step 1. 請到<a href=https://www.visualstudio.com/zh-hant/downloads/>Visual Studio官網</a>下載。</p><p>Step 2. 這次的範例，我們選擇Visual Studio Community 2017，請點選下載按鈕。</p><p>Step 3. 你將會取的一個檔案極小的.EXE可執行檔案（大約1.xMB），這就是我們的下載器。如果可以的話，請順手將其變更命名為「VS.exe」。</p><h2>利用下載器離線下載Visual Studio</h2><p>Step 1. 我們這次的作業目標是建立一個「繁體中文」並適合進行「.NET桌面開發」的離線安裝包，請先用「最高管理權限」開啟一個「cmd」視窗，並且在視窗下輸入這些指令。（若有其他需求，例如要建立ASP.NET的開發環境，請捲到畫面最下方，有相關連結的文件可以參考）</p><pre><code class=language-txt>vs.exe --layout C:\VS2017Community --lang zh-TW -add Microsoft.VisualStudio.Workload.ManagedDesktop
+</code></pre><p>Step 2. 接下來，VS安裝程式會自己跑去網路上，下載所指定的相關安裝程式檔案，並且將其放置在「C:\VS2017Community」目錄下，過程會長的像下方畫面文字。</p><pre><code class=language-txt>Visual Studio Setup Command Line Utility, version 1.11.2334.10236
+Copyright (C) Microsoft Corporation. All rights reserved.
+
+Download of 'https://aka.ms/vs/15/release/channel' succeeded using engine 'WebClient'
+Download of 'https://download.visualstudio.microsoft.com/download/pr/11155161/a0dce1d3137d28b792a87d09ec86c591/visualstudio.vsman' succeeded using engine 'WebClient'
+Catalog load operation correlation: {"id":"ad964f9a-42fb-48e7-8e78-d7447ee5691b"}
+Layout operation correlation: {"id":"425c9b76-f536-4c8a-b952-818697b46d65"}
+Planning 'Layout' operation
+Total packages to download: 249
+Starting 'Layout' operation
+Download of 'https://download.visualstudio.microsoft.com/download/pr/10629488/9cc67f6680fc7678f1d7ac58a89ff183/Windows8-RT-KB2999226-x64.msu' succeeded using engine 'WebClient'
+Layout progress: 0.16%
+Download of 'https://download.visualstudio.microsoft.com/download/pr/10630294/524348f23ca6f1d412b394577f4f3836/Windows8.1-KB2999226-x64.msu' succeeded using engine 'WebClient'
+Download of 'https://download.visualstudio.microsoft.com/download/pr/10983956/c273f97317a8848d7f32d8d01a27e767/microsoft.visualstudio.branding.community.vsix' succeeded using engine 'WebClient'
+Layout progress: 0.26%
+
+...中間過程省略
+
+Download of 'https://download.visualstudio.microsoft.com/download/pr/10907028/062b13547b73ab8fe4dc1229e372b75e/jitdebugger_x86.msi' succeeded using engine 'WebClient'
+Download of 'https://download.visualstudio.microsoft.com/download/pr/11150887/537e5ddaa8478b7940a2b9f5c0fd87cf/cab1.cab' succeeded using engine 'WebClient'
+Layout progress: 99.00%
+安裝已成功完成。
+請按任意鍵以繼續...
+</code></pre><p>Step 3. 當你看到「安裝已成功完成」的字樣，表示離線安裝檔案已經下載完成。</p><h2>逐步安裝Visual Studio</h2><p>Step 01. 首先我們先將網路關閉，證明離線安裝檔案是真的可以運行的。</p><p><img src=https://content.slashview.com/img/2017/20170822_01.jpg alt="" /></p><p>Step 02. 打開檔案總管，到「C:\VS2017Community」下面執行「vs_setup.exe」，並點選繼續。</p><p><img src=https://content.slashview.com/img/2017/20170822_02.jpg alt="" /></p><p>Step 03. 稍待一下安裝準備畫面。</p><p><img src=https://content.slashview.com/img/2017/20170822_03.jpg alt="" /></p><p>Step 04. 因為當初製作離線安裝檔案時，就是選擇「.NET桌面開發」，所以一開始安裝程式就給我們預設值嘍！（請注意，如果你在這個階段去勾選其他也要一併安裝的工作負載，那麼就一定要連線網路了，因為你根本沒有這些工作負載的離線安裝檔案。）</p><p><img src=https://content.slashview.com/img/2017/20170822_04.jpg alt="" /></p><p>Step 05. 點選安裝後，就會開始顯示安裝過程畫面。</p><p><img src=https://content.slashview.com/img/2017/20170822_05.jpg alt="" /></p><p>Step 06. 看到這個有「啟動」字樣的畫面，表示安裝完成了，請點選啟動。</p><p><img src=https://content.slashview.com/img/2017/20170822_06.jpg alt="" /></p><p>Step 07. 第一次進入時，會問你有沒有微軟的帳號，若沒有，可以暫時先選「不是現在，以後再說」。如果有的話，可以順便登入。（前提是你的網路要記得打開！）</p><p><img src=https://content.slashview.com/img/2017/20170822_07.jpg alt="" /></p><p>Step 08. 主要工作環境的設定，我們選擇「Visual C#」以及「深色」的佈景主題。</p><p><img src=https://content.slashview.com/img/2017/20170822_08.jpg alt="" /></p><p>Step 09. 看到這個畫面，表示整個Visual Studio已經準備為你作戰嘍！</p><p><img src=https://content.slashview.com/img/2017/20170822_09.jpg alt="" /></p><p>Step 10. 值得注意的是，社群版本（Community）只有提供30天的適用，如果有需要繼續使用，必須要進行註冊喔！（※ 免費，登入微軟帳號即可。）</p><p><img src=https://content.slashview.com/img/2017/20170822_10.jpg alt="" /></p><p>Happy Coding!</p><h3>相關參考文件</h3><ul><li><a href=https://docs.microsoft.com/zh-tw/visualstudio/install/use-command-line-parameters-to-install-visual-studio>使用命令列參數來安裝 Visual Studio 2017</a></li><li><a href=https://docs.microsoft.com/zh-tw/visualstudio/install/command-line-parameter-examples>Visual Studio 2017 安裝的命令列參數範例</a></li></ul><h6>VisualStudio Offline Installer ISO CD DVD StepByStep</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

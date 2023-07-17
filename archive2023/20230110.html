@@ -1,0 +1,115 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>利用EXCEL VBA將表格資料（Sheet）轉換為XML並存檔</h1><p>因為一些工作的因素，必須撰寫程式將使用者繕打在EXCEL中的文件內文，轉換成XML並儲存起來，內容沒啥營養，只是使用VBA寫東西有如回到25年前在寫ASP（Basic）的痛苦與生疏感，筆記在此供給有需要的人參考。</p><h2>將EXCEL表格資料儲存成XML文字檔</h2><p>其實文章的重點就是把表格資料儲存成文字檔案，XML只是一種表述的格式而已。</p><p>Step 1. 建立一個名為「會員資料表」的EXCEL頁籤，內容如下：</p><p><img src=https://content.slashview.com/img/2023/20230110_01.jpg alt="" /></p><p>Step 2. 產生一個名為「產生XML檔」的EXCEL頁籤，並在上面利用「開發人員」功能項次＞「插入」＞「表單控制項」＞「按鈕」，插入一個按鈕作為讓使用者操作的進入點（新增巨集：按鈕1_Click），並針對這個按鈕進行文字與外觀等設計工作。</p><p><img src=https://content.slashview.com/img/2023/20230110_02.jpg alt="" /></p><p>Step 3. 對這棵按鈕點擊進入VBA編輯畫面（Microsoft Visual Basic for Applications），在Module1裡面會出現「按鈕1_Click()」的Sub副程式進入點，接著就在這邊插入我們想要編寫的程式碼。</p><p><img src=https://content.slashview.com/img/2023/20230110_03.jpg alt="" /></p><p>Step 4. 將下列的VBA（Visual Basic Applications）程式碼貼上：</p><pre><code class=language-vb>Sub 按鈕1_Click()
+    '***** 定義資料表 *****
+    Dim cSheetName As String
+    Dim oWS As Worksheet
+    cSheetName = "會員資料表"
+    Set oWS = Worksheets(cSheetName)
+    
+    '***** 求取資料與欄位數量資訊 *****
+    Dim iRows As Long
+    Dim iColumns As Long
+    '資料數
+    If oWS.UsedRange Is Nothing Then
+        iRows = 0
+    Else
+        iRows = oWS.UsedRange.Rows.Count
+    End If
+    '欄位數
+    If oWS.UsedRange Is Nothing Then
+        iColumns = 0
+    Else
+        iColumns = oWS.UsedRange.Columns.Count
+    End If
+    
+    '***** 檢查資料填入區間是否符合期望 *****
+    Dim cMessage As String
+    If iColumns &lt;> 4 Then
+      cMessage = "總欄位數目應該為４欄，請查閱資料表的欄位是否有不應該出現的資料。"
+    End If
+    If Len(Trim(oWS.Cells(iRows, 1))) = 0 Then
+      cMessage = "系統偵測最後一筆資料之行號為「" &amp; iRows &amp; "」，但該筆資料的第一個欄位內容卻沒有賦值。"
+    End If
+    If Len(cMessage) > 0 Then
+      Response = MsgBox(cMessage, vbCritical, "嚴重錯誤")
+      Exit Sub
+    End If
+    
+    '***** 收集資料進入陣列 *****
+    Dim cTemp As String
+    Dim dTemp As String
+    ReDim aryData(1 To iRows, 1 To iColumns)
+    For I = 2 To iRows
+        For J = 1 To iColumns
+            cTemp = Trim(Replace(oWS.Cells(I, J).Value, vbLf, ""))
+            '檢查賦值是否正確
+            Select Case J
+                Case 1
+                    If Len(cTemp) &lt;> 5 Then
+                        cMessage = "「會員編號」必須為５碼"
+                    Else
+                        aryData(I, J) = cTemp
+                    End If
+                Case 2
+                    If Len(cTemp) = 0 Then
+                        cMessage = "「姓名」不可為空值"
+                    Else
+                        aryData(I, J) = cTemp
+                    End If
+                Case 3
+                    If Not IsDate(cTemp) Then
+                        cMessage = "「生日」必須為日期格式"
+                    Else
+                        aryData(I, J) = cTemp
+                    End If
+                Case 4
+                    If Not IsNumeric(cTemp) Then
+                        cMessage = "「存款」必須為數值格式"
+                    Else
+                        aryData(I, J) = cTemp
+                    End If
+                Case Else
+                    aryData(I, J) = cTemp
+            End Select
+            '若有錯誤則組裝行列資訊
+            If Len(cMessage) > 0 Then
+                cMessage = "行號「" &amp; I &amp; "」資料之" &amp; cMessage
+                Response = MsgBox(cMessage, vbCritical, "嚴重錯誤")
+                Exit Sub
+            End If
+        Next J
+    Next I
+
+    '***** 處理資料 *****
+    Dim cXML As String
+    'Header
+    cXML = "&lt;?xml version=""1.0"" ?>" &amp; vbCrLf &amp; _
+        "&lt;data>" &amp; vbCrLf
+    'Body
+    For I = 2 To iRows
+        cXML = cXML &amp; _
+        "  &lt;member seq=""" &amp; (I - 1) &amp; """>" &amp; vbCrLf &amp; _
+        "    &lt;id>" + aryData(I, 1) + "&lt;/id>" &amp; vbCrLf &amp; _
+        "    &lt;name>" + aryData(I, 2) + "&lt;/name>" &amp; vbCrLf &amp; _
+        "    &lt;birthday>" + aryData(I, 3) + "&lt;/birthday>" &amp; vbCrLf &amp; _
+        "    &lt;money>" + aryData(I, 4) + "&lt;/money>" &amp; vbCrLf &amp; _
+        "  &lt;/member>" &amp; vbCrLf
+    Next I
+    'Footer
+    cXML = cXML &amp; _
+        "&lt;/data>"
+        
+    '***** 寫入檔案 *****
+    Dim cPath As String
+    Dim cFileName As String
+    cPath = Environ("USERPROFILE") &amp; "\Desktop\"
+    cFileName = Format(Now(), "yyyyMMddHHmmss") &amp; "_會員資料.xml"
+    '寫入資料
+    Set oFS = CreateObject("Scripting.FileSystemObject")
+    Set oFile = oFS.CreateTextFile(cPath &amp; cFileName, True, True)
+    oFile.Write cXML
+    oFile.Close
+    '顯示成功訊息
+    Response = MsgBox("已經將「" &amp; cFileName &amp; "」檔案產生到您的桌面", vbInformation, "產生XML檔案成功")
+    'Debug.Print cXML
+End Sub
+</code></pre><p>Step 5. 完成後將這個EXCEL儲存可以執行的*.xlsm格式，當使用者編輯會員資料表後，再去點擊按鈕，VBA就會將資料以XML格式產生後，將文字檔儲存在使用者的桌面上。</p><h3>相關參考</h3><ul><li><a href=/archive2023/20230110.html>利用EXCEL VBA將表格資料（Sheet）轉換為XML並存檔</a></li><li><a href=/archive2023/20230111.html>利用EXCEL VBA將文字檔案資料轉換為EXCEL表格（Sheet）</a></li></ul><h6>Microsoft EXCEL VBA EditSheetContent SaveTo XmlFiles TextFiles Unicode UTF-8 UTF-16</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

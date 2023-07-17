@@ -1,0 +1,67 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>利用Predicate泛型委派，進行類別方法委派之實作</h1><p>為了增加自己在委派方面的實作經驗，因此寫了一隻委派常見的使用情境程式，讓未來有機會可以參考。其中的Predicate就相當於Func的實作。程式中主要就是某個叫student的類別，提供了一個叫Find的方法，但是這個方法裡面根本就是個被包裝過後空殼，因為主要的運算邏輯已經被委派出去外面的函式了。</p><p>這樣的情況就有如今天某人宣稱，我可以寫出一個X類別中具備一個AskMe的萬用方法，只要你問我問題（X.AskMe();），我可以把正確的答案列舉給你。當然，我們都知道這是不可能存在的程式碼，但是這樣的問題倒也不是無解，正確的來說，包個皮把問題反丟回去給你自己解決就是了。</p><h2>委派就是一種如此優美的包皮架構</h2><p>對不起，好像有點離題，大概是跟最近工作上的心情有關聯吧！話不多說了，程式碼如下：</p><pre><code class=language-cs>using System;
+using System.Collections;
+
+namespace DelegateTesting
+{
+  class student
+  {
+    //垃垃列舉，純粹為了實驗用
+    ArrayList _oAL = new ArrayList();
+
+    //建立垃圾資料
+    public student()
+    {
+      _oAL.Add("王大明");
+      _oAL.Add("李小華");
+      _oAL.Add("陳小春");
+      _oAL.Add("陳聰明");
+      _oAL.Add("李小龍");
+    }
+
+    /// &lt;summary>
+    /// 建立委派：這個函式取名為Find，但事實上根本沒有任何功能
+    /// 因為它把最主要的搜尋功能指向到一個外部的函式（Process）
+    /// 會這樣做的原因，是因為Find有可能包含很多意含，
+    /// 包括你可能要找字串中出現ｏｏ的、或者字尾出現ｘｘ的。
+    /// &lt;/summary>
+    /// &lt;param name="Process">委派函式&lt;/param>
+    /// &lt;returns>ArrayList列舉&lt;/returns>
+    public ArrayList Find(Predicate&lt;string> Process)
+    {
+      ArrayList oResult = new ArrayList();
+      foreach (var item in _oAL)
+      {
+        if (Process(item.ToString())) { oResult.Add(item); }
+      }
+      return oResult;
+    }
+  }
+  
+  class Program
+  {
+    static void Main(string[] args)
+    {
+      //Predicate委派：找出姓名中開頭出現"李"的人
+      Predicate&lt;string> whereIsStartWith_Lee = x => x.StartsWith("李");
+      //Predicate委派：找出姓名中結束時出現"明"的人
+      Predicate&lt;string> whereIsEndWith_Ming = x => x.EndsWith("明");
+
+      student oStu = new student();
+
+      Console.WriteLine("找出姓李的：");
+      foreach (var item in oStu.Find(whereIsStartWith_Lee))
+      {
+        Console.WriteLine(item);
+      }
+
+      Console.WriteLine("找出叫明的：");
+      foreach (var item in oStu.Find(whereIsEndWith_Ming))
+      {
+        Console.WriteLine(item);
+      }
+
+      Console.Read();
+    }
+  }
+}
+</code></pre><h2>程式簡單的說明如下：</h2><ol><li>student.Find方法中，掛上一個委派，指向一個名為Process的委派函式，而這個Process，在Find的方法中被當成代理人來使用。</li><li>例如Process(item.ToString())意指，請Process跟我講，到底item.ToString()是不是一個你想要的條件下的正確結果？而，Process甚至根本不在這個student類別之中。</li><li>whereIsStartWith_Lee跟whereIsEndWith_Ming是程式設計師自己在外圍，自己利用黏巴達表市示式去寫出來的邏輯（委派程式）。</li><li>當程式設計師呼叫oStu.Find(指向一個委派程式)，其實就是在跑自己寫的邏輯。student.Find()充其量只是在幫你整理你分析後的結果。</li></ol><h2>還是看不懂？</h2><p>還看不懂的話，我再用更化簡的生活角度跟你講：你陪你的老闆去外面標案，你老闆跟別人吹需說，台北101我一年就可以建完。客戶跟你聽到這種吹噓，當場心底一定是一陣否定。回來的途中，你跟老闆提及此一不可能之事，老闆說可以啊，我只要找到一個工程師來幫我做這件事就好。你回答說：怎麼可能會有這種工程師？而老闆回答更妙了：有啊！就是你，你就是我「委派」的那一位工程師。回去馬上提出一年內蓋好台北101的可行計劃案，快點呈上來給我。</p><p>如果你最終拿不出來一年內蓋好台北101計畫案，那是你的問題還是老闆的問題？</p><p>委派最終的意思，就是讓類別裡面的程式碼專心的做好這個類別應該處理的事情，如果有需要引用到複雜的演算或是流程，把它委派出去是最好的做法，這會讓程式碼單純化。（畢竟老闆只要負責開票就好了不是嗎？）</p><p>相關連結：</p><ul><li><a href=/archive2014/20140514.html>C#之委派之演進史與匿名函式之應用</a></li><li><a href=/archive2014/20141117.html>泛型委派（General Delegates）之研究</a></li><li><a href=/archive2019/20190111.html>新舊委派的撰寫與呼叫方式：以購物車折扣為例</a></li><li><a href=/archive2021/20210111.html>利用委派讓List(T)可以使用Lambda運算式寫法</a></li></ul><h6>C# Delegate Predicate Implementation SampleCode</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

@@ -1,0 +1,19 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>.NET Framework中使用SHA1來進行字串雜湊之程式碼</h1><p>在大部份的時間，我們要對一個使用者進行密碼的加密，都會使用單向雜湊函式來進行加密保護，單向的意思是連程式設計師都不知道這個亂數字串怎麼再還原回去了，也就是說不可逆了。所以當你的資料庫不小心被攻陷外洩時，至少客戶的密碼是不會流出去的。（所以如果有那種三流網站在使用忘記密碼時，把原密碼原封不動的寄給你，你就要小心你的資訊根本沒有被保護的可能！）</p><p>廢話不多說了，程式碼寫在這邊是要讓我自己不必每次要用時，都要回去MSDN官網查：</p><pre><code class=language-cs>namespace SHA1
+{
+  class Program
+  {
+    static void Main(string[] args)
+    {
+      Console.Write("請輸入您的密碼：");
+      string cTemp = Console.ReadLine();
+      System.Text.UnicodeEncoding oConvert = new System.Text.UnicodeEncoding();
+      Byte[] bytData = oConvert.GetBytes(cTemp);
+      System.Security.Cryptography.SHA1Managed oSha1 = new System.Security.Cryptography.SHA1Managed();
+      Byte[] bytResult = oSha1.ComputeHash(bytData);
+      foreach (int oItem in bytResult)
+      { Console.Write(oItem.ToString("X")); }
+      Console.Read();
+    }
+  }
+}
+</code></pre><p>SHA1或MD5都是有雜湊byte範圍的差異及規範（例如128bits, 256Bits...），因此各家各方法出來的值不一定一樣，所以如果你要跨系統進行協同驗證時，最好先找到一個兩者統一的做法，不然光一個TEST字串，SHA1出來的東西就可以有N種版本，不可不慎。</p><h2>相關連結：</h2><ul><li><a href=/archive2019/20190118.html>.NET Framework中使用SHA512來進行字串雜湊之程式碼</a></li><li><a href=https://security.googleblog.com/2017/02/announcing-first-sha1-collision.html>Google Security Blog: Announcing the first SHA1 collision</a></li><li><a href=/archive2020/20200417.html>JWT從入門到放棄：完整實作jwt.io網站演算（HMAC-SHA256雜湊）</a></li></ul><h6>.NET Framework SHA1 System.Security.Cryptography SampleCode</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

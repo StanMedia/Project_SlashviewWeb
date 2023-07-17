@@ -1,0 +1,48 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>SQL筆記：SQL資料表之JOIN指令圖解介紹</h1><p>SQL除了四大指令CRUD（Create, read, update and delete）之外，最讓初學者頭痛的就是JOIN了，兩張資料表的鍵值在那邊交集來聯集去的，頭昏眼花是常有的事，因此寫下這篇文章，利用圖型來簡單表達一下JOIN的概念。</p><p>假設有Table_A, Table_B這兩資料表，資料分別如下表所示：（打星號*表示資料是重疊的）</p><pre><code class=language-sql>SELECT [iIndex], [cName] FROM [Table_A]
+---------------------------------------
+iIndex  cName
+1       關羽*
+2       張飛
+3       趙雲*
+4       魏延
+
+SELECT [iIndex], [cName] FROM [Table_B]
+---------------------------------------
+iIndex  cName
+1       劉備
+2       關羽*
+3       曹操
+4       趙雲*
+</code></pre><h2>完整聯集：FULL OUTER JOIN</h2><p>這個部份表示兩張資料表的全部資料都要了！請見下圖圖示：</p><p><img src=https://content.slashview.com/img/2014/20140711_01.jpg alt="" /></p><pre><code class=language-sql>使用指令與結果：
+/*** JOIN TEST 01 ***/
+SELECT *
+FROM Table_A
+FULL OUTER JOIN Table_B
+ON Table_A.cName = Table_B.cName
+</code></pre><p><img src=https://content.slashview.com/img/2014/20140711_02.jpg alt="" /></p><h2>完整交集：INNER JOIN</h2><p>這個部份表示兩張資料表裡面，確定彼此都存在的資料我才要，其它各自只出現在自己的表中的資料全部都不要！請見下圖圖示：</p><p><img src=https://content.slashview.com/img/2014/20140711_03.jpg alt="" /></p><pre><code class=language-sql>使用指令與結果：
+/*** JOIN TEST 02 ***/
+SELECT *
+FROM Table_A
+INNER JOIN Table_B
+ON Table_A.cName = Table_B.cName
+</code></pre><p><img src=https://content.slashview.com/img/2014/20140711_04.jpg alt="" /></p><h2>部份聯集與完整交集：LEFT OUTER JOIN</h2><p>這個部份表示在Table_A的資料我全要，但是在Table_B裡有出現在Table_A的資料我也要！請見下圖圖示：（註：相同需求但反過變成Table_B全要，那就是RIGHT OUTER JOIN）</p><p><img src=https://content.slashview.com/img/2014/20140711_05.jpg alt="" /></p><pre><code class=language-sql>使用指令與結果：
+/*** JOIN TEST 03 ***/
+SELECT *
+FROM Table_A
+LEFT OUTER JOIN Table_B
+ON Table_A.cName = Table_B.cName
+</code></pre><p><img src=https://content.slashview.com/img/2014/20140711_06.jpg alt="" /></p><h2>部份聯集：LEFT OUTER JOIN - Table_B IS NULL</h2><p>這個部份表示在Table_A的資料我全要，但是在Table_B裡有出現在Table_A的資料在結果中剃除！請見下圖圖示：</p><p><img src=https://content.slashview.com/img/2014/20140711_07.jpg alt="" /></p><pre><code class=language-sql>使用指令與結果：
+/*** JOIN TEST 04 ***/
+SELECT *
+FROM Table_A
+LEFT OUTER JOIN Table_B
+ON Table_A.cName = Table_B.cName
+WHERE Table_B.iIndex IS NULL
+</code></pre><p><img src=https://content.slashview.com/img/2014/20140711_08.jpg alt="" /></p><h2>部份聯集：LEFT OUTER JOIN - Table_A OR Table_B IS NULL</h2><p>這個部份表示在Table_A與Table_B的資料我全要，但是Table_A與Table_B中共同擁有的資料我不要！請見下圖圖示：</p><p><img src=https://content.slashview.com/img/2014/20140711_09.jpg alt="" /></p><pre><code class=language-sql>使用指令與結果：
+/*** JOIN TEST 05 ***/
+SELECT *
+FROM Table_A
+FULL OUTER JOIN Table_B
+ON Table_A.cName = Table_B.cName
+WHERE Table_A.iIndex IS NULL OR Table_B.iIndex IS NULL
+</code></pre><p><img src=https://content.slashview.com/img/2014/20140711_10.jpg alt="" /></p><p>以上大概就是JOIN所有可能用到的情況，當然如果你是要取Table_B那一邊的，請自己把FROM Table的前後對調一下就可以了，大家應該可以舉一反三才是。</p><h2>CROSS JOIN</h2><p>一般情況下幾乎用不到，這個效果稱為笛卡爾乘積，顯現的效果就是TableA X TableB的相乘結果集，以本文章中的例子來說，就是4 X 4 = 16種結果，以當前的資料型態來說，根本沒有意義。（可參考：Wiki <a href=https://zh.wikipedia.org/zh-tw/%E8%BF%9E%E6%8E%A5#%E4%BA%A4%E5%8F%89%E8%BF%9E%E6%8E%A5>交叉連接</a>）</p><h2>Union</h2><p>一般情況下幾乎用不到，這個效果就是把兩個欄位型態均相同的表結合起來。例如公司X系統中有一個很複雜的資料庫，透過超多SQL指令後整理出一份珍貴的檢視表A；Y系統中也有一個很複雜的資料庫，透過完全不同的SQL指令後整理出一份珍貴的檢視表B，我們可以使用「檢視表A UNION 檢視表B」來進行異質資料結合，供給前端系統進行查詢。</p><h6>SQL Command InnerJoin OuterJoin LeftOuterJoin FullOuterJoin</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

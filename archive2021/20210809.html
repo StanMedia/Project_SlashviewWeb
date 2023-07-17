@@ -1,0 +1,59 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>LINQ-GUID亂數與Fisher-Yates亂數之比較</h1><p>在StackOverflow看到有人在問Linq的亂數怎麼使用，而第一回覆者答覆使用GUID當作亂數種子後，下面馬上就有人不認同的說其實FisherYates演算法來做亂數才是最好的，看到這個訊息的我當下心中頗不以為然，馬上做個LAB來證明其實GUID擁有更平均的亂數分配。</p><p>不囉嗦，直接上程式碼（Console介面），裡面包括採用LINQ的Order By GUID以及一個從網路上Copy過來的FisherYates演算法，然後我們跑一下看看倒底是誰「亂的比較平均」。</p><p>Fisher-Yates演算法獨立成一個方法：</p><pre><code class=language-cs>static string[] FisherYates(string[] oData)
+{
+  var oRnd = new System.Random();
+  int iLength = oData.Length;
+  for (int i = 0; i &lt; (iLength - 1); i++)
+  {
+    int r = i + oRnd.Next(iLength - i);
+    string Temp = oData[r];
+    oData[r] = oData[i];
+    oData[i] = Temp;
+  }
+  return oData;
+}
+</code></pre><p>LINQ-GUID亂數程式碼與調用Fisher-Yates演算法，我都把他寫在main裡面：</p><pre><code class=language-cs>static void Main(string[] args)
+{
+  int iLoop = 10_000_000;
+  var oData = new string[] { "A", "B", "C" };
+  var oList = new System.Collections.Generic.List&lt;string>();
+
+  /* ****** GUID ***** */
+  //利用Linq語法將集合亂數打亂
+  for (int i = 0; i &lt; iLoop; i++)
+  { oList.Add(string.Join(";", oData.OrderBy(x => System.Guid.NewGuid()))); }
+  //利用Linq語法將收集到的集合進行Group By計算
+  var oFinal = oList.GroupBy(x => x).Select(x => new { cKey = x.Key, iCount = x.Count() }).ToList();
+  //輸出
+  Console.WriteLine("----- GUID -----");
+  foreach (var oItem in oFinal.OrderBy(x => x.cKey))
+  { Console.WriteLine($"{oItem.cKey}：{oItem.iCount}"); }
+
+  oList.Clear();
+  oFinal.Clear();
+
+  /* ****** Fisher-Yates ***** */
+  for (int i = 0; i &lt; iLoop; i++)
+  { oList.Add(string.Join(";", FisherYates(oData))); }
+  //利用Linq語法將收集到的集合進行Group By計算
+  oFinal = oList.GroupBy(x => x).Select(x => new { cKey = x.Key, iCount = x.Count() }).ToList();
+  //輸出
+  Console.WriteLine("----- Fisher-Yates -----");
+  foreach (var oItem in oFinal.OrderBy(x => x.cKey))
+  { Console.WriteLine($"{oItem.cKey}：{oItem.iCount}"); }
+}
+</code></pre><h2>結論：GUID 更好更快</h2><p>總共跑了1000萬次後進行統計，數據如下：</p><pre><code class=language-txt>----- GUID -----
+A;B;C：1667162
+A;C;B：1667580
+B;A;C：1666915
+B;C;A：1667163
+C;A;B：1665983
+C;B;A：1665197
+
+----- Fisher-Yates -----
+A;B;C：1666350
+A;C;B：1663163
+B;A;C：1667707
+B;C;A：1668211
+C;A;B：1668242
+C;B;A：1666327
+</code></pre><p>依據不負責任的觀點來看，我認為GUID比Fisher Yates打亂得更平均，再說句更不負責任的主觀評斷，我認為GUID的亂數過程速度比Fisher Yates快了近三倍。Fisher Yates演算法的神話，還是讓他留在Javascript這種世界吧。</p><h6>Randomizes Shuffle Shuffling RndNumber LinqGUID FisherYates Compare</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

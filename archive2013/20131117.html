@@ -1,0 +1,20 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>ASP.NET Response.End()使用時請小心</h1><p>在使用ASP.NET的時候，在程式末我們都會很喜歡使用Response.End()來進行結束動作。諸如Response.End、Response.Redirect、Server.Transfer都是屬於ASP.NET要斷開某些連線、資源的方法，但這樣的動作都會引起一些與IIS相衝的問題。</p><p>舉例來說，當我們在某處進行Response.End()指令後，因為Response.End()將會直接觸發Application_EndRequest 方法，但是有可能在這之中仍有程序運行在Flush()方法，然後你就會收到「與遠程主機通信時發生錯誤 0x800704CD」的訊息。通常這個訊息都會被完整的記錄在Windows事件中，只是一般的Web開發者怎麼可能進去每一台機器查看細部訊息，因此你就會收到一些偶發性的回報，例如：我的檔案下載完後開不起來？我登錄後過一下子就被登出了...</p><p>解決方法因時因地都不盡相同，在這邊提供常見的指令，你可以自己探索與試用組合看看：</p><pre><code class=language-txt>Try Catch
+Response.Close()
+Response.IsClientConnected
+ApplicationInstance.CompleteRequest()
+</code></pre><p>微軟的KBQ312629中有討論到：</p><p>If you use the Response.End, Response.Redirect, or Server.Transfer method, a ThreadAbortException exception occurs. You can use a try-catch statement to catch this exception.<br /> <a href=http://support.microsoft.com/kb/312629/en-us>http://support.microsoft.com/kb/312629/en-us</a></p><p>由於IIS的執行緒（Worker Process; W3WP）在運作時期是共用佇列的方式進行，當某Request在運行Response.End();指令運行後，將會強制把這個執行緒關閉，而完全關閉前可能此時執行緒正在處理下一個Request中，這時候就會發生莫名其妙的執行中斷等詭異現象、被登出等問題。更進一步來說，若Application Pool裡面的Worker Process被不斷地重新啟動Ｎ次後（Ｎ的數值要查一下設定），IIS會啟動保護機制，直接給你吐出Service Unavailable，這也是Response.End();可能產生出的原因。</p><h2>安全的Response.End()替換方式</h2><p>所以如果可以的話，請完全忘記Response.End();指令吧！例如包裝成另外一個函式，用來取代Response.End();，以下是我建議的寫法，但不代表一定適用所有的情境。</p><pre><code class=language-cs>public void SafeResponseEnd()
+{
+  try
+  { //強制內容輸出
+    HttpContext.Current.Response.Flush();
+  }
+  catch
+  { /* 有時候接收端關閉，會引發串流中斷問題 */ }
+  finally
+  { //阻斷繼續送HTTP內容給Client
+    HttpContext.Current.Response.SuppressContent = true;
+    //跳過所有HTTP pipeline中的事件與過濾器，直接調用EndRequest事件
+    HttpContext.Current.ApplicationInstance.CompleteRequest();
+  }
+}
+</code></pre><p>※ 並非所有的情境都可以使用上述的方法進行替代，例如：Response.TransmitFile()，在檔案的Size過大的極端情況下，如果沒有使用Response.End()有時會出現尾部被夾雜後續的處理結果。（例如：尾部被加入網站的HTML輸出程式碼。）</p><h2>快速記憶各常用方法的取代方式</h2><ul><li>Response.End：<br /> 用 HttpContext.Current.ApplicationInstance.CompleteRequest 取代。</li><li>Response.Redirect：<br /> 用 Response.Redirect ("nextpage.aspx", false); 取代，並在後面補上HttpContext.Current.ApplicationInstance.CompleteRequest讓執行緒強制終結。。</li><li>Server.Transfer：<br /> 用 Server.Execute 取代。</li></ul><h6>Response.End 0x800704CD KBQ312629</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

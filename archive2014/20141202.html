@@ -1,0 +1,47 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>LINQ筆記：LINQ的FindAll、Contains實作練習</h1><p>因為一直不是很喜歡委派（Delegate）與黏巴達表示式（Lambda Expression），加上排斥LINQ對於資料庫實體連接層的抽象化，所以對於LINQ一直沒有多大的好感。但是，現在的程式碼出現越來越多混合式的寫法，再加上泛型的應用上已經離不太開LINQ，因此，不去理解與學習一些LINQ方面的知識好像也說不太過去。因此，在這邊就寫一個小小的範例自我練習一下吧！</p><p>程式碼如下，懂Lambda Expression的人應該不會有多大的閱讀困難才是。</p><pre><code class=language-cs>using System;
+using System.Linq;
+
+namespace LINQ
+{
+  class employee  //利用自動實作建立一個員工類別
+  {
+    public string name { get; set; }
+    public int age { get; set; }
+    public bool sex { get; set; }
+  }
+  
+  class Program
+  {
+    static void Main(string[] args)
+    {
+      var oTemp = new System.Collections.Generic.List&lt;employee>();
+      oTemp.Add(new employee { name = "John", age = 30, sex = true });
+      oTemp.Add(new employee { name = "Leen", age = 20, sex = false });
+      oTemp.Add(new employee { name = "Mary", age = 40, sex = false });
+      oTemp.Add(new employee { name = "Fool", age = 60, sex = false });
+      oTemp.Add(new employee { name = "Cool", age = 50, sex = true });
+
+      //找出名字內有字母n的員工
+      var oResult_1 = oTemp.FindAll(x => x.name.Contains("n"));
+      
+      //找出名字內有字母o的員工，而且進行排序
+      var oResult_2 = oTemp
+        .Where&lt;employee>(x => x.name.Contains("o"))
+        .OrderBy&lt;employee, int>(x => x.age);
+
+      //列印資料
+      foreach (var x in oResult_1) { Console.WriteLine("Name: {0}, Age: {1}, Sex:{2}", x.name, x.age, x.sex); }
+      Console.WriteLine("---");
+      foreach (var x in oResult_2) { Console.WriteLine("Name: {0}, Age: {1}, Sex:{2}", x.name, x.age, x.sex); }
+      
+      Console.Read();
+    }
+  }
+}
+</code></pre><p>輸出結果如下：</p><pre><code class=language-txt>Name: John, Age: 30, Sex:True
+Name: Leen, Age: 20, Sex:False
+---
+Name: John, Age: 30, Sex:True
+Name: Cool, Age: 50, Sex:True
+Name: Fool, Age: 60, Sex:False
+</code></pre><h6>LINQ Implementation LambdaExpression</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

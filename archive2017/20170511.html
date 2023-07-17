@@ -1,0 +1,43 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>真正捕捉System.Net.WebRequest的Timeout錯誤</h1><p>最近在處理System.Net.WebRequest遭遇到Timeout的問題，一不小心又踩到了using語法的坑了，因此特別寫這一篇文章來提醒自己。事情是這樣的，我有一隻Services明明有設定System.Net.WebRequest的Timeout屬性，卻怎麼也無法被正確的「施行」、「處理」有關於Timeout的攔截，仔細一看我的程式碼，才發現老年人如我，我又犯傻了！</p><p><img src=https://content.slashview.com/img/2017/20170511_01.jpg alt="" /></p><p>先直接來看錯誤的程式碼吧！</p><pre><code class=language-cs>System.Net.HttpWebRequest oWRq = (System.Net.HttpWebRequest)System.Net.WebRequest.Create("http://www.google.com/");
+oWRq.Timeout = 3000;  //如果超過3秒沒有回應，那就出Timeout錯誤
+using (System.Net.HttpWebResponse oWRp = (System.Net.HttpWebResponse)oWRq.GetResponse())
+{
+  using (System.IO.StreamReader oSR = new System.IO.StreamReader(oWRp.GetResponseStream(), System.Text.Encoding.UTF8))
+  {
+    string cTemp = oSR.ReadToEnd();
+    //BraBra...
+  }
+}
+</code></pre><p>上面這一段程式碼，就是我又對using的語法記錯結構，認為他會幫我catch錯誤，在我不需要特別處理Timeout動作下，我認為這樣的程式碼就已經夠安全了。但是萬萬沒有想到，using只有try-finally，並沒有catch區段啊！我．．．我又忘了！回來做review code才猛然想起來自己的蠢！</p><h2>正確捕捉System.Net.WebRequest Timeout錯誤的正確結構</h2><p>為了預防自己再次癡呆，所以將比較嚴謹的撰寫結構放在下方，供給自己與大家順便參考。</p><pre><code class=language-cs>System.Net.HttpWebRequest oWRq = (System.Net.HttpWebRequest)System.Net.WebRequest.Create("http://www.google.com/");
+oWRq.Timeout = 3000;  //如果超過3秒沒有回應，那就出Timeout錯誤
+try
+{ //using事實上並沒有保護好System.Net.HttpWebResponse oWRp這一段的實例化可能的錯誤，所以最好在這之前，就把它用try-catch包好。
+  using (System.Net.HttpWebResponse oWRp = (System.Net.HttpWebResponse)oWRq.GetResponse())
+  {
+    using (System.IO.StreamReader oSR = new System.IO.StreamReader(oWRp.GetResponseStream(), System.Text.Encoding.UTF8))
+    {
+      string cTemp = oSR.ReadToEnd();
+      //BraBra...
+    }
+  }
+}
+catch (System.Exception oEx)
+{
+  if (oEx.GetType() == typeof(System.Net.WebException))
+  { //探測到真的發生網路型錯誤，例如Timeout真的出Exception時，就可以在這裡捕捉到
+    var oExDetail = oEx as System.Net.WebException;
+    cMessage = string.Format(
+      "連接網路時發生錯誤，連接逾期時間為3000ms，錯誤資訊如下：{0}／{1}。",
+      oExDetail.Status.ToString(),
+      oExDetail.Message
+    );
+  }
+  else
+  {  //非網路型的錯誤
+    cMessage = string.Format(
+      "發生錯誤，錯誤資訊如下：{0}。",
+      oEx.Message
+    );
+  }
+}
+</code></pre><p>想要透徹的了解using在幹嘛的話，請一定要順便參考這篇文章：</p><p><a href=/archive2017/20170125.html>你真的懂Try-Catch嗎？Try-Catch流程及與Using之間的程式對應</a></p><h6>System.Net.HttpWebRequest Timeout Capture Exception Using Try-Catch-Finally</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

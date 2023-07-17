@@ -1,0 +1,46 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>Task非同步作業的等候與終結</h1><p>這篇文章是在討論在有限條件必須終結的環境下（例如：Console、ASP.NET），使用System.Threading.Tasks來進行非同步多工作業安排時，等候其終結完成的寫法差異之處。</p><p><img src=https://content.slashview.com/img/2018/20181226_01.jpg alt="" /></p><h2>壅塞式與事件式兩種做法，各有千秋</h2><p>一種是掛載事件，一種是將非同步直接線性化回歸同步式寫法，以下是程式碼的演繹：</p><pre><code class=language-cs>public static void Main(string[] args)
+{
+  var oTask = RunAsync_A();
+  //事件式寫法
+  oTask.GetAwaiter().OnCompleted(() =>
+  {
+    Console.WriteLine(oTask.Result);
+  });
+  
+  Console.WriteLine("--- 11111 ---");
+  
+  //壅塞式寫法：回歸單線處理
+  var cResult = RunAsync_B().GetAwaiter().GetResult();
+  Console.WriteLine(cResult);
+
+  Console.WriteLine("--- 22222 ---");
+
+  //強制等候事件式TASK
+  oTask.Wait(); 
+
+  Console.WriteLine("--- 33333 ---");
+
+  Console.Read();
+}
+
+static async System.Threading.Tasks.Task&lt;string> RunAsync_A()
+{
+  await System.Threading.Tasks.Task.Delay(3000);
+  return "非同步模式A處理完成";
+}
+
+static async System.Threading.Tasks.Task&lt;string> RunAsync_B()
+{
+  await System.Threading.Tasks.Task.Delay(1000);
+  return "非同步模式B處理完成";
+}
+</code></pre><p>回傳結果如下：</p><pre><code class=language-txt>--- 11111 ---
+非同步模式B處理完成
+--- 22222 ---
+--- 33333 ---
+非同步模式A處理完成
+</code></pre><h2>壅塞式寫法</h2><p>這個寫法很簡單，當你有一個非同步的方法必須調用，但是你往下的程式碼極度需要這個方法的產出結果（否則做不下去），那麼使用GetAwaiter().GetResult()這樣的寫法是最佳解，也是最符合我們傳統思路上的程式撰寫習慣，因此這段程式碼其實沒啥好講的。</p><h2>事件掛載式的寫法</h2><p>這邊利用GetAwaiter().OnCompleted()委派掛載了一個我們自己的方法，當非同步回傳完成時會自動調用我們的OnCompleted()方法，這個好處是不壅塞，執行過程中可以讓出其他的CPU資源去執行其他程式碼，缺點是有時候情況會有點失控，特別是你確切的需要在某一行之後引用這個非同步回傳結果時，以下是更進一步的說明。</p><ol><li>oTask.Wait()指令，基本上就是用於等候事件掛載式寫法的非同步回傳，但這並非絕對。</li><li>以上面的程式碼來說，理論上結果會是「--- 22222 --- > 非同步模式A處理完成 > --- 33333 ---」才對，但你可以發現實務上卻是「--- 22222 --- > --- 33333 --- > 非同步模式A處理完成」，可見oTask.Wait()指令並沒有我們想像中的線性（將非同步收斂回歸同步）。</li><li>但我們又可以在程式運行中的過程發現，在oTask.Wait()指令處，的確滯留了短暫的秒數才繼續往下做，只是結果並非我們所預期（字串組合順序）。也就是說，其實「--- 22222 --- > --- 33333 --- > 非同步模式A處理完成」這個字串是停滯後瞬間彈出的。</li><li>就算你把程式碼的oTask.Wait()移動到「--- 22222 ---」的上方，依然會得到「--- 22222 --- > --- 33333 --- > 非同步模式A處理完成」的結果。</li><li>於是我們可以推論oTask.Wait()指令在運行時期的確卡住在他身處的結構上進行等候，但諸如Console.WriteLine這些指令其實還是「已經被運行」寫入到螢幕輸出的Buffer之中。（你也可以嘗試在oTask.Wait()加入一些邏輯或算數運算，其實也都會被背景執行完成了）</li><li>推測這樣的編譯設計是因為要讓整體的執行緒不要壅塞所致，因此如果真的有不得不的需求（例如此刻一定要得到非同步的結果），我的解法是加個System.Threading.Thread.Sleep(1)來解決這個等候問題，當我強制在oTask.Wait();後面讓執行緒睡1毫秒後，輸出變成線性化了。</li></ol><h2>射後不理寫法</h2><p>最後補充一個根本篇主題無關的射後不理的寫法，可作為非重要性（執行成功與否無所謂）平行工作的簡單寫法：</p><pre><code class=language-cs>System.Threading.Tasks.Task.Run(() => {
+  System.Threading.Thread.Sleep(1000);
+  Console.WriteLine("Hello!");
+});
+</code></pre><h3>相關連結</h3><ol><li><a href=/archive2017/20170411.html>利用鎖定（Lock）來保持資源在多執行緒間安全的共用與複寫</a></li><li><a href=/archive2018/20180114.html>利用安全且非獨占的方式，將檔案內容讀取或寫回</a></li><li><a href=/archive2020/20200421.html>單例模式（Singleton Pattern）搭配非同步方法與驗證</a></li></ol><h6>GetAwaiter() GetResult() OnCompleted() 非同步轉回同步 執行緒終結 非同步等候 System.Threading.Tasks.Task.WhenAny</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

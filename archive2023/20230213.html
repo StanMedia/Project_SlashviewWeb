@@ -1,0 +1,49 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>利用OpenCvSharp與Tesseract套件，進行車牌辨識</h1><p>今天心血來潮隨意寫寫的玩具程式碼，路過的人參考參考就好，真正要上戰場運作得要不斷的研究與精化，影像辨識有很多適用場景與範圍需要討論，也有可能需要引入AI等訓練模型來優化。這篇文章重點是採用離線的方式進行識別，並且站在OpenCvSharp與Tesseract這兩個巨人的肩膀上。</p><h2>使用nuget引入套件</h2><ol><li>OpenCvSharp4</li></ol><ul><li><a href=https://www.nuget.org/packages/OpenCvSharp4.Windows>OpenCvSharp4.Windows 4.7.0.20230115</a></li><li><a href=https://www.nuget.org/packages/OpenCvSharp4.Extensions>OpenCvSharp4.Extensions 4.7.0.20230115（為了在套件之間轉換影像陣列）</a></li></ul><ol start=2><li>Tesseract</li></ol><ul><li><a href=https://www.nuget.org/packages/Tesseract>Tesseract 5.2.0</a></li><li>Tesseract下載後必須要再去下載訓練模型（Trained models），請在執行目錄中建立一個名為「tessdata」的目錄，並將訓練模型放置於該目錄中<a href=https://github.com/tesseract-ocr/tessdata>Trained models with support for legacy and LSTM OCR engine</a></li></ul><h2>撰寫車牌辨識程式碼</h2><p>有關於影像辨識的程式碼都列入在下方的，沒啥好說的，大致上就是灰階、設定閥值、框選想要處理的矩形區塊、OCR文字識別這樣而已。</p><pre><code class=language-cs>public static void Main()
+{
+  var stopwatch = new Stopwatch();
+  stopwatch.Start();
+  Mat image = Cv2.ImRead($@"D:\test.jpg", ImreadModes.Color);
+  var licensePlateNumber = RecognizeLicensePlate(image).Trim();
+  stopwatch.Stop();
+  Console.WriteLine($"識別輸出：{licensePlateNumber}");
+  Console.WriteLine($"耗費時間：{stopwatch.Elapsed.TotalMilliseconds}ms");
+  Console.Read();
+}
+
+private static string RecognizeLicensePlate(Mat image)
+{
+  Mat gray = new Mat();
+  Cv2.CvtColor(image, gray, ColorConversionCodes.BGR2GRAY);
+  Mat threshold = new Mat();
+  Cv2.AdaptiveThreshold(gray, threshold, 255, AdaptiveThresholdTypes.GaussianC, ThresholdTypes.Binary, 11, 2);
+  Cv2.FindContours(threshold, out var contours, out var hierarchyIndices, RetrievalModes.Tree, ContourApproximationModes.ApproxSimple);
+
+  var licensePlateRegions = new List&lt;OpenCvSharp.Rect>();
+  for (int i = 0; i &lt; contours.Length; i++)
+  {
+    var rect = Cv2.BoundingRect(contours[i]);
+    float aspectRatio = (float)rect.Width / rect.Height;
+    if (aspectRatio > 2 &amp;&amp; aspectRatio &lt; 6.0 &amp;&amp; rect.Width > 60 &amp;&amp; rect.Height > 20)
+    {
+      licensePlateRegions.Add(rect);
+    }
+  }
+
+  string licensePlateNumber = string.Empty;
+  foreach (var rect in licensePlateRegions)
+  {
+    using (var engine = new TesseractEngine(@"./tessdata", "eng", EngineMode.LstmOnly))
+    { //消除「Estimating resolution as」輸出
+      engine.SetVariable("user_defined_dpi", 96);
+      //Treat the image as a single text line.
+      engine.SetVariable("tessedit_pageseg_mode", 7);
+      using (var page = engine.Process(Pix.LoadFromMemory(new Mat(image, rect).ToBytes())))
+      {
+        string extractedText = page.GetText().Trim();
+        licensePlateNumber += $"{(extractedText.Length != 0 ? extractedText : string.Empty)}\n";
+      }
+    }
+  }
+  return licensePlateNumber;
+}
+</code></pre><h2>執行畫面</h2><p>運行起來後，跑去網路隨便抓一張<a href=https://www.kamalan-news.com/local/14/7033>苦主的車牌號碼</a>進行辨識（車牌請恕我馬賽克），果然可行。但再去抓了幾張比較模糊的照片，或是沒那麼正矩形的車牌，其辨識率就不是很高，但總之大致上的模樣已經有出來了。</p><p><img src=https://content.slashview.com/img/2023/20230213_01.jpg alt="" /></p><h2>後記</h2><p>以上程式碼與大家分享，這是我花了一些小時間寫出來的概念性驗證程式碼，有驗證出概念我就完事了，所以別寫信來要求提高辨識率，我的本業與興趣並非在此。但如果你可以依據上面的程式碼調教出更好的參數，歡迎來信分享給我，我會把你的程式碼與大名更新回這個頁面。（取之於網路用之於網路）</p><p>我心目中最佳化的車牌辨識系統應該是以YOLO這種卷積神經網路（Convolutional Neural Network，CNN）為出發點的AI識別系統，先識別物件找出車輛，再針對車輛去拿車牌，這樣速度才會又快又準。這種全畫面去找邊緣化找矩形的做法其實很土炮（車牌拍的歪斜一點就毀了），我認為不是現代電腦程式碼應該撰寫或處理的方向。</p><h6>CSharp OpenCvSharp Tesseract 影像辨識 車牌辨識 車號辨識</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

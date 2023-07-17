@@ -1,0 +1,123 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>傳送陣列或資料物件集合至WebMethod</h1><p>前陣子朋友詢問WebMethod的傳值的事情，剛好自己從來沒有正式的使用過WebMethod（只有用來傳遞單一變數證明），所以研究了一下傳送陣列（DataArray）或資料集合物件（DataCollections）的方式，並將其記錄在此備忘。</p><p>我們先在HTML端建立共用測試的Checkbox以及按鈕：</p><pre><code class=language-html>&lt;div>
+  &lt;input type="checkbox" name="uCheckbox" value="CheckboxA">
+  &lt;label>勾選A的值&lt;/label>
+  &lt;input type="checkbox" name="uCheckbox" value="CheckboxB">
+  &lt;label>勾選B的值&lt;/label>
+  &lt;input type="checkbox" name="uCheckbox" value="CheckboxC">
+  &lt;label>勾選C的值&lt;/label>
+&lt;/div>
+&lt;a id="uBtn" class="btn btn-primary">送出&lt;/a>
+</code></pre><h2>WebMethod傳送陣列的方法</h2><p>與其說是陣列，不如說是型態較為單一的資料列舉，例如：回傳全班的學號、回傳購物車商品的訂單...，而因為WebMethod只接收JSON資料，所以就算是以陣列的型態集結了Client端資料，依然必須使用JSON的格式送回喔。</p><p>建立起後端的WebMethod方法，這邊的重點在於oData這個參數的名稱一定要與前端的JSON資料格式呼應喔，不然在ModelBinding時期一定會噴錯誤。</p><pre><code class=language-cs>[System.Web.Services.WebMethod]
+public static string uBtnClick(System.Collections.Generic.List&lt;string> oData)
+{
+  return Newtonsoft.Json.JsonConvert.SerializeObject(new {
+    bIsError = false,
+    cMessage = "OK!",
+    oData = oData,
+  });
+}
+</code></pre><p>建立前端jQuery的AJAX呼叫模型：</p><pre><code class=language-js>$(function () {
+  $("#uBtn").click(function () {
+    var aryData = [];
+    $("input[name='uCheckbox']:checked").each(function() {
+      aryData.push($(this).val());
+    });
+    //Call WebMethod
+    $.ajax({
+      type: "POST",
+      url: "YourWebMethod.aspx/uBtnClick",
+      data: JSON.stringify({ oData: aryData }),
+      contentType: "application/json; charset=utf-8",
+      dataType: "json",
+      success: function (response) {
+        if (response != null &amp;&amp; response.d != null) {
+          var oResponse = $.parseJSON(response.d);
+          console.log(oResponse.cMessage);
+          $.each(oResponse.oData, function (k, v) {
+            console.log(k + ":" + v);
+          });
+        }
+      }
+    });
+  });
+});
+</code></pre><p>送出去的JSON格式如下：</p><pre><code class=language-json>{
+  "oData":[
+    "CheckboxA",
+    "CheckboxB",
+    "CheckboxC"
+  ]
+}
+</code></pre><p>當我們在畫面中點選checkbox，可以成功的取得到伺服器端接收後打JSON回前端正確的回傳值！</p><pre><code class=language-txt>OK!
+0:CheckboxA
+1:CheckboxB
+2:CheckboxC
+</code></pre><h2>WebMethod傳送資料物件集合的方法</h2><p>後端的程式碼要加一下新的ORM Type，以利後續的ModelBinding，注意屬性名稱與型別要對上喔。</p><pre><code class=language-cs>[System.Web.Services.WebMethod]
+public static string uBtnClick(System.Collections.Generic.List&lt;MyORM> oData)
+{
+  return Newtonsoft.Json.JsonConvert.SerializeObject(new {
+    bIsError = false,
+    cMessage = "OK!",
+    oData = oData,
+  });
+}
+
+public class MyORM
+{
+  public string CheckboxName { get; set; }
+  public string CheckboxValue { get; set; }
+  public int CheckboxRandom { get; set; }
+}
+</code></pre><p>建立前端jQuery的AJAX呼叫模型，基本上就是不斷的建立Javascript匿名型別的物件後，接著推入陣列中：</p><pre><code class=language-js>$(function () {
+  $("#uBtn").click(function () {
+    var aryData = [];
+    $("input[name='uCheckbox']:checked").each(function() {
+      aryData.push({
+        CheckboxName: $(this).next("label").text(),
+        CheckboxValue: $(this).val(),
+        CheckboxRandom: Math.floor(Math.random() * 10),
+      });
+    });
+    //Call WebMethod
+    $.ajax({
+      type: "POST",
+      url: "YourWebMethod.aspx/uBtnClick",
+      data: JSON.stringify({ oData: aryData }),
+      contentType: "application/json; charset=utf-8",
+      dataType: "json",
+      success: function (response) {
+        if (response != null &amp;&amp; response.d != null) {
+          var oResponse = $.parseJSON(response.d);
+          console.log(oResponse.cMessage);
+          $.each(oResponse.oData, function (k, v) {
+            console.log(k + ":" + v.CheckboxName + ":" + v.CheckboxValue + ":" + v.CheckboxRandom);
+          });
+        }
+      }
+    });
+  });
+});
+</code></pre><p>送出去的JSON格式如下：</p><pre><code class=language-json>{
+  "oData":[
+    {
+      "CheckboxName":"AAA",
+      "CheckboxValue":"CheckboxA",
+      "CheckboxRandom":2
+    },
+    {
+      "CheckboxName":"BBB",
+      "CheckboxValue":"CheckboxB",
+      "CheckboxRandom":9
+    },
+    {
+      "CheckboxName":"CCC",
+      "CheckboxValue":"CheckboxC",
+      "CheckboxRandom":4
+    }
+  ]
+}
+</code></pre><p>當我們在畫面中點選checkbox，可以成功的取得到伺服器端接收後打JSON回前端正確的回傳值！</p><pre><code class=language-txt>OK!
+0:AAA:CheckboxA:2
+1:BBB:CheckboxB:9
+2:CCC:CheckboxC:4
+</code></pre><h3>相關連結</h3><p><a href=/archive2017/20170308.html>在ASP.NET WebForm架構下，利用WebMethod實作AJAX</a></p><h6>ASP.NET WebForm WebMethod AJAX POST MultiData DataList DataCollections DataArray ObjectArray ObjectCollections</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

@@ -1,0 +1,21 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>ASP.NET Session State無法寫入之謎案</h1><p>前陣子在寫泛型處理常式（ASHX）時發現一個問題，就是有一個運算完成的結果無論怎麼樣就是無法指派到Session記憶體中，無論怎麼樣只要重複Request，記憶體中的Session就會被洗掉。出現這個問題第一個當然是檢查自己是否有繼承IRequiresSessionState或IReadOnlySessionState（當然是有繼承，不然寫了這麼多年是白寫的喔！），翻遍了StackOverflow也沒有人在討論這方面的問題，心底甚是沮喪。</p><p><img src=https://content.slashview.com/img/2020/20200217_01.jpg alt="" /></p><p>接著就開始懷疑生命週期的問題，查到最後連trace.axd都翻出來慢慢看，還是查不到有任何問題？真的詭異到懷疑人生！</p><h2>笨蛋，問題不在於Session！</h2><p>最後受不了去泡杯茶時突然想到：啊幹！是LINQ的延遲執行（Deferred Execution）啦！我的程式碼會把順帶處理完成的IEnumerable(T)再拿去挑選一個集合拿去放在Session，結果根本沒有執行到就走了，是要存個屁啊！</p><p>原始程式碼：</p><pre><code class=language-cs>//處理oData
+oData = oData.Select(x =>
+{
+  ...
+  return x;
+});
+//萃取其他資訊，供給後續使用
+System.Web.HttpContext.Current.Session[BraBra] = oData.Where(x => x.bIsEmployee == true).Select(x => x.cID);
+//繼續進行oData處理
+...
+</code></pre><p>修正後的程式碼，加個ToList()先強制執行一下就好：</p><pre><code class=language-cs>//處理oData
+oData = oData.Select(x =>
+{
+  ...
+  return x;
+});
+//萃取其他資訊，供給後續使用
+System.Web.HttpContext.Current.Session[BraBra] = oData.Where(x => x.bIsEmployee == true).Select(x => x.cID).ToList();
+//繼續進行oData處理
+...
+</code></pre><p>如果看到此篇文章的你正遇到Session無法寫入的鬼問題，不妨先想想是否是LINQ的延遲執行（Deferred Execution）影響所致，希望可以節省到你寶貴的時間。</p><h6>ASP.NET ASPX ASHX Session CanNotWrite CanNotRead Disable Block</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

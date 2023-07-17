@@ -1,0 +1,41 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>將img圖片置於DIV中央，並以DIV高度作為圖片填滿基準，圖片寬度若超過則不顯示</h1><p>這是一個沒有營養的CSS練習，對熟悉CSS的人可能信手捻來，可是對於我來說是一個不太好達成的任務，經過一通亂試後有了初步的結果，將這個CSS記錄在此以利後續引用。</p><h2>圖片置於DIV水平中間、高度100%、寬度超出不顯示</h2><p>我要的效果很簡單，就是一張任意長寬的圖片，放入我指定的DIV，具備特定的長寬時，圖片可以依據所處的DIV容器進行下列的運算顯示：</p><ol><li>必須從正中央為基準顯示，而非傳統的自左開始顯示。</li><li>必須以填滿這個DIV的高度為最大目標，也就是圖片的高度必須等於DIV指定的高度。</li><li>寬度如果匹配當下的長寬比，那超出DIV寬度之圖片範圍就不顯示。</li></ol><h2>建立CSS</h2><p>首先先建立下列CSS，預設兩種DIV長寬，<code>.box-1</code>是 16:9 長方形，<code>.box-2</code>是 1:1 正方形。而圖片的原始大小是16:9，也就是1920 X 1080。</p><pre><code class=language-css>&lt;style>
+  .box{
+    position: relative;
+    overflow: hidden;
+  }
+  img {
+    height: 100%;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%,-50%);
+  }
+  .box-1 {
+    width: 328px;
+    height: 185px;
+  }
+  .box-2 {
+    width: 150px;
+    height: 150px;
+  }
+&lt;/style>
+</code></pre><style>.box{position:relative;overflow:hidden}img{height:100%;position:absolute;top:50%;left:50%;transform:translate(-50%,-50%)}.box-1{width:328px;height:185px}.box-2{width:150px;height:150px}</style><h3>套用的效果Ａ</h3><p>16:9 長方形的DIV，可以看到圖片大致上是滿版的：</p><div class="box box-1"><img src=https://content.slashview.com/img/2023/20230320_01.jpg /></div><p>1:1 正方形的DIV，可以看到圖片自DIV正中央展開填滿，寬度超出的部分自動隱藏：</p><div class="box box-2"><img src=https://content.slashview.com/img/2023/20230320_01.jpg style=max-width:initial!important /></div><p>透過這樣的設計，可以讓一張圖片同時適應到各式應用場合，是一個蠻不錯的應用小技巧。</p><h2>改寫成object-fit、object-position的方式</h2><p>上面的例子其實已經不錯了，但是這個需求還有一個更標準、更容易閱讀的方法，就是CSS 3的object-fit、object-position，改寫的方式很簡單，只要針對<code>img</code>標籤開刀就可以了。</p><pre><code class=language-css>&lt;style>
+  .box{
+    /* 不需要了 */
+  }
+  img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;  /* 這種渲染的算法，意外的比上面的老前輩好看 */
+    object-position: center center; /* center是預設值，所以未必一定要宣告 */
+  }
+  .box-1 {
+    width: 328px;
+    height: 185px;
+  }
+  .box-2 {
+    width: 150px;
+    height: 150px;
+  }
+&lt;/style>
+</code></pre><style>.newCss3{position:initial!important;top:initial!important;left:initial!important;transform:initial!important;width:100%;height:100%;object-fit:cover;object-position:center center}</style><h3>套用的效果Ｂ</h3><p>16:9 長方形的DIV，可以看到圖片大致上是滿版的：</p><div class=box-1><img class=newCss3 src=https://content.slashview.com/img/2023/20230320_01.jpg /></div><p>1:1 正方形的DIV，可以看到圖片自DIV正中央展開填滿，寬度超出的部分自動隱藏。如果有仔細看的話可以看到這種方式更好，圖片若有設定CSS邊框的部分，不會因為<code>position:absolute</code>的設定而覆蓋掉水平邊框：</p><div class=box-2><img class=newCss3 src=https://content.slashview.com/img/2023/20230320_01.jpg /></div><h2>動畫的引入</h2><p>更妙的是<code>object-position</code>這種作法還可以支援動畫的引入喔！也就是當小方框看不到圖片全貌時，我們是可以透過CSS動畫去移動圖片的，蠻有趣的。</p><style>.roll{animation:ImageMove 10s infinite}.box-3{width:150px;height:300px}@keyframes ImageMove{0%{object-position:0% 0%}100%{object-position:100% 0%}}</style><div class=box-3><img class="newCss3 roll" src=https://content.slashview.com/img/2023/20230320_01.jpg /></div><h6>HTML CSS DIV IMG Center Fill Overflow Invisible RWD Responsive</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

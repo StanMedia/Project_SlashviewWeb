@@ -1,0 +1,26 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>C#撰寫具備條件判斷的using結構式</h1><p>這篇文章連標題我都不知道要怎麼下，起因是因為我個人在撰寫資源耗用相關的程式碼，偏愛使用using結構式，然而在不同的需求下，往往也只能因為using先天上的撰寫限制，只好把程式碼拆開複製成兩份來表達，這在程式碼的維護上顯得很蠢，直到在StackOverflow上面剛好看到一篇文章的寫法，給了我個人的一些啟發。</p><p><img src=https://content.slashview.com/img/2018/20181127_01.jpg alt="" /></p><h2>傳統using結構式的困境</h2><pre><code class=language-cs>using (資源Ａ)
+{
+  using (資源Ｂ = From(資源Ａ))
+  { ... }
+}
+</code></pre><p>如上面的結構，假設資源Ｂ在某件任務中是一定要使用到的資源，但資源Ａ並非一定要使用，這時候我們往往會選擇讓方法Overload，並將程式碼複製成兩份分開撰寫。例如下面程式碼：</p><pre><code class=language-cs>private void Method_1(...)
+{
+  using (資源Ａ)
+  {
+    using (資源Ｂ = From(資源Ａ))
+    { ... }
+  }
+}
+private void Method_2(...)
+{
+  using (資源Ｂ)
+  { ... }
+}
+</code></pre><p>接著我們就會開始看using (資源Ｂ)這段程式碼不爽，接著就開始想辦法包裝、模組化、傳址，總之就是往外拋到一個共通的方法去調用。當然啦，這對類別狂人來說是一場自豪的正規化之旅，但對我來說卻未必，因為這些程式碼當你辛苦的建立完一堆類別程式碼後，日後重新使用的機率其實很低。（以我數十年的經驗來看，其實幾近於零。）</p><p>基於我自己的看法使然，因此我對於「為了一個不可能重用的程式碼，再去拆程式碼達到共用化」這部分的工作感到很厭惡，但是實務上，同一支類別檔中出現兩個重載Overload中的程式碼大多數雷同，也是令人無法忍受的。如果可以「繼續使用同一組using結構」，同時也可以讓我在同一個方法中完成「依需求調用資源」，那該多好？</p><h2>null，答案是null可以拯救你！</h2><p>感謝using結構時，Compiler看到null不會去呼叫IDisposable，這讓一切都解套了。上面困境的程式碼可以化成下列範例：</p><pre><code class=language-cs>System.IO.Stream oSource = null;
+using ((ModeA) ? oSource = new System.IO.FileStream(cStaticFile, System.IO.FileMode.Open) : null)
+{
+  if (ModeB) { oSource = oHttpStream; }
+  using (System.Drawing.Image oImage = System.Drawing.Image.FromStream(oSource, false, false))
+  { ... }
+}
+</code></pre><p>上面的程式碼美妙之處，就是在於第一段的using使用了if判斷式，而在判斷為false後會載入null，而using(null){...}對compiler來說是一個空洞但又合法的寫法，剛剛好可以滿足我們的需求啊！這下我們就不用因為要區分成兩種模式而重載兩個程式碼很雷同的方法，箇中意象就有請大家自己去體會啦！</p><h6>C# Reference UsingStatement IfElse Switch</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

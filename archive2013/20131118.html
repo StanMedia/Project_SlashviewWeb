@@ -1,0 +1,28 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>針對.NET SQLCommand類別進行靜態方法的擴充</h1><p>因為需要進行資料庫稽核的關係，必須要於SQL Command中加入一些數位足跡，以便於讓資料庫記錄這些事情並可以日後被追蹤。</p><p>問題是，在沒有自製的資料庫元件的方案下，不可能在日後的所有的程式碼中，每一次都要記錄這些資料庫的足跡，因此，一個統一性的擴充性方法是必須的。以下就是這個擴充方法的程式碼。</p><pre><code class=language-cs>namespace Slashview
+{
+  public static class SqlExtension
+  {
+    public static void AddTrackableInformation(this System.Data.SqlClient.SqlCommand oSqlCmd)
+    {
+      //抓使用者
+      string cUser = "";
+      if (System.Web.HttpContext.Current.Session["User"] != null)
+      {  cUser = System.Web.HttpContext.Current.Session["User"]; }
+      else
+      {  cUser = "null";  }
+      //抓IP
+      string cIP = ...省略...;
+      //抓程式運行路徑
+      string cURL = System.Web.HttpContext.Current.Request.Url.AbsolutePath;
+      //組合具備追蹤性之字串
+      oSqlCmd.CommandText = oSqlCmd.CommandText + "\n-- User: " + cUser + "。\n-- IP: " + cIP + "。\n-- Path: " + cURL + "。\n";
+      //傳回物件
+      return oSqlCmd;
+    }
+  }
+}
+</code></pre><p>日後的引用就變得很簡單了，只要在資料指令送出前，加入這行指令即可：</p><pre><code class=language-cs>&lt;%@ Import Namespace="Slashview" %>
+System.Data.SqlClient.SqlCommand oCmd = new System.Data.SqlClient.SqlCommand();
+oCmd.CommandText = "select * from AAA";
+oCmd.AddTrackableInformation();  //這時候會被加入新的可追蹤資訊
+</code></pre><h6>C# StaticClassExtension</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

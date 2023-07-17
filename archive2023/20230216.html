@@ -1,0 +1,7 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>GIT筆記：拋棄所有歷史版本，只保留當前最新版本</h1><p>有時候看到GIT的分支上面一堆歷史版本，眼睛不僅難受，心裡還會不斷地犯嘀咕：「最好有人會想起來三年前做了某個改動、兩年前某改動又被改成另外一個改動啦！」，當真的有追朔歷史的時刻來臨時，這些追朔的動作大都跟實際必須進行的事務無關（例如修正程式碼），反而跟程式設計師的辛酸血淚故事比較有關。</p><p>總之，看不順眼的雜亂版本想要一律把它清除，對於GIT進行差異計算時也比較有效率一些。</p><h2>消除歷史只保留現有版本</h2><p>請依照下列指令服用即可：</p><p>Step 1. 到Repository所在的目錄下</p><p>Setp 2. 創造並切換到新分支</p><pre><code>git checkout --orphan masterLatest
+</code></pre><p>Step 3. 把當前所有的文件都加進來，並給予註解</p><pre><code>git add -A
+git commit -am "Init"
+</code></pre><p>Step 4. 把master分支砍掉</p><pre><code>git branch -D master
+</code></pre><p>Step 5. 把當前masterLatest名字改回master</p><pre><code>git branch -m master
+</code></pre><p>Step 6. 強制更新Repository</p><pre><code>git push -f origin master
+</code></pre><h2>Visual Studio Team Explorer GIT 修正</h2><p>若你的GIT已經綁定Visual Studio透過Team Explorer操作推送之類的動作，透過上面的操作後介面將會警告你<code>此分支未追蹤遠端存放庫分支</code>，會有這樣的訊息其實是Visual Studio偵測到你有開一個新的分支且名稱為master，但是最後一次推送的版本號與紀錄上的不一樣，因此拒絕推送或同步。</p><p>正確的做法是進入到Team Explorer介面後，如下圖依序點選ICON：</p><ol><li>擷取</li><li>推送</li><li>同步（提取後推送）</li></ol><p><img src=https://content.slashview.com/img/2023/20230216_01.jpg alt="" /></p><h6>git 版本控制 推送 簽入 歷史 移除 刪除 rebase</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

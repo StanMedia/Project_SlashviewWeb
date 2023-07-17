@@ -1,0 +1,35 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>System.DateTime運算小範例（時間差距、同日判斷）</h1><p>.NET Framework的System.DateTime類別其實非常的強大，也在所有的專案中被大量地使用。但是有些小地方就算你的程式設計技巧已看過千山萬水，還是有可能會犯錯（或者是繞遠路），因此在這邊分享兩個小技巧。</p><p><img src=https://content.slashview.com/img/2015/20151015_01.jpg alt="" /></p><h2>計算兩個日期時間物件總共差距多少分鐘（差距幾分鐘）</h2><p>一般來說，我們會直覺地想到DateTime.Subtract方法，因此我們馬上寫下程式碼如下：</p><pre><code class=language-cs>static void Main(string[] args)
+{
+  DateTime t1 = new DateTime(2015, 10, 15, 14, 10, 00);
+  DateTime t2 = new DateTime(2015, 10, 15, 19, 38, 00);
+  WriteLine(t2.Subtract(t1).Minutes);  //28
+}
+</code></pre><p>上述程式碼，請問回傳的差距分鐘數為？答案是28分鐘。因為Minutes屬性真的就只會回傳你分鐘數而已，誰管你幾小時、幾秒。正確的用法要採用TotalDays、TotalHours、TotalMinutes、TotalSeconds、TotalMilliseconds，希望下次要提醒自己多小心點。服用下方正確的程式碼後，答案就是正確的328分鐘。</p><pre><code class=language-cs>static void Main(string[] args)
+{
+  DateTime t1 = new DateTime(2015, 10, 15, 14, 10, 00);
+  DateTime t2 = new DateTime(2015, 10, 15, 19, 38, 00);
+  WriteLine(new TimeSpan(t2.Ticks - t1.Ticks).TotalMinutes);  //328
+}
+</code></pre><h2>計算兩個日期時間物件是否為同日（同一天）</h2><p>這個問題不是BUG的問題，而是效能與程式碼精簡度的問題。往往我們看到這個題目一定直覺地想，這不困難吧，把時間的年、月、日拿出來一起判斷，不就知道是同一天了嗎？當然可以，程式碼如下：</p><pre><code class=language-cs>static void Main(string[] args)
+{
+  DateTime t1 = new DateTime(2015, 10, 15, 14, 10, 00);
+  DateTime t2 = new DateTime(2015, 10, 15, 19, 38, 00);
+  
+  if (t1.Year == t2.Year &amp;&amp; 
+      t1.Month == t2.Month &amp;&amp;
+      t1.Day == t2.Day)
+  { 
+    //BraBra...
+  }
+}
+</code></pre><p>遜！下面的寫法簡潔、易懂、效率更高：</p><pre><code class=language-cs>static void Main(string[] args)
+{
+  DateTime t1 = new DateTime(2015, 10, 15, 14, 10, 00);
+  DateTime t2 = new DateTime(2015, 10, 15, 19, 38, 00);
+  
+  if (DateTime.Compare(t1.Date, t2.Date) == 0)
+  { 
+    //BraBra...
+  }
+}
+</code></pre><p>相關連結：</p><p><a href=/archive2018/20181003.html>System.DateTime運算小範例（迄今時間計算：年月天）</a></p><h6>System.DateTime Comapre Subtract Diff</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

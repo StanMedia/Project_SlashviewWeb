@@ -1,0 +1,9 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>如何針對伺服器控制項來下註解？</h1><p>在ASP.NET Web-Form的世界裡面，伺服器控制項（Server Side Controls）是很重要的物件重覆利用觀念，雖然說近年來已經慢慢勢微，但是如果你懂得什麼時候該利用它，好好的用它的話總體的網站還是具備相當的規模模組化的。</p><p>今天在操作的時候突然想到一個問題，就是我完全沒有用過伺服器控制項的註解，我們知道，HTML的註解可能長的像下列所示，但是要怎麼在控制項的層層疊疊XML之中，進行某區塊的註解呢？因為有時候實在是不想砍掉這些具備參考價值的XML啊。</p><p>但是伺服器控制項的註解呢？有關於Server Side Comments其實很簡單，就是回到ASP時代的%標記法。以下是範例：</p><pre><code class=language-cs>&lt;asp:CheckBoxList id="CB" runat="server">
+  &lt;asp:ListItem>Item 1&lt;/asp:ListItem>
+  &lt;asp:ListItem>Item 2&lt;/asp:ListItem>
+  &lt;%--
+  &lt;asp:ListItem>Item 3&lt;/asp:ListItem>
+  &lt;asp:ListItem>Item 4&lt;/asp:ListItem>
+  --%>
+&lt;/asp:CheckBoxList>
+</code></pre><h6>ASP.NET WebForm ServerSideControls ServerSideComments</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

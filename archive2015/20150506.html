@@ -1,0 +1,57 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>在泛型處理常式（ashx）中利用HttpTaskAsyncHandler來完成async/await之需求</h1><p>今天在撰寫泛型處理常式（ashx）時，遇到一個非同步的應用上問題，也就是ProcessRequest在async/await運行尚未完成時期，它本身就運行完成，因此直接跳離，導致await Task後的回傳結果根本無處控制與顯示，因為管理者不見啦！當下很直覺的想說，那我就在ProcessRequest前面加個async就可以了啊！才發現事實不是笨蛋想的那麼簡單。</p><p>我們都知道泛型處理常式（ashx）需要繼承並實作IHttpHandler介面，問題是IHttpHandlerr介面下根本不支援ProcessRequest去處理async/await的動作，這時候就需要繼承IHttpAsyncHandler來達成非同步功能，但是引用IHttpAsyncHandler又必須要實作一堆垃圾方法，有沒有更簡單的方式呢？答案就是繼承System.Web.HttpTaskAsyncHandler類別。</p><p>繼承System.Web.HttpTaskAsyncHandler類別後，你可以繼續使用你習慣的ASHX架構繼續開發程式，然後你可以複寫（override）一個叫ProcessRequestAsync的方法，它具備非同步（async）的處理能力，更妙的是，你不用再多寫一次IsReusable屬性（Property）了，程式碼變得更精簡了！真棒！</p><h2>程式碼範例如下：</h2><pre><code class=language-cs>&lt;%@ WebHandler Language="C#" Class="ajaxResponse" %>
+
+public class ajaxResponse: System.Web.HttpTaskAsyncHandler
+{
+  //設定一個集合來存放結果集
+  private System.Collections.Generic.List&lt;ORM_Class> oResult;
+  //泛型處理常式主要進入點
+  public override async System.Threading.Tasks.Task ProcessRequestAsync(System.Web.HttpContext context)
+  {
+    //指定要存取的網址，壓入非同步工作中
+    await PushToTask(new string[] {
+      "http://date.jsontest.com",  //FreeJson
+      "http://date.jsontest.com",  //FreeJson
+      "http://date.jsontest.com"  //FreeJson
+    });
+    //輸出結果集之JSON
+    context.Response.ContentType = "application/json; charset=utf-8";
+    context.Response.Write(Newtonsoft.Json.JsonConvert.SerializeObject(oResult));
+  }
+
+  //非同步工作佇列處理
+  private async System.Threading.Tasks.Task PushToTask(System.Collections.Generic.IList&lt;string> oURLs)
+  {
+    System.Collections.Generic.List&lt;System.Threading.Tasks.Task> oTasks = new System.Collections.Generic.List&lt;System.Threading.Tasks.Task>();
+    System.Threading.SemaphoreSlim oControl = new System.Threading.SemaphoreSlim(oURLs.Count);
+    oResult = new System.Collections.Generic.List&lt;ORM_Class>();
+    foreach (var cURL in oURLs)
+    {
+      await oControl.WaitAsync();
+      oTasks.Add(System.Threading.Tasks.Task.Run(async () =>
+      {
+        try
+        {
+          using (System.Net.WebClient oWC = new System.Net.WebClient() { Encoding = System.Text.Encoding.UTF8 })
+          {
+            oResult.Add(Newtonsoft.Json.JsonConvert.DeserializeObject&lt;ORM_Class>(
+              await oWC.DownloadStringTaskAsync(new System.Uri(cURL))
+            ));
+          }
+        }
+        catch { return; }
+        finally { oControl.Release(); }
+      }));
+    }
+    //等候所有的工作完成
+    await System.Threading.Tasks.Task.WhenAll(oTasks);
+  }
+}
+
+//預計取用的ORM類別
+class ORM_Class
+{
+  public string time { get; set; }
+  public long milliseconds_since_epoch { get; set; }
+  public string date { get; set; }
+}
+</code></pre><p>輸出的結果圖如下：</p><p><img src=https://content.slashview.com/img/2015/20150506_01.jpg alt="" /></p><p>相關參考：</p><ul><li><a href=/archive2014/20140408.html>非同步程式設計Async與Await</a></li><li><a href=/archive2015/20150505.html>利用SemaphoreSlim類別來進行async/await非同步工作排程</a></li><li><a href=/archive2016/20160202.html>再論具總量控管之.NET非同步工作排程模型</a></li><li><a href=https://aspnetmonsters.com/2016/08/2016-08-27-httpclientwrong/>延伸參考：YOU'RE USING HTTPCLIENT WRONG AND IT IS DESTABILIZING YOUR SOFTWARE；HttpClient因IDisposable反而引發連線資源耗盡（TIME_WAIT）問題</a></li><li><a href=/archive2018/20181212.html>HttpClient所引爆的Sockets Port耗盡問題</a></li></ul><h6>泛型處理常式 .ashx HttpTaskAsyncHandler IHttpAsyncHandler System.Threading.SemaphoreSlim System.Threading.Tasks.Task aSync aWait</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

@@ -1,0 +1,9 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>在SubDomain下，完全移除RootDomain的Cookies</h1><p>公司的根網域（假設為：slashview.com）因為行銷的需求，被加入了Root Domain等級的Google Analysis Cookies（GA），然而在公司內部的應用網站（例如：app.slashview.com），卻不需要這些GA Cookies的追蹤，也就是往來之間，我們不需要諸如：__utma、__utmb、__utmc、__utmt、__utmz這些無用的數據傳輸與干擾。</p><p>那麼，如何顧及其他網站的追蹤需求，又不讓這些根網域的餅乾屑掉到家中呢？</p><h2>Cookies小常識</h2><ol><li>子網域（app.slashview.com）可以建立根網域（slashview.com）的Cookies。</li><li>一旦根網域的Cookies被建立，那麼所有的子網域中（例如：www.slashview.com、mail.slashview.com、erp.slashview.com...）中的任何一次Http Request都會被夾帶根網域（slashview.com）的資訊，自Http Header回傳至Server。</li><li>反過來說，子網域亦可以刪除根網域（slashview.com）的Cookies。</li></ol><p>好了，既然發想已經完成，接下來就是程式碼的實作了。</p><h2>刪除根網域下所有的Cookies</h2><p>我故意把Javascript寫成匿名，這樣你Copy回去就可以直接貼上使用了。</p><pre><code class=language-js>(function () {
+  var aryCookies = document.cookie.split(';');
+  for (var i = 0; i &lt; aryCookies.length; i++) {
+    var iEqual = aryCookies[i].indexOf("=");
+    var cName = iEqual > -1 ? aryCookies[i].substring(0, iEqual) : aryCookies[i];
+    document.cookie = cName + "=; Path=/; domain=.slashview.com; expires=Thu, 01 Jan 1970 00:00:01 GMT";
+  }
+})();
+</code></pre><p>註釋一：刪除時寫成「domain=slashview.com」也可以喔，點（dot）會在Client端自動被加回。（RFC 2965）</p><p>註釋二：這樣的寫法並不會刪除到瀏覽器自帶的Session ID（SSID），所以不必緊張。</p><h6>Delete Remove Cookies GoogleAnalysis __utma __utmb __utmc __utmt __utmz RootDomain SubDomain</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

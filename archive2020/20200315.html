@@ -1,0 +1,24 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>Bootstrap 4讓特定元素在特定的裝置畫面中消失</h1><p>有時候我們會想要在行動裝置的寬度下，讓按鈕中的文字或圖案消失，在不變更版面的排列下讓UI的體驗可以更加一致性，這篇文章將展示如何做到這樣的語法。</p><p><img src=https://content.slashview.com/img/2020/20200315_01.jpg alt="" /></p><p>首先我們有下列的HTML：</p><pre><code class=language-html>&lt;div class="row col-12 mt-4">
+  &lt;div class="col-8 col-md-6">
+    &lt;h3>&lt;i class="fab fa-microsoft fa-fw">&lt;/i> ＯＯＯ管理系統&lt;/h3>
+  &lt;/div>
+  &lt;div class="col-4 col-md-6">
+    &lt;div class="d-inline float-right">
+      &lt;a href="#" class="btn btn-primary">&lt;i class="fas fa-check fa-fw">&lt;/i> 新增&lt;/a>
+      &lt;a href="#" class="btn btn-danger">&lt;i class="fas fa-times fa-fw">&lt;/i> 刪除&lt;/a>
+    &lt;/div>
+  &lt;/div>
+&lt;/div>
+</code></pre><p>畫面如下：</p><p><img src=https://content.slashview.com/img/2020/20200315_02.jpg alt="" /></p><p>而我們希望如果畫面寬度再進一步縮小，是否可以留下打勾跟打叉的ICON就好，新增跟刪除的中文字眼可以消失。</p><h2>讓特定元素在特定的裝置畫面中消失</h2><p>答案就是利用d-none CSS類別來進行控制，例如某個元素只想要在md（Medium）以上的裝置才顯現，md以下的裝置都消失，則我們可以使用這樣的語法。</p><pre><code class=language-html>ＯＯＯ&lt;span class="d-none d-md-inline">這行字在md以下的裝置會消失喔！&lt;/span>ＯＯＯ
+</code></pre><p>承剛才的HTML，套用上去後會長的如下：</p><pre><code class=language-html>&lt;div class="row col-12 mt-4">
+  &lt;div class="col-8 col-md-6">
+    &lt;h3>&lt;i class="fab fa-microsoft fa-fw">&lt;/i> ＯＯＯ管理系統&lt;/h3>
+  &lt;/div>
+  &lt;div class="col-4 col-md-6">
+    &lt;div class="d-inline float-right">
+      &lt;a href="#" class="btn btn-primary">&lt;i class="fas fa-check fa-fw">&lt;/i> &lt;span class="d-none d-sm-inline">新增&lt;/span>&lt;/a>
+      &lt;a href="#" class="btn btn-danger">&lt;i class="fas fa-times fa-fw">&lt;/i> &lt;span class="d-none d-sm-inline">刪除&lt;/span>&lt;/a>
+    &lt;/div>
+  &lt;/div>
+&lt;/div>
+</code></pre><p><img src=https://content.slashview.com/img/2020/20200315_03.jpg alt="" /></p><p>在sm（Small）、xs（Extra small）這種可視寬度極小的狀況下，新增跟刪除的字眼消失嘍！</p><h3>參考連結：</h3><p><a href=/archive2019/20190716.html>Bootstrap顯示隱藏Grid指令對照表</a></p><h6>Bootstrap BS3 BS4 BS5 DifferentDevice DisplayWidth ShowElement HideElement Visible Invisible</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

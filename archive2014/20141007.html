@@ -1,0 +1,34 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>C#類別中this關鍵字的必要性</h1><p>在初學物件導向的時候，我就一直在懷疑this的必要性，因為對我來說無論如何這都是一個可以省略的關鍵字，大部份的時刻我一直都不需要它的，甚至有時候有人猛然問我為何要寫this，我一時之間還是答不太上來說（笑）。其實，this是必要的，只是長時間以來我的書寫習慣讓我不需要太重度依存這個關鍵字，所以我還是把為何需要this的原因寫在下方吧，提供給跟我一樣有當年困惑的你瞭解一下。</p><p>this表示這個物件實體本身，在多數的情況下，它根本是廢話，因為類別實體方法（Methods）中，本來就可以有完整權限存取類別自己定義的欄位（Fields），那又何需加上this？原因如下列程式碼，你看了就會心神領會。</p><pre><code class=language-cs>class Program
+{
+  private string id;
+
+  public string setName(string id)
+  {
+    this.id = id;
+    return this.id;
+  }
+
+  static void Main()
+  {
+    Program obj = new Program();
+    Console.Write(obj.setName("John"));
+  }
+}
+</code></pre><p>由上述的程式碼我們可以知道，當你的欄位跟你方法中的參數同名時，這就是困擾的根源，也就是this的使用時機。不然你永遠無法達成讓編譯器完成「id = id」的狀況。問題其實到這邊就解答完了，那麼另外的問題是，為何我的書寫習慣幾乎不會用到this呢？以下是我習慣的寫法：（當然啦，這只是範例，以這個例子真正在實作上只要用<a href=/archive2014/20141008.html>自動屬性實作</a>一行就解決了。）</p><pre><code class=language-cs>class Program
+{
+  private string _cId;  //私有變數加底線
+
+  //參數的設計我會加上Temp，因為它本身就有暫時性的味道
+  public string setName(string cTempId)
+  {
+    _cId = cTempId;
+    return _cId;
+  }
+
+  static void Main()
+  {
+    Program obj = new Program();
+    Console.Write(obj.setName("John"));
+  }
+}
+</code></pre><p>延伸閱讀：</p><p><a href=/archive2014/20141008.html>屬性Property與欄位Field，傻傻分不清楚</a></p><p><a href=/archive2015/20150423.html>Visual Studio中的產生方法Stub</a></p><h6>物件導向 類別 ObjectOriented Class WhyNeed This Keyword</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

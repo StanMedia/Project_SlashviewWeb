@@ -1,0 +1,283 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>利用GDI+圖形雙重緩衝（Double Buffering）來實作圖形跑馬燈</h1><p>之前實作過文字跑馬燈後，應同事要求再實作出圖形跑馬燈，原因無他，因為客戶要求文字跑馬燈後，可預期的圖形跑馬燈的需求一定接踵而至，話不多說了，直接看程式碼。</p><p><img src=https://content.slashview.com/img/2015/20151123_01.jpg alt="" /></p><p>在這次的程式碼中，依然動態的調用PictureBox來當作我們的基礎繪製畫布，如此一來可以避免直接在Form表單底圖作畫，產生許多效能上的問題。當然，這個類別也提供了事件供給外部程式碼掛載，可以在動態運行的時期藉以觀察相關的參數（若有需要可以自己調整參數）。此外，我這些類別都是寫給自己用的，所以許多的建構或方法，都沒有詳細地進行初始化的檢查，也就是說，當類別的實例被生成之後，相關的欄位或方法的指定，請依照順序來進行，否則可能會跳出null Exception，這並不是因為程式碼寫的爛，純粹是因為這是自用（程式設計師使用），而非用嚴謹的商業元件角度來撰寫。</p><h2>MarqueeImage文字跑馬燈類別原始程式碼</h2><p>程式碼裡面依然有透過System.Reflection反射方法，來調用Windows Forms被保護（protected）的SetStyle、UpdateStyles方法，因此你不需要再去Form建構子中，去設定啟用OptimizedDoubleBuffer。</p><pre><code class=language-cs>namespace Slashview
+{
+  /// &lt;summary>
+  /// MarqueeImage事件委派器
+  /// &lt;/summary>
+  /// &lt;param name="sender">MarqueeText實例本體&lt;/param>
+  /// &lt;param name="e">參數包&lt;/param>
+  public delegate void MarqueeImageEventHandler(System.Object sender, System.EventArgs e);
+  /// &lt;summary>
+  /// MarqueeImage主類別
+  /// &lt;/summary>
+  public class MarqueeImage
+  {
+    //（私有變數）圖片顯示元件
+    private System.Windows.Forms.PictureBox _oTargetPictureBox;
+    //（私有變數）計時器物件
+    private System.Windows.Forms.Form _oTargetForm;
+    //（私有變數）計時器物件
+    private System.Timers.Timer _oTimer;
+    //（私有變數）兩張圖片中間的指標
+    private int _iPartitionPoint;
+    /// &lt;summary>
+    /// 提供螢幕畫面重新繪製時的外部事件通知
+    /// &lt;/summary>
+    public event MarqueeImageEventHandler OnDrawing;
+    /// &lt;summary>
+    /// 圖片要畫在哪一個表單物件的繪布上
+    /// &lt;/summary>
+    public System.Windows.Forms.Form oTargetForm
+    {
+      get { return _oTargetForm; }
+      set
+      {
+        _oTargetForm = value;
+        //阻擋違法的建構參數
+        if (iWidth == 0 || iHeight == 0) { throw new System.Exception("預設圖片的寬度與高度不可能為零。"); }
+        //動態產生PictureBox
+        if (_oTargetPictureBox == null)
+        {
+          _oTargetPictureBox = new System.Windows.Forms.PictureBox()
+          {
+            Left = iPosX,
+            Top = iPosY,
+            BorderStyle = System.Windows.Forms.BorderStyle.None,
+            Size = new System.Drawing.Size(iWidth, iHeight),
+            ClientSize = new System.Drawing.Size(iWidth, iHeight)
+          };
+          _oTargetForm.Controls.Add(_oTargetPictureBox);
+          SetDoubleBuffering(_oTargetPictureBox);
+          //強制重繪PictureBox
+          _oTargetPictureBox.Refresh();
+        }
+      }
+    }
+    /// &lt;summary>
+    /// 圖片要顯示在哪個X軸上
+    /// &lt;/summary>
+    public int iPosX { get; set; }
+    /// &lt;summary>
+    /// 圖片要顯示在哪個Y軸上
+    /// &lt;/summary>
+    public int iPosY { get; set; }
+    /// &lt;summary>
+    /// 圖片預期寬度
+    /// &lt;/summary>
+    public int iWidth { get; set; }
+    /// &lt;summary>
+    /// 圖片預期高度
+    /// &lt;/summary>
+    public int iHeight { get; set; }
+    /// &lt;summary>
+    /// 圖片幾千分之一秒移動一次
+    /// &lt;/summary>
+    public int iTimerInterval { get; set; }
+    /// &lt;summary>
+    /// 圖片每次要移動幾個像素
+    /// &lt;/summary>
+    public int iMovePixel { get; set; }
+    /// &lt;summary>
+    /// 當前圖片物件
+    /// &lt;/summary>
+    public System.Drawing.Image oCurrentImage { get; set; }
+    /// &lt;summary>
+    /// 下張圖片物件
+    /// &lt;/summary>
+    public System.Drawing.Image oNextImage { get; set; }
+    /// &lt;summary>
+    /// 開始移動圖片
+    /// &lt;/summary>
+    public void Start()
+    {
+      if (iTimerInterval &lt;= 0) { throw new System.Exception("計數器必須被設定，或已經設定的整數值有誤。"); }
+      if (_oTimer != null) { _oTimer.Stop(); }
+      _oTimer = new System.Timers.Timer() { Interval = iTimerInterval };
+      _oTimer.Elapsed += DrawMarquee;
+      _oTimer.SynchronizingObject = _oTargetPictureBox;
+      _iPartitionPoint = oCurrentImage.Width;  
+      _oTimer.Start();
+    }
+    /// &lt;summary>
+    /// 結束移動圖片
+    /// &lt;/summary>
+    public void Stop()
+    {
+      if (_oTimer == null) { return; }
+      _oTimer.Stop();
+      _oTimer.Dispose();
+    }
+    /// &lt;summary>
+    /// 繪製圖形跑馬燈
+    /// &lt;/summary>
+    public void DrawMarquee(System.Object sender, System.EventArgs e)
+    {
+      if (_oTargetForm == null || _oTargetPictureBox == null) { throw new System.Exception("未指定繪製目標表單，或者是建立繪圖元件失敗。"); }
+      /* 進行繪圖作業 */
+      using (System.Drawing.BufferedGraphics oBuffer = System.Drawing.BufferedGraphicsManager.Current.Allocate(_oTargetPictureBox.CreateGraphics(), _oTargetPictureBox.ClientRectangle))
+      {
+        using (System.Drawing.Graphics oGraph = oBuffer.Graphics)
+        {
+          //最佳化繪圖輸出
+          oGraph.CompositingQuality = System.Drawing.Drawing2D.CompositingQuality.HighQuality;
+          oGraph.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
+          oGraph.PixelOffsetMode = System.Drawing.Drawing2D.PixelOffsetMode.HighQuality;
+          oGraph.InterpolationMode = System.Drawing.Drawing2D.InterpolationMode.HighQualityBicubic;
+          //在目標重繪所屬表單背景色
+          oGraph.Clear(_oTargetForm.BackColor);
+          //（匿名函式）運算與繪製父表單背景圖片
+          System.Action funcDrawBackgroundImage = () => {
+            int iCorpX;             //剪裁座標X
+            int iCorpY;             //剪裁座標Y
+            int iCorpWidth;         //剪裁目標寬
+            int iCorpHeight;        //剪裁目標高
+            int iPasteTargetX = 0;  //黏貼目標座標X
+            int iPasteTargetY = 0;  //黏貼目標座標Y
+            //評估水平座標系統
+            if (_oTargetPictureBox.Left &lt; 0)
+            {
+              if ((_oTargetPictureBox.Left + _oTargetPictureBox.Width) >= 0) { iCorpX = 0; iCorpWidth = _oTargetPictureBox.Left + _oTargetPictureBox.Width; iPasteTargetX = -(_oTargetPictureBox.Left - 1); }
+              else { iCorpX = -1; iCorpWidth = -1; }
+            }
+            else if (_oTargetPictureBox.Left >= 0 &amp;&amp; _oTargetPictureBox.Left &lt; _oTargetForm.BackgroundImage.Width)
+            {
+              if ((_oTargetPictureBox.Left + _oTargetPictureBox.Width) &lt; _oTargetForm.BackgroundImage.Width) { iCorpX = _oTargetPictureBox.Left; iCorpWidth = _oTargetPictureBox.Width; iPasteTargetX = 0; }
+              else { iCorpX = _oTargetPictureBox.Left; iCorpWidth = _oTargetForm.BackgroundImage.Width - _oTargetPictureBox.Left; iPasteTargetX = 0; }
+            }
+            else  /* means oPB.Left >= this.BackgroundImage.Width */
+            {
+              iCorpX = -1; iCorpWidth = -1;
+            }
+            //評估垂直座標系統
+            if (_oTargetPictureBox.Top &lt; 0)
+            {
+              if ((_oTargetPictureBox.Top + _oTargetPictureBox.Height) >= 0) { iCorpY = 0; iCorpHeight = _oTargetPictureBox.Top + _oTargetPictureBox.Height; iPasteTargetY = -(_oTargetPictureBox.Top - 1); }
+              else { iCorpY = -1; iCorpHeight = -1; }
+            }
+            else if (_oTargetPictureBox.Top >= 0 &amp;&amp; _oTargetPictureBox.Top &lt; _oTargetForm.BackgroundImage.Height)
+            {
+              if ((_oTargetPictureBox.Top + _oTargetPictureBox.Height) &lt; _oTargetForm.BackgroundImage.Height) { iCorpY = _oTargetPictureBox.Top; iCorpHeight = _oTargetPictureBox.Height; iPasteTargetY = 0; }
+              else { iCorpY = _oTargetPictureBox.Top; iCorpHeight = _oTargetForm.BackgroundImage.Height - _oTargetPictureBox.Top; iPasteTargetY = 0; }
+            }
+            else  /* means oPB.Top >= this.BackgroundImage.Height */
+            {
+              iCorpY = -1; iCorpHeight = -1;
+            }
+            //評估需不需要填入任何背景
+            bool bNeedDrawBackgroundImage = true;
+            if (iCorpX &lt; 0 || iCorpY &lt; 0 || iCorpWidth &lt; 0 || iCorpHeight &lt; 0) { bNeedDrawBackgroundImage = false; }
+            //如果有需要填入背景，就切割背景影像，貼到應該貼上的位置
+            if (bNeedDrawBackgroundImage)
+            {
+              oGraph.DrawImage(new System.Drawing.Bitmap(
+                _oTargetForm.BackgroundImage).Clone(
+                  new System.Drawing.Rectangle(iCorpX, iCorpY, iCorpWidth, iCorpHeight),
+                  _oTargetForm.BackgroundImage.PixelFormat
+                ),
+                new System.Drawing.Point(iPasteTargetX, iPasteTargetY)
+              );
+            }
+          };
+          //如果表單有背景圖片的話，就重繪背景圖片（透明效果）
+          if (_oTargetForm.BackgroundImage != null) { funcDrawBackgroundImage(); }
+          
+          /* 繪製雙圖片輪播效果 */
+          int iCorpCurrentX = oCurrentImage.Width - _iPartitionPoint;
+          int iCorpCurrentWidth = oCurrentImage.Width - iCorpCurrentX;
+          int iCorpNextWidth = iCorpCurrentX;
+          //丟出事件
+          if (OnDrawing != null) { OnDrawing(this, new MarqueeImageArgs() { iCurrentImageWidth = iCorpCurrentWidth, iPartitionPoint = _iPartitionPoint, iNextImageWidth = iCorpNextWidth }); }
+          //繪製現在圖片應該在的位址
+          if (iCorpCurrentWidth != 0)
+          {
+            oGraph.DrawImage(new System.Drawing.Bitmap(
+              oCurrentImage).Clone(
+                new System.Drawing.Rectangle(iCorpCurrentX, 0, iCorpCurrentWidth, oCurrentImage.Height),
+                _oTargetForm.BackgroundImage.PixelFormat
+              ),
+              new System.Drawing.Point(0, 0)
+            );
+          }
+          //繪製下張圖片應該在的位址
+          if (iCorpNextWidth != 0)
+          {
+            oGraph.DrawImage(new System.Drawing.Bitmap(
+              oNextImage).Clone(
+                new System.Drawing.Rectangle(0, 0, iCorpNextWidth, oNextImage.Height),
+                _oTargetForm.BackgroundImage.PixelFormat
+              ),
+              new System.Drawing.Point(_iPartitionPoint, 0)
+            );
+          }
+          //計算下一次的位移
+          if (_iPartitionPoint == 0)
+          {
+            _oTimer.Stop();
+            //修正有時按下螢幕快照截圖時，會產生的繪圖區洗成空白的問題
+            _oTargetPictureBox.Image = oNextImage;
+            _oTargetPictureBox.Refresh();
+          }
+          else
+          {
+            _iPartitionPoint -= iMovePixel;
+            if (_iPartitionPoint &lt; 0) { _iPartitionPoint = 0; }
+          }
+          //將緩衝丟回目標前景
+          oBuffer.Render(_oTargetPictureBox.CreateGraphics());
+        }
+      }
+    }
+    /// &lt;summary>
+    /// 驅動繪圖目標對象使用雙圖形緩衝
+    /// &lt;/summary>
+    /// &lt;param name="oTemp">套用目標對象&lt;/param>
+    private void SetDoubleBuffering(System.Object oTemp)
+    {
+      try
+      {
+        //因為SetStyle、UpdateStyles是被設定存取屬性是protected，因此只能透過Reflection來代理
+        System.Reflection.MethodInfo oMethod_1 = oTemp.GetType().GetMethod("SetStyle", (System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance));
+        System.Reflection.MethodInfo oMethod_2 = oTemp.GetType().GetMethod("UpdateStyles", (System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance));
+        //如果兩個方法都有調用到，那就Invoke它們
+        if (oMethod_1 != null &amp;&amp; oMethod_2 != null)
+        {
+          oMethod_1.Invoke(oTemp, new object[] { System.Windows.Forms.ControlStyles.OptimizedDoubleBuffer, true });
+          oMethod_2.Invoke(oTemp, new object[] { });
+        }
+      }
+      catch { throw new System.Exception("驅動繪圖對象使用圖形雙重緩衝失敗！"); }
+    }
+  }
+  /// &lt;summary>
+  /// MarqueeImageArgs參數包
+  /// &lt;/summary>
+  public class MarqueeImageArgs : System.EventArgs
+  {
+    /// &lt;summary>
+    /// 繪製中前一個圖片的剩餘寬度
+    /// &lt;/summary>
+    public int iCurrentImageWidth { get; set; }
+    /// &lt;summary>
+    /// 分割兩個圖片的座標X軸
+    /// &lt;/summary>
+    public int iPartitionPoint { get; set; }
+    /// &lt;summary>
+    /// 繪製中下一個圖片的當前寬度
+    /// &lt;/summary>
+    public int iNextImageWidth { get; set; }
+  }
+}
+</code></pre><h3>MarqueeImage類別使用方法</h3><p>使用的方法很簡單，可能你是在Form Load事件下呼叫這個可能被設定成全域物件的oMarquee，然後你只要給他一切應該有的參數後，接著調用.Start();即可。當然，你可以選擇掛上某些額外的按鈕，讓這些按鈕來調用.Stop();方法或者是.OnDrawing()事件。</p><pre><code class=language-cs>oMarquee = new MarqueeImage()
+{
+  iPosX = 0,
+  iPosY = 0,
+  iWidth = 800,
+  iHeight = 100,
+  iTimerInterval = 50,
+  iMovePixel = 20,
+  oCurrentImage = System.Drawing.Image.FromFile(@"X:\Slashview\001.png"),
+  oNextImage = System.Drawing.Image.FromFile(@"X:\Slashview\002.png"),
+  oTargetForm = this
+};
+oMarquee.OnDrawing += oMarquee_OnDrawing;  //可選擇不掛上事件
+oMarquee.Start();
+</code></pre><p>本類別有支援表單（Form）之背景顏色以及背景圖片，因此你可以自由的移動PictureBox到任何表單的可視區域內，類別會自動幫你計算並重新繪製應該繪製的圖片，來產生透明的效果。</p><h6>Marquee WindowsForms Win32 C# .NetFramework Image Picture System.Drawing.Graphics System.Drawing.BufferedGraphics System.Drawing.BufferedGraphicsManager</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

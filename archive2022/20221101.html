@@ -1,0 +1,53 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>SQL筆記：利用SQL語法計算學年期</h1><p>沒什麼營養，純粹偷懶筆記在此，日後就少花時間重想一次。</p><h2>利用SQL語法計算學年與學期</h2><p>SQL語法如下，使用時@dNow參數請自行取代成為想要引用的欄位名稱。</p><pre><code class=language-sql>DECLARE @dNow AS DATE = GETDATE()
+SELECT
+  @dNow AS 原始日期,
+  CASE
+    WHEN
+      MONTH(@dNow) BETWEEN 1 AND 7
+    THEN
+      YEAR(@dNow)-1912
+    ELSE
+      YEAR(@dNow)-1911
+  END AS 學年, 
+  CASE
+    WHEN
+      MONTH(@dNow) BETWEEN 2 AND 7
+    THEN
+      2
+    ELSE
+      1
+  END AS 學期
+</code></pre><p>輸出如下：</p><pre><code class=language-txt>原始日期   學年 學期
+2022-11-01 111  1
+</code></pre><h2>同場加映：利用C#語法計算學年與學期</h2><p>這裡簡單撰寫一下C#語言計算學年、學期的程式碼，要注意的是這邊採用了C# 9.0的模式比對增強功能（Pattern-matching），並且順手撰寫了一下測試輸出，看起來大致上沒有問題：</p><p>GetYearSemester函式如下：</p><pre><code class=language-cs>public static (int iYear, int iSemester) GetYearSemester(System.DateTime oDate)
+{
+  return (
+    oDate.Month switch {
+      >= 1 and &lt;= 7 => oDate.Year - 1912,
+      _ => oDate.Year - 1911,
+    },
+    oDate.Month switch {
+      >= 2 and &lt;= 7 => 2,
+      _ => 1,
+    }
+  );
+}
+</code></pre><p>撰寫一下調用測試看看輸出是否有誤，確認輸出無誤。</p><pre><code class=language-cs>var oDate = System.DateTime.Now;
+for (int i = 0; i &lt; 1000; i++)
+{
+  var oTempDate = oDate.AddDays(i);
+  var oResult = GetYearSemester(oTempDate);
+  Console.WriteLine($"{oTempDate.ToString("yyyy-MM-dd")}: {oResult.iYear}學年度第{oResult.iSemester}學期");
+}
+</code></pre><p>輸出如下：</p><pre><code class=language-txt>2022-11-01: 111學年度第1學期
+...
+2023-01-31: 111學年度第1學期
+2023-02-01: 111學年度第2學期
+...
+2023-07-31: 111學年度第2學期
+2023-08-01: 112學年度第1學期
+...
+2024-01-31: 112學年度第1學期
+2024-02-01: 112學年度第2學期
+...
+</code></pre><h6>台灣 中華民國 教育 學校 年曆 日期 算法 學年度 學年 學期 轉換 SQL CSharp</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

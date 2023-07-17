@@ -1,0 +1,61 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>Java初探：super父類別、sub子類別之繼承關係（inheritance）</h1><p>繼承（inheritance）要簡單的兩三個字跳過其實也可以，但追根究底其種種細節可以說是炸彈連連，連經驗充分的物件導向老手也有可能會短暫的迷失在因錯誤設計而Debug的世界之中。我在這舉幾個可能會碰到的例子，算是給自己記憶，日後有遇到其它問題隨時會補充在這裡。</p><p>在Java的世界裡面，如果你有一個類別沒有宣告，那麼基本上他就是預設繼承Object這個類別，像常見的toString()這類的實體方法成員，事實上就是Object這個父類別提供的公開（public）方法，當然啦，如果你有需要，應該要自己Overriding它才對。例如下面的例子，extends Object這句話完全就是多餘的廢話。</p><pre><code class=language-java>public class Tester extends Object  //設定繼承父類別自Object
+{
+  public static void main(String[] args)
+  {
+    Tester oTemp = new Tester();
+    System.out.println(oTemp.toString());
+  }
+}
+</code></pre><h2>Overriding 覆寫、重寫</h2><p>Overriding跟Overloading是完全不一樣的東西，但這兩個名詞卻常常會讓初學者搞混。Overloading是指建構子有多重參數，可以形成不同種類的建構方法。而Overriding講的東西是怎麼把一個已經繼承的方法蓋過去，這兩者是截然不同的觀念。以剛才講的Object.toString()為例，並不是所有的物件都是把記憶體位址（例如：Tester@19836ed）吐出來就算了，在不同的時刻或許我們需要不同的toString()來支援，以剛才為例，我們只要實作一下toString的Overriding就可以完成這項需求了。</p><pre><code class=language-java>public class Tester extends Object
+{
+  //覆寫（Overriding）toString實體方法成員
+  public String toString()
+  {
+    return "Overriding Success!";
+  }
+  
+  public static void main(String[] args)
+  {
+    Tester oTemp = new Tester();
+    System.out.println(oTemp.toString());
+  }
+}
+</code></pre><p>Overriding看似美妙，但是有許多眉眉角角需要注意，觀念稍微薄弱或不常用到，馬上就掉坑了。</p><ol><li>運算結果之輸出，如果是基本資料型別，那麼一定要完全一樣。（這個算是廢話）</li><li>運算結果之輸出，如果是某類別的子類別（Sub Class），那麼也可以。（特別！）</li><li>所覆寫之實體方法成員，其輸入參數一定要完全一模一樣，不然的話你的寫法會讓自己看起來是在Overriding，其實你是在Overloading，只是你不知道而已。（很容易掉坑！）</li><li>所覆寫之實體方法成員，存取限制只會持平或越來越鬆，不可能變緊。（例如把public overriding成private，這是妄想）</li><li>所覆寫之實體方法成員，擲出的Exception只會持平或越來越少，且子類別的Exception不可以超出父類別制定的Exception範圍。例如Java的<a href=http://goo.gl/MFNrSy>FileNotFoundException</a>是繼承自IOException。那麼假設有一個父類別是extends IOException，如此一來子類別的實體方法成員只能throws IOException或更下層的FileNotFoundException，如果想要throws較上層的父Exception（java.lang.Exception）是不可以的。</li><li>不可以覆寫父類別中的final、static、private等方法，尤其是static類別方法成員，它本身是屬於「這個父類別」，子類別必須要擁有自己的static類別方法成員，因為這些static寫出來後是屬於「這個子類別」自己所擁有的。</li><li>還有很多啦，例如子類別繼承了抽象類別（abstract），那麼除非你這個子類別也要宣告成抽象，否則你必須要Overriding所有的抽象方法，原因很簡單，你不是抽象子類別表示你準備可以實體（實例）化，那麼沒有實體方法你要怎麼實體化？要怎麼被物件拿來操控？</li></ol><pre><code class=language-java>//這個範例程式說明static是不可以被Overriding的！
+public class Sample
+{
+  public String runA()
+  {
+    return "AAA";
+  }
+  public static String runB()
+  {
+    return "BBB";
+  }
+}
+//Tester繼承Sample
+public class Tester extends Sample
+{
+  public String runA()
+  {
+    return "AAA-Overriding!";
+  }
+  
+  public String runB()
+  {
+    return "BBB-Overriding!";
+  }
+  
+  public static void main(String[] args)
+  {
+    Tester oTemp = new Tester();
+    System.out.println(oTemp.runA());
+    System.out.println(oTemp.runB());
+  }
+}
+</code></pre><p>執行後相關資訊：</p><pre><code class=language-txt>/*runB()在進行Overriding時，編譯會出錯！*/
+Tester.java:8: error: runB() in Tester cannot override runB() in Sample
+        public String runB()
+                      ^
+overridden method is static
+1 error
+</code></pre><h6>Java SCJP SuperClass SubClass Inheritance Extends</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

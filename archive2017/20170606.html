@@ -1,0 +1,19 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>刪除Windows磁碟管理員無法刪除的磁碟分割（完全清除）</h1><p>當我們使用Windows下的磁碟管理員時，總會發現有一些磁碟分割是在這種視覺界面下的工具無法刪除的，例如partitions只要出現「EFI系統磁碟分割」、「修復磁碟分割」等字眼，按下右鍵都是不會出現「刪除磁碟區」的指令的，必須透過console模式下的diskpart才有辦法辦到。</p><p><img src=https://content.slashview.com/img/2017/20170606_01.jpg alt="" /></p><p>要特別注意的是，這些指令會被微軟拿掉是因為他不想要讓一般用戶觸及這些動作指令，所以如果你不太把握你正在做什麼，或者想要做什麼，那麼你最好把設備拿去給坊間的電腦公司處理會比較好。否則弄到系統全毀開不了機甚至資料消失，那問題就更大條了。</p><p><img src=https://content.slashview.com/img/2017/20170606_02.jpg alt="" /></p><h2>利用DiskPart刪除磁碟分割（Partitions）</h2><p>Step 1. 叫出具備系統管理者身分的cmd命令模式，輸入「DiskPart」。（以下所有操作建議搭配磁碟管理員交叉確認，以保平安）</p><p>Step 2. 輸入「List Disk」列舉出現在系統所有抓到的實體磁碟。</p><pre><code class=language-txt>DISKPART> list disk
+
+  磁碟 ###  狀態           大小     可用     Dyn  Gpt
+  --------  -------------  -------  -------  ---  ---
+  磁碟 0    連線             1863 GB  1024 KB        *
+  磁碟 1    連線              931 GB      0 B
+  磁碟 2    連線              465 GB  2048 KB
+</code></pre><p>Step 3. 輸入「Select Disk 2」切換到第三顆硬碟。</p><pre><code class=language-txt>磁碟 2 是所選擇的磁碟。
+</code></pre><p>Step 4. 輸入「List Partition」再次確認要對這顆硬碟下所有的分割配置，是否就是你要清除的那顆硬碟。</p><pre><code class=language-txt>DISKPART> list partition
+
+  磁碟分割  ###  類型              大小     位移
+  -------------  ----------------  -------  -------
+  磁碟分割  1    主要                 464 GB  1024 KB
+  磁碟分割  3    復原                 786 MB   464 GB
+</code></pre><p>Step 5. 輸入「Clean」把這顆硬碟下的磁碟分割都洗掉。</p><pre><code class=language-txt>DISKPART> clean
+DiskPart 成功地清理了磁碟。
+</code></pre><p>Step 6. 輸入「Exit」退出DiskPart程式。</p><pre><code class=language-txt>DISKPART> exit
+正在離開 DiskPart...
+</code></pre><p><img src=https://content.slashview.com/img/2017/20170606_03.jpg alt="" /></p><p>修復磁碟分割區小常識：修復磁碟分割區大都落在450MB～1GB以內，是當Windows作業系統整體損毀無法開機時，用來緊急開機修復的小系統，一般都稱呼為WinRE，全名為「Windows Recovery Environment」，如果你真的不是那麼需要磁碟空間，那麼你不應該隨意地刪除它。</p><h3>相關連結</h3><ul><li><a href=/archive2017/20170606.html>刪除Windows磁碟管理員無法刪除的磁碟分割（完全清除）</a></li><li><a href=/archive2023/20230203.html>刪除Windows磁碟管理員無法刪除的磁碟分割（特定刪除）與延伸磁區</a></li></ul><h6>KillPartition DeletePartition RemovePartition WindowsRE WindowsRecoveryEnvironment</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

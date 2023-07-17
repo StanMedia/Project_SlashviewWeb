@@ -1,0 +1,13 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>HttpClient所引爆的Sockets Port耗盡問題</h1><p>最近在跨單位合作某通訊軟體API時再度觸及到這個議題，擔心某同事會寫出爆掉的程式碼，因此寫了此篇文章真實的驗證以利日後查閱。</p><p><img src=https://content.slashview.com/img/2018/20181212_01.jpg alt="" /></p><h3>HttpClient不慎引發Sockets資源耗盡</h3><p>從2015-2016年之間我在文章中一直呼籲，如果你不確定你的HttpClient將要怎麼的被使用，那就最好不要用！不要以為用using Statement就可以安全下樁，這反而是引爆你的Socket 65535個連接埠耗盡的關鍵點。原因就是因為IDisposable在實作關閉時，依照TCP協定的規定必須實作等候MSL（Maximum Segment Lifetime）時間延遲，以確保另一通訊端關閉連接，以至於形成TIME-WAIT，這就是爆掉的原因。</p><p>驗證程式碼如下，隨便開個ASPX把方法丟進去就知道效果。</p><pre><code class=language-cs>protected void uBtn_Click(object sender, EventArgs e)
+{
+  uMsg.Text = "";
+  for (int i = 0; i &lt; 10; i++)
+  { //這裡很自以為是地用了using嘍！
+    using (var oHC = new System.Net.Http.HttpClient())
+    {
+      var oResult = oHC.GetAsync("https://api.myjson.com/bins/nx06k").GetAwaiter().GetResult();
+      uMsg.Text += oResult.Content.ReadAsStringAsync().Result;
+    }
+  }
+}
+</code></pre><p>結果很簡單，用netstat看就知道效果，不多不少共10個TIME-WAIT，想想看當你的程式碼被執行一萬次會怎樣？</p><p><img src=https://content.slashview.com/img/2018/20181212_02.jpg alt="" /></p><p>雖然微軟建議往HttpClient遷移，但是如果你懶得另行設計Singleton或Lazy(T)的話，我建議還是留在最完整與強大的HttpWebRequest尤佳。</p><p>相關參考：</p><ul><li><a href=https://aspnetmonsters.com/2016/08/2016-08-27-httpclientwrong/>延伸參考：YOU'RE USING HTTPCLIENT WRONG AND IT IS DESTABILIZING YOUR SOFTWARE；HttpClient因IDisposable反而引發連線資源耗盡（TIME_WAIT）問題</a></li><li><a href=http://weiyiao.pixnet.net/blog/post/30971305-%5Bc%23%5D-%5Bdesign-patterns%5D-singleton-pattern>Singleton Design Pattern</a></li><li><a href=/archive2015/20151108.html>UWP及.NET Framework 4 Client Profile適用的HttpClient()</a></li></ul><h6>System.Net.Http.HttpClient TIME_WAIT System.Net.HttpWebRequest TCP Sockets Ports</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

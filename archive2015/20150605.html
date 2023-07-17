@@ -1,0 +1,81 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>利用正規表示式類別（Regex）進行可替換式的文字取代</h1><p>在梳理一堆充滿雜訊的文字時，最佳效能解就是選擇使用正規表示式來過濾。這篇文章的內容重點是，逐步的帶大家瞭解並使用正規表示式的去快速的取代掉自己想要取代的字串，並改寫某個内容裡面的變數。（正規表示式的語法不是本篇的重點，因此會略過）</p><h2>工作目標</h2><p>解析、取代並保留其它文字的原貌。</p><ol><li>我們有一個很複雜的cSource字串，但裡面可能存在「超過一個以上」我們想要取代的目標。</li><li>目標假設像是「[file src=/files/說明書.zip]使用手冊[/file]」類的文字。</li><li>cSource字串，裡面可能存在「超過一個以上」我們想要取代的目標。</li><li>我們還想取出「目標」裡面特定的文字，進行某一種程度的加工處理後，改寫回cSource字串中。</li><li>cSource字串中，非目標以外的文字，一律保留。</li></ol><h2>字串分割法</h2><p>字串分割法可以幫我們找出「目標對象」，也可以同時保留「非目標對象」，並將一切保存在一維陣列內，可惜對我們來說無用，原因是因為在多組結果的情況下，你無法正確取出「目標」裡面特定的文字來進行加工，再者，需要自行撰寫重組字串的程式碼。</p><pre><code class=language-cs>namespace RegularExpression
+{
+  class Program
+  {
+    static void Main(string[] args)
+    {
+      string cSource = "This is a URI [file src=/files/說明書.zip]使用手冊[/file] sample.";
+      string cRegExp = @"\[file\ssrc\=([^\[\]\']+)\]([^\[\]\']+)\[\/file\]";
+      System.Text.RegularExpressions.Regex oReg;
+
+      //（無用）字串分割法
+      oReg = new System.Text.RegularExpressions.Regex(cRegExp);
+      string[] aryTemp = oReg.Split(cSource);
+      foreach (var item in aryTemp)
+      {  Console.WriteLine(string.Format("\"{0}\"", item)); }
+      Console.Read();
+    }
+  }
+}
+</code></pre><p>結果圖片如下所示：</p><p><img src=https://content.slashview.com/img/2015/20150605_01.jpg alt="" /></p><h2>命中取出法</h2><p>命中取出法可以幫我們找出「目標對象」，但也就僅止於「目標對象」而已，「非目標對象」被丟棄掉了，就算你可以從MatchCollection＞Match＞Split再去拆解成陣列，但終究也只是將結果停留在處理「目標對象」而已。</p><pre><code class=language-cs>namespace RegularExpression
+{
+  class Program
+  {
+    static void Main(string[] args)
+    {
+      string cSource = "This is a URI [file src=/files/說明書.zip]使用手冊[/file] sample.";
+      string cRegExp = @"\[file\ssrc\=([^\[\]\']+)\]([^\[\]\']+)\[\/file\]";
+
+      //（無用）命中取出法
+      System.Text.RegularExpressions.MatchCollection oMCs = System.Text.RegularExpressions.Regex.Matches(cSource, cRegExp);
+      foreach (System.Text.RegularExpressions.Match item in oMCs)
+      { 
+        Console.WriteLine(item.Value);
+        Console.WriteLine(item.Groups[1].Value);
+        Console.WriteLine(item.Groups[2].Value);
+        /* 也可以再度解析一次拆陣列
+        string[] aryTemp = System.Text.RegularExpressions.Regex.Split(item.Value, cRegExp);
+        foreach (string cTemp in aryTemp)
+        { Console.WriteLine(string.Format("\"{0}\"", cTemp)); }
+        */
+      }
+      Console.Read();
+    }
+  }
+}
+</code></pre><p>結果圖片如下所示：（使用「再度解析一次拆陣列」的程式碼為圖片執行結果）</p><p><img src=https://content.slashview.com/img/2015/20150605_02.jpg alt="" /></p><h2>取代字串法</h2><p>取代字串法可以幫我們找出「目標對象」進行取代成我們想要變更的字串，「非目標對象」也被保留下來了，看起來一切都很完美，但是就壞在你在重組成想要的字串之時，無法動態替換成我們想要加上去的效果，例如幫某組Regex後的陣列文字，加上UrlEncode();效果。不過總體來說，程式碼的精簡度與效果上已經接近我們的期望了。</p><pre><code class=language-cs>namespace RegularExpression
+{
+  class Program
+  {
+    static void Main(string[] args)
+    {
+      string cSource = "This is a URI [file src=/files/說明書.zip]使用手冊[/file] sample.";
+      string cRegExp = @"\[file\ssrc\=([^\[\]\']+)\]([^\[\]\']+)\[\/file\]";
+
+      //（無用）取代字串法
+      string cTemp = System.Text.RegularExpressions.Regex.Replace(cSource, cRegExp, @"&lt;a href=""$1"">$2&lt;/a>");
+      Console.WriteLine(cTemp);
+      Console.Read();
+    }
+  }
+}
+</code></pre><p>結果圖片如下所示：</p><p><img src=https://content.slashview.com/img/2015/20150605_03.jpg alt="" /></p><h2>取代字串法 + MatchEvaluator委派</h2><p>上面不完美的問題再於，你沒有辦法對於$0, $1, $2...之類的變數，進行額外的加工處理。以這個例子為例，這個輸出的超連結中文字，在丟到Internet Explorer顯示時，可能會因為IE6, IE7, IE8, IE9, IE10, IE11...等不同版本、不同代理字串的影響下，產生不同的POST編碼丟回Server端，我們會直覺得想要UrlEncode把這些Parameter編碼起來，但是在上面的例子很顯然的無法完成。</p><p>幸好，System.Text.RegularExpressions.Regex.Replace留下來一個具備委派功能的窗口MatchEvaluator，讓我們的需求有一個逃生的窗口啊！最後完成的程式碼如下：</p><pre><code class=language-cs>namespace RegularExpression
+{
+  class Program
+  {
+    static void Main(string[] args)
+    {
+      string cSource = "This is a URI [file src=/files/說明書.zip]使用手冊[/file] sample.";
+      string cRegExp = @"\[file\ssrc\=([^\[\]\']+)\]([^\[\]\']+)\[\/file\]";
+
+      //（成功）取代字串法＋MatchEvaluator委派
+      string cTemp = System.Text.RegularExpressions.Regex.Replace(cSource, cRegExp, oME => {
+        return $@"&lt;a href=""{System.Uri.EscapeUriString(oME.Groups[1].Value)}"">{oME.Groups[2].Value}&lt;/a>";
+      });
+
+      Console.WriteLine(cTemp);
+      Console.Read();
+    }
+  }
+}
+</code></pre><p>結果圖片如下所示：</p><p><img src=https://content.slashview.com/img/2015/20150605_04.jpg alt="" /></p><p>看到上圖中，那「說明書.zip」被UrlEncode編碼成一大串的%XX的文字，這下IE再也不敢造次了。</p><h6>C# Delegate RegularExpressions Regex Replace Match Split HTML BBCode IE InternetExplorer</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

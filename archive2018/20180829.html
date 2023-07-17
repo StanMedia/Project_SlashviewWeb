@@ -1,0 +1,27 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>Javascript之物件是否為空值的快速判斷</h1><p>今天剛好在網路上看到有人在詢問這方面的問題，這裡所有的空值，不是只有指null這個單純的物件型別而已，而是指JS常見的一些「不具有意義的值」，例如NaN、undefined...，這就是JS最惱人的一部分。</p><p>其實有一個重要觀念，就是這些「不具有意義的值」一定會與false等價，在JS的領域統稱為「Falsy value」（爛到衍生出自己專屬的名詞了），有興趣的人可以去查一下這方面的討論。</p><p>那麼，要怎麼「不惱人、快速的」判斷一個Javascript物件是否為空值呢？請先回去看一下我這篇文章：<a href=/archive2014/20140729.html>Javascript之「==」與「===」比較運算子解析表</a>，特別是「===」運算子裡面的矩陣圖，你心裡就會有譜。</p><p>答案就是，寫在if運算式裡面就好。沒錯，就是這麼簡單，不要懷疑。例如下列的程式碼：</p><pre><code class=language-js>if(懷疑有可能為空值的物件)
+{ //確定這個物件不是空值才會進來區塊
+  var cTemp = 懷疑有可能為空值的物件.屬性;
+  //如果要更細緻一點，可以先檢查屬性方法是否存在
+  //ex: 懷疑有可能為空值的物件.property === undefined
+}
+</code></pre><p>沒有falsy觀念的人可能不相信我說的事實，那麼可以用下列的程式碼證明一下：</p><pre><code class=language-js>//先把一些空值的型別灌進去，後面再加一些正常的型別
+var falsy = [0, NaN, '', false, null, undefined, true, new Date(), new Object()];
+//把這些型別全部跑一次if，然後把非空值的型別撈出來顯示
+falsy.forEach(function (value) {
+  if (value) { alert('NormalObject: ' + value + ' / ' + typeof value); }
+});
+</code></pre><p>從上面的程式碼我們可以得知，所有的空值型別都被判斷成false了（等效於object===true），所以自然就被過濾掉了。</p><h2>Falsy還有一個很有趣的應用，就是利用「||」運算子綁定成預設值</h2><p>我們都知道JS沒有像其他語言，在函式中對於某引數有指派其預設值的功能，此時我們可以運用falsy的特性來進行預設值的處理，其實還蠻有趣的。</p><pre><code class=language-js>//字串預設值
+var cTemp = '';
+cTemp = cTemp || "NullString";
+alert(cTemp); //若cTemp為空字串（falsy），則會輸出NullString喔！
+
+//數值預設值
+var iTemp = 0;
+iTemp = iTemp || 100;
+alert(iTemp); //若iTemp為（falsy），則會輸出100喔！
+
+//物件預設值
+var oData = null; //var oData = undefined;
+oData = oData || {cName: "Anonymous"};
+alert(oData.cName); //若oData為（falsy），則會輸出Anonymous喔！
+</code></pre><h2>如果只要識別某些特定的型別要怎麼辦呢？</h2><p>這個沒有辦法，就乖乖的自己一行一行寫typeof吧。</p><h6>Javascript JS NaN Null Undefined FalsyValue TruthyValue</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

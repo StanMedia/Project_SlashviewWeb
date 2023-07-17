@@ -1,0 +1,33 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>利用C#存取Registry註冊檔（登錄檔）</h1><p>在發展Console程式的時候，我們有時會需要註冊檔（登錄檔）來輔助我們儲存一些資訊與狀態，這篇要示範的就是如何利用C#來存取Windows Registry的方式。</p><p>我們都知道，在一般工作站級的Windows作業系統中，Windows Registry的機碼總共分為五大類，分別為：</p><ol><li>（HKCR）HKEY_CLASSES_ROOT</li><li>（HKCU）HKEY_CURRENT_USER</li><li>（HKLM）HKEY_LOCAL_MACHINE</li><li>（HKU）HKEY_USERS</li><li>（HKCC）HKEY_CURRENT_CONFIG</li></ol><p>那麼你可以利用下列的方法去存取這些根機碼：</p><ol><li>（HKCR）Microsoft.Win32.Registry.ClassesRoot</li><li>（HKCU）Microsoft.Win32.Registry.CurrentUser</li><li>（HKLM）Microsoft.Win32.Registry.LocalMachine</li><li>（HKU）Microsoft.Win32.Registry.Users</li><li>（HKCC）Microsoft.Win32.Registry.CurrentConfig</li></ol><p>在這邊也順道提醒，機碼是具有權限性的，如果你今天想要存取例如HKEY_LOCAL_MACHINE等級的機碼，那麼你可能要多付出好幾十行的程式碼去實作Windows ACLs，這將會動用到「System.Security; System.Security.AccessControl; System.Security.Principal;」等namespace下面的類別。</p><p>因此，基於偷懶的原因。我們今天要進行存取的是HKEY_USERS這個機碼下面的目錄，比較簡單、可以專注於程式碼上。我們要動用到的namespace是「Microsoft.Win32」。</p><h2>C#存取Registry的程式碼</h2><p>假設我們要存取.DEFAULT\SOFTWARE\Slashview\下面的機碼，但是基本上，SOFTWARE下面根本沒有Slashview，所以我們的程式碼就要假定它可能不存在，然後試圖去解決它。也就是，如果不存在的話，那就建立；如果存在，那就讀取值。</p><pre><code class=language-cs>static void Main(string[] args)
+{
+  string cRegKeyState = "bIsAccessOK";  //登錄檔的更新狀態KeyName
+  string cRegKeyDate = "dLastAccessDate";    //登錄檔的更新日期KeyName
+
+  bool bLastUpdateState;
+  DateTime dLastUpdateDate;
+
+  //準備讀取Registry前的動作
+  string cRegistryPath = @".DEFAULT\SOFTWARE\Slashview";
+  Microsoft.Win32.RegistryKey oRK = Microsoft.Win32.Registry.Users.CreateSubKey(cRegistryPath);
+  oRK = Microsoft.Win32.Registry.Users.OpenSubKey(cRegistryPath, true);
+
+  //到Registry讀取現存參數
+  if (
+    string.IsNullOrWhiteSpace(System.Convert.ToString(oRK.GetValue(cRegKeyState))) ||
+    string.IsNullOrWhiteSpace(System.Convert.ToString(oRK.GetValue(cRegKeyDate))))
+  {
+    //如果是第一次連註冊檔都讀不到，那就寫完一些必要資訊後就直接跳出
+    oRK.SetValue(cRegKeyState, "false", Microsoft.Win32.RegistryValueKind.String);
+    oRK.SetValue(cRegKeyDate, System.DateTime.Now.ToString("yyyy/MM/dd HH:mm:ss"), Microsoft.Win32.RegistryValueKind.String);
+    Console.WriteLine("已建立必要之機碼。");
+  }
+  else
+  {
+    bLastUpdateState = System.Convert.ToBoolean(oRK.GetValue(cRegKeyState));
+    dLastUpdateDate = System.Convert.ToDateTime(oRK.GetValue(cRegKeyDate));
+    Console.WriteLine(bLastUpdateState.ToString());
+    Console.WriteLine(dLastUpdateDate.ToString());
+  }
+  Console.Read();      
+}
+</code></pre><h6>C# WindowsRegedit WindowsRegistry Access Write Read</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

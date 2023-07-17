@@ -1,0 +1,20 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>遞迴只應天上有，人間該當用迴圈</h1><p>遞迴是程式設計師的最愛也最恨，愛的是簡潔，恨的是出包往往在無形之間（Stack Overflow），以及效率非常緩慢。所有的遞迴寫法一定可以用迴圈取代，但換來的就是一連串冗長的程式碼了。</p><p><img src=https://content.slashview.com/img/2014/20140714_01.jpg alt="" /></p><p>L. Peter Deutsch程式設計師說過一段經典名句「To iterate is human, to recurse, divine.」，他對資訊界最主要的貢獻是Ghostscript和Archie，沒有了這兩個，PDF、雷射印表機PostScript跟早期網路檔案搜尋等功能，就不會出現在我們的生活中了。</p><p>這句話中文有人翻做「迭代（iterate）者為人，遞迴（recurse）者為神。」，亦有人譯做「遞迴（recurse）只應天上有，凡人該當用迴圈（iterate）」。很明顯的，最後那一句翻譯更佳貼切與優美，也很明顯的他就是繼承自杜甫的七言絕句「贈花卿」。</p><pre><code class=language-txt>贈花卿
+------
+錦城絲管日紛紛  半入江風半入雲
+此曲只應天上有  人間能得幾回聞
+</code></pre><p>在套用上，我覺得天上跟人間是對仗的型態，因此譯做「遞迴只應天上有，人間該當用迴圈」才是最洽當的翻譯。以下是一個用C#簡單寫出來的階乘計算機，在輸入大整數（例如：16）時很容易就溢位了。</p><pre><code class=language-cs>class Program
+{
+  static void Main(string[] args)
+  {
+    Console.Write("請輸入階層數：");
+    Console.Write(factorial(Convert.ToInt32(Console.ReadLine())));
+    Console.Read();
+  }
+
+  static int factorial(int n)
+  {
+    if (n == 1) { return 1; }
+    return n * factorial(n - 1);
+  }
+}
+</code></pre><h6>Iterate Recurse Translate</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

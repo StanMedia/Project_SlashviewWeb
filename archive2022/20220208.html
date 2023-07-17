@@ -1,0 +1,70 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>LINQ筆記：SelectMany的使用方式</h1><p>不太常使用到LINQ的SelectMany，每次使用到SelectMany都要回去翻網路文章或是微軟文件確認語法，乾脆簡單記錄在這裡一勞永逸，沒啥技術性請參考參考即可。</p><h2>LINQ SelectMany的使用方式</h2><p>兩個資料類別的程式碼如下：</p><pre><code class=language-cs>//部門
+class OrmDepartment
+{
+  public int iDepartment { get; set; }
+  public string cDepartmentName { get; set; }
+  public System.Collections.Generic.List&lt;OrmEmployee> oEmployee { get; set; }
+}
+//員工
+class OrmEmployee
+{
+  public int iEmployee { get; set; }
+  public string cEmployeeName { get; set; }
+}
+</code></pre><p>主要使用方式如下：</p><pre><code class=language-cs>static void Main(string[] args)
+{
+  var oList = new System.Collections.Generic.List&lt;OrmDepartment>()
+  {
+    new OrmDepartment()
+    {
+      iDepartment = 1, cDepartmentName = "行銷部", oEmployee = new System.Collections.Generic.List&lt;OrmEmployee>()
+      {
+        new OrmEmployee { iEmployee = 1000, cEmployeeName = "王小明" },
+        new OrmEmployee { iEmployee = 2000, cEmployeeName = "李小華" },
+      }
+    },
+    new OrmDepartment()
+    {
+      iDepartment = 2, cDepartmentName = "研發部", oEmployee = new System.Collections.Generic.List&lt;OrmEmployee>()
+      {
+        new OrmEmployee { iEmployee = 3000, cEmployeeName = "張大頭" },
+        new OrmEmployee { iEmployee = 4000, cEmployeeName = "林小英" },
+      }
+    },
+  };
+
+  //列舉出所有的員工編號與姓名
+  var oSelectMany_1 = oList.SelectMany(x => x.oEmployee).Select(x => $"ID={x.iEmployee}；Name={x.cEmployeeName}");
+  foreach (var item in oSelectMany_1)
+  { Console.WriteLine(item); }
+
+  //列舉出所有的員工編號與姓名，以及所屬部門（拍扁）
+  var oSelectMany_2 = oList.SelectMany(x => x.oEmployee, (x, y) => new { x.iDepartment, x.cDepartmentName, y.iEmployee, y.cEmployeeName });
+  foreach (var item in oSelectMany_2)
+  { Console.WriteLine(item); }
+
+  ReadKey();
+}
+</code></pre><p>輸出結果如下：</p><pre><code class=language-txt>ID=1000；Name=王小明
+ID=2000；Name=李小華
+ID=3000；Name=張大頭
+ID=4000；Name=林小英
+{ iDepartment = 1, cDepartmentName = 行銷部, iEmployee = 1000, cEmployeeName = 王小明 }
+{ iDepartment = 1, cDepartmentName = 行銷部, iEmployee = 2000, cEmployeeName = 李小華 }
+{ iDepartment = 2, cDepartmentName = 研發部, iEmployee = 3000, cEmployeeName = 張大頭 }
+{ iDepartment = 2, cDepartmentName = 研發部, iEmployee = 4000, cEmployeeName = 林小英 }
+</code></pre><h2>進行笛卡爾乘積運算（Cartesian product）</h2><p>有些情境下我們會需要進行TableA與TableB進行交叉連接（CrossJoin）進行乘積運算，例如：要列出總共的排列組合可能性，這時候我們也可以使用SelectMany來進行運算，雖然說以這個案例來進行舉例並不太恰當，但是就將就一下湊或著看看吧。</p><pre><code class=language-cs>//其實這就是oSelectMany_1的另外一種寫法，透過一次性的指令直接把職員挑出來成為IEnumerable>string>列表
+var oEmployeeList = oList.SelectMany(x => x.oEmployee, (x, y) => y.cEmployeeName );
+//利用SelectMany進行交互聯集
+var oSelectMany_3 = oList.SelectMany(x => oEmployeeList, (x, y) => new { cName = y, iDeaprtment = x.iDepartment, cDepartmentName = x.cDepartmentName });
+foreach (var item in oSelectMany_3)
+{ Console.WriteLine(item); }
+</code></pre><p>輸出結果如下，可以看到透過SelectMany進行A、B兩個資料表進行交叉連接（CrossJoin）運算，把所有的排列組合都列出來了：</p><pre><code class=language-txt>{ cName = 王小明, iDeaprtment = 1, cDepartmentName = 行銷部 }
+{ cName = 李小華, iDeaprtment = 1, cDepartmentName = 行銷部 }
+{ cName = 張大頭, iDeaprtment = 1, cDepartmentName = 行銷部 }
+{ cName = 林小英, iDeaprtment = 1, cDepartmentName = 行銷部 }
+{ cName = 王小明, iDeaprtment = 2, cDepartmentName = 研發部 }
+{ cName = 李小華, iDeaprtment = 2, cDepartmentName = 研發部 }
+{ cName = 張大頭, iDeaprtment = 2, cDepartmentName = 研發部 }
+{ cName = 林小英, iDeaprtment = 2, cDepartmentName = 研發部 }
+</code></pre><h3>相關連結</h3><ul><li><a href=/archive2018/20180503.html>LINQ筆記：利用Linq撈取具有兩個階層的匿名型別（AnonymousType）資料</a></li><li><a href=/archive2018/20181001.html>列舉NameValueCollection集合內所有的資料</a></li><li><a href=/archive2022/20220208.html>LINQ筆記：SelectMany的使用方式</a></li></ul><h6>LINQ SelectMany Flat Flatten</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

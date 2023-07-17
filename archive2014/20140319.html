@@ -1,0 +1,72 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>Enumeration（Enum）列舉型別之可用性增強</h1><p>enum是一個可以正規化程式設計時期的好物，尤其在多人開發團隊時更是有其必要性，但是每次要用它時去翻一下msdn後總是做罷，原因是因為enum只接受數值型的值（byte、sbyte、short、ushort、int、uint、long 或 ulong），但多數的情況下，我們想要的是「字串 String」的值，在基本的enum定義中，字串的回傳是無法的。</p><p>在翻過很多國外討論的文章，要不就是回覆不行，要不就是鬼打牆叫你回去看msdn的Enum.ToString()，要不就是弄了很多很扯的類別來外掛（例如 System.Collections.Generic.Dictionary），看了實在很想笑，如果真的需要寫這麼多Code來完成enum可以吐出你想要的字串，何不自建一個簡單的static class來簡單解決？</p><pre><code class=language-cs>//寫成這樣會比引用一大堆Dictionary難嗎？
+class Pattle
+{
+  public static string Red { get { return "This is Red"; } }
+  public static string Green { get { return "That is Green"; } }
+  public static string Blue { get { return "Those are Blue"; } }
+}
+</code></pre><p>前幾天又有用到emun的需求，又稍做了同樣的survey，又同樣的怒了，但是這次我直接到StackOverflow上面翻所有的文章，終於有一個解法是讓我滿意的，答案就是利用擴充方法（Extension Method）來完成，我只能說這樣的解法真的是太妙了。</p><p>先來複習enum的基本型，環境是ASP.NET，語言是C#，程式碼如下：</p><pre><code class=language-cs>//宣告一個調色盤列舉（int是預設，可省略）
+public enum Pattle : int
+{
+  Red = 1,
+  Green = 2,
+  Blue = 3
+}
+//印出相關的列舉（數值或字串）
+public void Page_Load(object sender, EventArgs e)
+{
+  int a = (int)Pattle.Red;
+  int b = (int)Pattle.Green;
+  int c = (int)Pattle.Blue;
+  showMe.Text = a + "; " + b + "; " + c;
+  showMe.Text += "換行";
+  showMe.Text += Pattle.Red.ToString() + "; ";
+  showMe.Text += Pattle.Green.ToString() + "; ";
+  showMe.Text += Pattle.Blue.ToString();
+}
+</code></pre><p>輸出如下：</p><pre><code class=language-txt>1; 2; 3
+Red; Green; Blue
+</code></pre><p>問題是上述的ToString()並不是我想要的，我喜歡「Pattle.Red」直觀的寫法，可是我不希望「Pattle.Red.ToString()」出來一定是要Red。絕大部份的真實運用中，我們一定希望吐出來的是別的可用字串。例如我想要吐出Bootstrap中定義的四色「alert-success 綠、alert-info 藍、alert-warning 黃、alert-danger 紅」，這就是一個很典型的例子。</p><p>但是搭配System.ComponentModel.Description以及Extension Method後，痛苦已久的問題終於解決，請大家開心服用吧！</p><pre><code class=language-cs>//app_code
+namespace Hello.ExtensionMethod
+{
+  public static string ToExtensionString(this System.Enum oTemp)
+  {
+    System.ComponentModel.DescriptionAttribute[] oDA = (System.ComponentModel.DescriptionAttribute[])(oTemp.GetType().GetField(oTemp.ToString())).GetCustomAttributes(typeof(System.ComponentModel.DescriptionAttribute), false);
+    if (oDA.Length > 0)
+    {  return  oDA[0].Description;  }
+    else
+    {  return  oTemp.ToString();  }      
+  }
+}
+</code></pre><pre><code class=language-cs>//aspx
+&lt;%@ import Namespace="Hello.ExtensionMethod" %>
+
+public enum Pattle
+{
+  [System.ComponentModel.Description("This is Red")]
+  Red = 1,
+  [System.ComponentModel.Description("That is Green")]
+  Green = 2,
+  [System.ComponentModel.Description("Those are Blue")]
+  Blue = 3
+}
+
+public void Page_Load(object sender, EventArgs e)
+{
+  int a = (int)Pattle.Red;
+  int b = (int)Pattle.Green;
+  int c = (int)Pattle.Blue;
+  showMe.Text = a + "; " + b + "; " + c;
+  showMe.Text += "換行";
+  showMe.Text += Pattle.Red.ToString() + "; ";
+  showMe.Text += Pattle.Green.ToString() + "; ";
+  showMe.Text += Pattle.Blue.ToString();
+  showMe.Text += "換行";
+  showMe.Text += Pattle.Red.ToExtensionString() + "; ";
+  showMe.Text += Pattle.Green.ToExtensionString() + "; ";
+  showMe.Text += Pattle.Blue.ToExtensionString();
+}
+</code></pre><p>輸出如下：</p><pre><code class=language-txt>1; 2; 3
+Red; Green; Blue
+This is Red; That is Green; Those are Blue
+</code></pre><p>相關文章：<a href=/archive2018/20180425.html>建立一個可以讀寫自定義屬性（Attribute）列舉（Enum）的擴充方法</a></p><h6>Enum Enumeration ToString CustomizeString ExtensionMethod System.ComponentModel.Description</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

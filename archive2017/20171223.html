@@ -1,0 +1,81 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>在WSP WebForm下，使用System.Web.Optimization來進行JS、CSS壓縮與打包</h1><p>在ASP.NET 4.5開始，有提供JS、CSS的Bundling與Minification這兩項內建的功能，比較幸運的事情，這個特性是可以移植到ASP.NET WebForm的，一直知道有這個技術但是都沒有去研究它，今天剛好有時間稍微摸一下移植與實作方法，在這裡分享給大家參考。</p><p><img src=https://content.slashview.com/img/2017/20171223_01.jpg alt="" /></p><h2>使用System.Web.Optimization來進行JS、CSS壓縮與打包</h2><p>Step 1. 看到這個System.Web.Optimization，就知道又要使用nuget去進行了，請先使用下列指令到nuget去抓取最新的打包檔案。</p><pre><code class=language-txt>nuget install System.Web.Optimization
+或者喜歡打舊包裝名字也可以
+nuget install Microsoft.AspNet.Web.Optimization
+</code></pre><p>Step 2. 安裝完成後，會看到一大堆關聯檔案，主要的結構是下列這四個DLL，把他們放到你的「bin目錄」下吧！</p><pre><code class=language-txt>\System.Web.Optimization.dll       //主要類別
+\Microsoft.Web.Infrastructure.dll  //協助類別
+\WebGrease.dll                     //壓縮JS用
+\Antlr3.Runtime.dll                //壓縮CSS用
+</code></pre><p>Step 3. 到App_Code目錄下面，建立你自己專屬的類別，理論上這個類別用靜態，會比較好方便調用。特別要強調的是，System.Web.Optimization有跟web.config裡面的「compilation debug值」有互動關係。這點請你在使用前，請先閱讀我下面類別裡面的SetOptimization方法，裡面的註解很重要。</p><pre><code class=language-cs>namespace Slashview
+{
+  /// &lt;summary>
+  /// 本類別用來管理JavaScript、CSS的壓縮
+  /// &lt;/summary>
+  public class BundleResource
+  {
+    /// &lt;summary>
+    /// 註冊與分派相關JavaScript、CSS
+    /// &lt;/summary>
+    /// &lt;param name="oBundles">&lt;/param>
+    public static void RegisterBundles(System.Web.Optimization.BundleCollection oBundles)
+    {
+      /* JavaScript 綁定區 */
+      oBundles.Add(
+        new System.Web.Optimization.ScriptBundle("~/bundles/myJS").Include(
+          "~/resource/js/nonCompress.js"  //可以使用Wildcard語法
+      ));
+
+      /* CSS 綁定區 */
+      oBundles.Add(
+        new System.Web.Optimization.StyleBundle("~/bundles/myCSS").Include(
+          "~/resource/css/nonCompress.css"  //可以使用Wildcard語法
+      ));
+
+      /* 啟用最佳化壓縮 */
+      SetOptimization(true);
+    }
+
+    /// &lt;summary>
+    /// 設定是否壓縮檔案（最佳化）
+    /// &lt;/summary>
+    /// &lt;param name="bUseCompress">是否啟用壓縮&lt;/param>
+    public static void SetOptimization(bool bUseCompress = true)
+    {
+      /* *** 壓縮與否，請看下列規則表 ***
+       * WebConfigCompilationDebug(true)  = 不壓縮
+       * WebConfigCompilationDebug(false) = 壓縮
+       * SetOptimization(true)  || WebConfigCompilationDebug(Don'tCare) = 壓縮
+       * SetOptimization(false) || WebConfigCompilationDebug(Don'tCare) = 不壓縮
+       * 更詳細的內容，請看網頁下方「更新與否」組態表
+       */
+      System.Web.Optimization.BundleTable.EnableOptimizations = bUseCompress;
+    }
+  }
+}
+</code></pre><p>Step 4. 打開「global.asax」，去「Application_Start」方法裡面，調用剛才類別裡面的靜態方法，把打包引擎調用一下吧。</p><p>Slashview.BundleResource.RegisterBundles(System.Web.Optimization.BundleTable.Bundles);</p><p>Step 5. 打開你的「MasterPage」或某個aspx檔案，在想要插入的地方，插入你想要的壓縮檔案。例如下面的程式碼：</p><pre><code class=language-xml>&lt;asp:PlaceHolder runat="server">        
+  &lt;%: System.Web.Optimization.Styles.Render("~/bundles/myCSS") %>  
+  &lt;%: System.Web.Optimization.Scripts.Render("~/bundles/myJS") %>
+&lt;/asp:PlaceHolder>
+</code></pre><p>Step 6. 這一步本來不用動作，但是因為nuget中，把關聯的WebGrease.dll的版本號弄錯，所以如果你是下載Microsoft.AspNet.Web.Optimization.1.1.3，他連帶拉下來的WebGrease.dll是1.5.2.14234而非1.5.1.25624。而如果你覺得那我就去拉1.5.2.14234下來就好，那麼你又會踩到另外一個雷，就是系統會提示你說，這個DLL版本的簽章（Hash）被變更過...。</p><p>最好的方式就是去nuget一次最新版的WebGrease，以我寫文章的當下是1.6.5135.21930，然後去web.config裡面做一下版本號認定聲明：</p><pre><code class=language-xml>&lt;configuration>
+  &lt;runtime>
+    &lt;assemblyBinding xmlns="urn:schemas-microsoft-com:asm.v1">
+      &lt;dependentAssembly>
+        &lt;assemblyIdentity name="WebGrease" publicKeyToken="31bf3856ad364e35" culture="neutral" />
+        &lt;bindingRedirect oldVersion="0.0.0.0-1.5.1.25624" newVersion="1.6.5135.21930" />
+      &lt;/dependentAssembly>
+    &lt;/assemblyBinding>
+  &lt;/runtime>
+&lt;/configuration>
+</code></pre><p>Step 7. 去執行你的網站看一下原始碼，會發現網頁中你插入的點，已經會自動壓縮程式碼。恭喜大功告成！</p><h2>有關於BundleCollection的讀取更新機制，請參考「更新與否」組態表</h2><p>這個表不是我自己測試出來的（但具備一定的參考性，若有錯誤還請留言指正），只是將<a href=https://stackoverflow.com/questions/12158933/asp-net-bundling-bundle-not-updating-after-included-file-has-changed-returns>stackoverflow</a>上面前人的血淚轉載而已。</p><p>Step 1. 先決定現在的環境處於「DebugMode」、「ReleaseMode」哪一種模式。</p><pre><code class=language-txt>            | Optimizations=false ｜Optimizations=true
+            | or is Omitted       ｜or is Omitted
+------------+---------------------+-------------------
+debug=false | ReleaseMode         ｜ReleaseMode
+------------+---------------------+-------------------
+debug=true  | DebugMode           ｜DebugMode
+------------+---------------------+-------------------
+</code></pre><p>決定模式後，如果你的環境中存在*.min.*資源：</p><pre><code class=language-txt>ReleaseMode + change Min    js code = Cache refresh
+ReleaseMode + change nonMin js code = NO cache refresh
+DebugMode   + change Min    js code = NO cache refresh
+DebugMode   + change nonMin js code = NO cache refresh
+</code></pre><p>決定模式後，如果你的環境中不存在*.min.*資源：</p><pre><code class=language-txt>ReleaseMode + change nonMin js code = Cache refresh
+DebugMode   + change nonMin js code = NO cache refresh
+</code></pre><p>所謂的change（修改），不可以是去添加一個空白，或是新增註解，因為這個被壓縮後算出來的雜湊是一樣的，相當於沒有改。</p><h2>特別說明</h2><ol><li>oBundles.Add裡面的目標，可以適用Wildcard語法，例如：*.js。</li><li>oBundles.Add事實上有很多特別的流程政策，所以如果你在測試、正式環境下，去修改JS、CSS發現並沒有進行任何的異動，那麼你可能要考慮一下是否已經踩中坑了。（詳見上面的「更新與否」組態表）</li><li>我的類別裡面有包裝一個SetOptimization方法，當你如果要在某一頁特別指定不要壓縮的話，只要在該頁Page_Load調用這個方法「SetOptimization(false);」即可。</li><li>更多資訊，請參考微軟官網：<a href=https://docs.microsoft.com/en-us/aspnet/mvc/overview/performance/bundling-and-minification>Bundling and Minification</a></li><li>Microsoft.AspNet.Web.Optimization在.NET Framework 4.5的時候被統一更名為System.Web.Optimization，但並沒有被包入到.NET Framework裡面，仍然要透過nuget去取得（ASP.NET Web Optimization Framework）。</li></ol><h3>相關連結</h3><p><a href=/archive2017/20171226.html>使用WebGrease裡面的Microsoft.Ajax.Utilities.Minifier來動態壓縮JS、CSS</a></p><h6>ASP.NET WebSiteProject WebForm System.Web.Optimization Bundling Minification Javascript Css Package Compress</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

@@ -1,0 +1,46 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>Chrome、Edge瀏覽器插件（PlugIn）撰寫初體驗</h1><p>沒有寫過瀏覽器的插件（PlugIn）程式，嘗鮮一下並順手紀錄在此，日後有需要的時候可以快速回憶基礎架構。</p><h2>最基本的瀏覽器插件理論上需要三種檔案元素</h2><ol><li><p>manifest.json 組態檔</p></li><li><p>icon 圖示檔（其實非必要，請自己找一個好看的128X128之PNG圖檔即可）</p></li><li><p>主要運作Javascript程式碼</p></li></ol><h2>manifest.json組態檔</h2><pre><code class=language-json>{
+  "manifest_version": 3,
+  "name": "APP名稱",
+  "description": "APP說明",
+  "version": "1.0", //APP版本
+  "icons": {
+    "128": "icon128.png"  //APP圖示
+  },
+  "content_scripts": [
+    {
+      "matches": ["https://www.google.com.tw/"],  //APP要應用到的目標網址
+      "js": ["script.js"] //要執行的主要運作程式碼
+    }
+  ]
+}
+</code></pre><h2>主要運作Javascript程式碼</h2><p>這個實驗性的插件一點意義也沒有，主要就是看到當使用者尋訪台灣GOOGLE首頁，且經過五秒鐘後沒有輸入任何搜尋字眼，就直接尋找搜尋框中插入台灣地區時間之字串，然後送出這個表單，利用Google內建的機制在標題顯示出台灣現在的時間。將下列Javascript程式碼存成檔名為「script.js」。</p><pre><code class=language-js>let iSecond = 5;
+console.log(`${iSecond}秒後啟動自動查詢台灣時間`);
+
+window.setTimeout(function () {
+  var oSearch = document.querySelector("input[type=text]");
+  oSearch.value = "Taiwan Local Time";
+  var oForm = document.querySelector("form");
+  oForm.submit();
+}, iSecond * 1000);
+</code></pre><h2>組合至資料夾中</h2><p>將三個檔案manifest.json、icon128.png、script.js存放到一個名為MyPlugInTest的資料夾中，並在瀏覽器網址列輸入edge://extensions/（或 chrome://extensions/），就可以進入到瀏覽器的擴充功能。</p><p>進入後點選「載入解壓縮」指定到MyPlugInTest資料夾並確認，就可以看到你寫的插件（PlugIn）被載入了，此時訪問台灣Google首頁應該可以看到console跳出相關訊息，五秒後就被form submit到搜尋結果頁面。</p><p><img src=https://content.slashview.com/img/2022/20221213_01.jpg alt="" /></p><p>若要進行插件的Javascript除錯，可以在擴充功能頁面中屬於你的插件處，找到<code>重新載入</code>字樣，請善用這個連結按鈕來重新載入你修正過後的程式碼，用以持續測試。</p><h2>引入外部套件（以jQuery為例）</h2><p>有時候我們需要一些第三方的Javascript套件來加速我們開發的過程，舉例來說我們希望引入jQuery框架，那麼這時候要怎麼著手進行呢？請先產生一個名為js的子目錄中，並在裡面放置一個名為<code>jquery.min.js</code>的jQuery框架檔案。</p><p>接著<code>manifest.json</code>組態檔可以進行下列設定：</p><pre><code class=language-js>{
+  "manifest_version": 3,
+  "name": "ＯＯＯ產生器",
+  "description": "解決煩人的表單填寫步驟",
+  "version": "1.0",
+  "icons": {
+    "128": "icon128.png"
+  },
+  "content_scripts": [
+    {
+      "matches": ["*://*/*"],
+      "js": [
+        "js/jquery.min.js",
+        "script.js"
+      ]
+    }
+  ]
+}
+</code></pre><p>然後我們可以快樂的在<code>script.js</code>中快樂的開始寫程式了：</p><pre><code class=language-js>$(function() {
+  alert("Hello, jQuery已經正式的被引入plugin之中嘍！");
+});
+</code></pre><h6>Browser Chrome Edge Chromium PlugIn Plig-In Basic Intro Introduction</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

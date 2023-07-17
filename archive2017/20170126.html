@@ -1,0 +1,61 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>.NET PerformanceCounter求得到錯誤的Memory數值</h1><p>這篇是要討論如何使用.NET Framework來取得運行主機上面的記憶體狀態，看到這裡可能會有很多人第一印象就是，這還用講嗎？利用System.Diagnostics.PerformanceCounter來取得不是兩三行就寫完了嗎？這種想法也對也錯，如果你只是使用Console隨便POC一下，你可能會覺得數據貼近你在工作管理員（Task Manager）中看到的數據，因此就覺得這樣就是正確了。但是事實不然，如果你將這些程式碼移到Web端環境（例如ASP.NET），那你就會發現表現出來的數字遠遠與工作管理員背道而馳。</p><p><img src=https://content.slashview.com/img/2017/20170126_01.jpg alt="" /></p><h2>先示範一下常見的PerformanceCounter取得方式</h2><pre><code class=language-cs>using (System.Diagnostics.PerformanceCounter oRAM = new System.Diagnostics.PerformanceCounter("Memory", "% Committed Bytes in Use"))
+{
+  //System.Diagnostics.PerformanceCounter oRAM = new System.Diagnostics.PerformanceCounter("Memory", "Available MBytes");
+  fRAM = oRAM.NextValue();
+}
+</code></pre><p>如果你細心一點的將這些Code轉到非Console本機運行的環境，例如使用Web端脫離Administrator最高權限的運行，你取得到的數據會變得非常的不正確，無論是「% Committed Bytes in Use」或是「Available MBytes」皆然。不信你自己部屬到正式網站後，遠端開啟Task Manager，一面去刷新該台WebPage，你就會看到你取得到的這些數字根本是笑話。</p><h2>那要如何取用到正確的系統記憶體狀態</h2><p>沒錯，只能回到Windows API來取得，Windows API才是王道。下面是我建立的一個類別，該類別會傳回極度貼近工作管理員的記憶體數據。</p><pre><code class=language-cs>public class PerformanceInfo
+{
+  [System.Runtime.InteropServices.DllImport("psapi.dll", SetLastError = true)]
+  [return: System.Runtime.InteropServices.MarshalAs(System.Runtime.InteropServices.UnmanagedType.Bool)]
+  public static extern bool GetPerformanceInfo([System.Runtime.InteropServices.Out] out PerformanceInformation PerformanceInformation, [System.Runtime.InteropServices.In] int Size);
+
+  [System.Runtime.InteropServices.StructLayout(System.Runtime.InteropServices.LayoutKind.Sequential)]
+  public struct PerformanceInformation
+  {
+    public int Size;
+    public System.IntPtr CommitTotal;
+    public System.IntPtr CommitLimit;
+    public System.IntPtr CommitPeak;
+    public System.IntPtr PhysicalTotal;
+    public System.IntPtr PhysicalAvailable;
+    public System.IntPtr SystemCache;
+    public System.IntPtr KernelTotal;
+    public System.IntPtr KernelPaged;
+    public System.IntPtr KernelNonPaged;
+    public System.IntPtr PageSize;
+    public int HandlesCount;
+    public int ProcessCount;
+    public int ThreadCount;
+  }
+
+  //Item1:記憶體總數MB、Item2:剩餘多少可用記憶體MB
+  public static System.Tuple&lt;decimal, decimal> GetRamState()
+  {
+    PerformanceInformation oPI = new PerformanceInformation();
+    if (GetPerformanceInfo(out oPI, System.Runtime.InteropServices.Marshal.SizeOf(oPI)))
+    {
+      return new System.Tuple&lt;decimal, decimal>
+      (
+        System.Convert.ToDecimal((oPI.PhysicalTotal.ToInt64() * oPI.PageSize.ToInt64() / 1048576)),
+        System.Convert.ToDecimal((oPI.PhysicalAvailable.ToInt64() * oPI.PageSize.ToInt64() / 1048576))
+      );
+    }
+    else
+    { return new System.Tuple&lt;decimal, decimal>(0, 0); }
+  }
+
+}
+</code></pre><p>調用方式很簡單，請看下列程式碼：</p><pre><code class=language-cs>static void Main(string[] args)
+{
+  System.Tuple&lt;decimal, decimal> oRAM = PerformanceInfo.GetRamState();
+  WriteLine(string.Format(
+    "總記憶體數：{0}\n可用記憶體數：{1}\n使用中記憶體數：{2}\n記憶體佔用率：{3}%",
+    oRAM.Item1,
+    oRAM.Item2,
+    oRAM.Item1 - oRAM.Item2,
+    string.Format("{0:0%}", 1 - (oRAM.Item2 / oRAM.Item1))
+  ));
+
+  Read();
+}
+</code></pre><h6>System.Diagnostics.PerformanceCounter TaskManager WrongRamUsage ErrorRamUsage WrongValue</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

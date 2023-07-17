@@ -1,0 +1,8 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>ASHX讀寫Session的方法（包含ReadOnly Session）</h1><p>ASHX（泛型處理函式）的高速是有目共睹的，因為它跳過了ASPX那些繁複的事件觸發，是ASP.NET架構下的一款高速神器。ASHX要進行Session的存取也是很簡單的，只要引入特別的介面即可擁有存取能力，而今天剛好想到可以使用ReadOnly的Session來加速一點點運行時間，因此上網找了一些資料備註在下面，以利回憶。</p><h2>ASHX讀寫Session的方法</h2><ol><li><p>在主要類別端實作下列方法System.Web.SessionState.IRequiresSessionState。</p></li><li><p>你的Code大概會長的像下面這樣：</p></li></ol><pre><code class=language-cs>public class AshxHandler : System.Web.IHttpHandler, System.Web.SessionState.IRequiresSessionState
+{
+  System.Web.HttpContext.Current.Session["YourSessionKey"];
+  ...
+}
+</code></pre><p>那麼，要如何設定成為Session ReadOnly來微加速（non-Block）你的Session網頁運行呢？答案很簡單，只要把介面改成「System.Web.SessionState.IReadOnlySessionState」就可以了，很棒吧！</p><p>備註：如果你忘記引入System.Web.SessionState.IRequiresSessionState或是System.Web.SessionState.IReadOnlySessionState介面，那你可能會一直發生取出Session時發生NullReferenceException的錯誤，而這一定會讓你一時之間一頭霧水。例如：</p><pre><code class=language-txt>System.NullReferenceException: '並未將物件參考設定為物件的執行個體。'
+System.Web.HttpContext.Session.get 傳回 null。
+</code></pre><p>Happy Coding!</p><h6>ASHX ASP.NET ASPX Session ReadOnly</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

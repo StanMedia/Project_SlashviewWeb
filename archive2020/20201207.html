@@ -1,0 +1,15 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>SQL筆記：在SSMS的VIEW中保留SQL指令的格式或註解</h1><p>每次打了一大堆花式SQL指令存成檢視表（VIEW）之後，就會被SSMS縮排成自己的SQL格式語法，倒也不是看不懂，但對於我來說，分階層的SQL指令與適當的註解是非常重要的，每當修改或除錯的時刻來臨時，至少可以節省大量的人工反組譯（重新SQL格式化）時間。</p><p>但，這項期盼已久的特性，從SQL 2000等到現在SQL 2019，都20年了不給你就是不給，不用再期盼了。</p><h2>在SSMS中保留SQL指令的格式或註解</h2><p>偶然中發現，其實是有特別的管道可以儲存精心編輯過的SQL指令的，雖然說儲存過程很愚蠢，但總比安裝第三方SQL管理軟體好。有需要的就請自行服用吧。</p><p>Step 1. 按照原先的步驟，把你原先編輯好的SQL指令貼到檢視表設計師（Query Designer）裡面儲存，想當然爾就是SQL被壓縮成一坨屎。</p><p>Step 2. 重新整理目錄後，找到這張已經被儲存可以正確運行結果的檢視表，對其按右鍵＞編寫檢視表的指令碼為（Script View as）＞ALTER至（Alter To）＞新增查詢編輯器視窗（New Query Editor Window）。</p><p>Step 3. 接著你會看到這張檢視表背後的T-SQL指令碼，基本上在這邊檢視表所有輸入的字串都會被保留喔！包含空白或者註解都會被保留。</p><pre><code class=language-sql>USE [某個資料桶]
+GO
+/****** Object:  創建VIEW當下的註解    Script Date: 2020-12-07 00:00:00 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+
+ALTER VIEW [dbo].[這張檢視表名稱]
+AS
+--請把你的花式SQL放在這裡↓↓↓
+這裡的SQL內容都不會被壓縮...
+--請把你的花式SQL放在這裡↑↑↑
+GO
+</code></pre><p>Step 4. 編寫修改後要儲存的方式「不是」按下儲存按鈕（按下後會要你另存新檔），而是按下「執行按鈕」，很奇葩！</p><p>基本上爾後的修正也都要從這條路徑進入修正，否則這裡面的內容就會被檢視表設計師（Query Designer）洗掉了。</p><h6>MicrosoftSQLServerManagementStudio SSMS View SAVE SQLCommand Shrink ReFormatted Compression</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

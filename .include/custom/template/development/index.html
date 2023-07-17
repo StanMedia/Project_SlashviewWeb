@@ -1,0 +1,218 @@
+﻿<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link href="/.file/site.css" rel="stylesheet" />
+  <script src="/.include/jquery/jquery.min.js"></script>
+  <style>
+    main h1 {
+      /* 將main hN樣式擦除 */
+      margin: initial;
+      padding: initial;
+      border: initial;
+      background: initial;
+      /* 其他外觀設定 */
+      color: #474747;
+      font-size: 2rem;
+      font-weight: 600;
+      letter-spacing: .2rem;
+      margin: 1rem 0 2rem .25rem;
+    }
+  </style>
+</head>
+<body>
+  <header></header>
+
+  <main>
+    <div class="container">
+      <div class="row">
+        <div class="col px-0" id="articles-list">
+          <h1><i class="fa-solid fa-crow me-3 text-success"></i>articles list</h1>
+          <table class="table table-striped table-hover">
+            <thead>
+              <tr>
+                <th class="col-1 d-none d-lg-table-cell"><i class="fa-solid fa-hashtag"></i></th>
+                <th class="col-1 d-none d-md-table-cell"><i class="fa-solid fa-calendar-days"></i></th>
+                <th class="col-auto pe-0"><i class="fa-regular fa-comment me-1"></i>文章標題</th>
+                <th class="col-3 col-md-2 col-xl-1 text-center"><i class="fa-solid fa-glasses"></i></th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+      <div class="row mt-2 mb-4">
+        <div class="col px-0 text-center">
+          <button class="btn btn-lg btn-outline-secondary me-5" id="uNew"><i class="fa-solid fa-angles-left me-2"></i>newer</button>
+          <button class="btn btn-lg btn-outline-secondary" id="uOld">older<i class="fa-solid fa-angles-right ms-2"></i></button>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <footer></footer>
+
+  <!-- 訊息基礎框架-->
+  <div class="modal fade" id="uMsgBox" tabindex="-1">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header"><span class="modal-title fs-4 fw-bolder"></span></div>
+        <div class="modal-body"></div>
+        <div class="modal-footer"><button type="button" class="btn btn-danger" data-bs-dismiss="modal"><i class="fa-solid fa-xmark me-2"></i>Close</button></div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    /* ***** 文章分頁規則與定義相關變數 *****
+     * 1. 基於GOOGLE索引效益最大化的方向下去思考，因此希望讓每節的索引頁面未來都成為有價內容，不會一直異動
+     * 2. 文章不再顯現分節數字於外界提供參考，因為沒有人會真的去翻頁，而是透過搜尋引擎進入，因此顯現分結數字無意義
+     * 3. 改採用左右翻頁的規則，讓有心尋訪的人至少有個切換頁面的機會即可。
+     *    A、排序依然由最新→最舊
+     *    B、入口頁沒有任何節數字，避免被索引起來
+     *    C、入口頁會無視規矩，直接給予最近的10筆資料
+     *    D、當使用者按下一節，會顯示自該節定義的「每頁幾筆」資料
+     * ********** */
+    //文章陣列
+    let oArticles;
+    //總共幾篇文章
+    let iArticlesTotal = 0;
+    //每節幾筆
+    let iArticlesPerPage = 10;
+    //共可分幾節
+    let iSections = 0;
+    //目前操作意向想要讀第幾節：由網址或其他操控取得
+    let iSection = 0;
+
+    /* ***** 事件區 *****
+     * 這裡存放觸發事件後進行的動作
+     * ********** */
+    $(function () {
+      //全域監聽瀏覽器導航事件
+      window.addEventListener("popstate", function (e) {
+        if (e.state !== null && e.state.iSection !== undefined) {
+          //覆寫分節參數
+          iSection = e.state.iSection;
+          //呼叫控制中心
+          ControlCenter();
+        }
+      });
+      $("#uNew").click(function () {
+        //違法的數值就離開
+        if (iSection > iSections) { return; }
+        //將目前的網址推進去歷史紀錄
+        window.history.pushState(null, null);
+        //累增分節數
+        iSection++;
+        //更新目前的網址，使其成為為最新狀態的頁碼
+        window.history.replaceState({ iSection: iSection }, null, `${(iSection > iSections ? "/" : `?p=${iSection}`)}`);
+        //呼叫控制中心
+        ControlCenter();
+      });
+      $("#uOld").click(function () {
+        //違法的數值就離開
+        if (iSection < 2) { return; }
+        //將目前的網址推進去歷史紀錄
+        window.history.pushState(null, null);
+        //遞減分節數
+        iSection--;
+        //更新目前的網址，使其成為為最新狀態的頁碼
+        window.history.replaceState({ iSection: iSection }, null, `?p=${iSection}`);
+        //呼叫控制中心
+        ControlCenter();
+      });
+    });
+
+    //控制中心
+    function ControlCenter() {
+      //計算當前參數值
+      iArticlesTotal = oArticles.length;
+      iSections = Math.floor(iArticlesTotal / iArticlesPerPage);
+      //如果傳入的iSection不合法，那就調整成「最新」分節
+      if (iSection < 1 || iSection > iSections) {
+        iSection = iSections + 1;
+      }
+      //更新表格
+      UpdateTableState();
+      //更新按鈕
+      UpdateButtonState();
+    }
+
+    //依據iSections狀態，來進行文章列表顯示
+    function UpdateTableState() {
+      let cRowContent;
+      //讀取文章指標：如果超過分節數那就視為「最新」否則就以分節數最底部列計，注意這裡已經是陣列的操作了，所以基底是零（必須減一）
+      let iReadPoint = (iSection > iSections) ? (iArticlesTotal - 1) : (iSection * iArticlesPerPage - 1);
+      for (var i = iReadPoint; i > (iReadPoint - iArticlesPerPage); i--) {
+        cRowContent += `
+<tr>
+  <td class="col-1 d-none d-lg-table-cell">${i + 1}</td>
+  <td class="col-1 d-none d-md-table-cell">${oArticles[i].d.toString().replace(/(\d{2})(\d{2})(\d{2})(\d{2})/, `<span class="d-xxl-none">$2$3$4</span><span class="d-none">｜</span><span class="d-none d-xxl-block">$1$2-$3-$4</span>`)}</td>
+  <td class="col-auto pe-0">${oArticles[i].t}</td>
+  <td class="col-3 col-md-2 col-xl-1 px-0 text-center"><a class="btn btn-sm btn-warning" href="/archive${String(oArticles[i].d).substring(0, 4)}/${oArticles[i].d}.html">開啟閱讀</a></td>
+</tr>`;
+      }
+      //將表格置換內容
+      $("main tbody").html(cRowContent);
+    }
+
+    //依據iSections狀態，來進行按鈕狀態更新
+    function UpdateButtonState() {
+      //如果超過分節上限
+      if (iSection > iSections) {
+        $("#uNew").attr("disabled", true);  //往上關閉
+      } else {
+        $("#uNew").attr("disabled", false); //往上開啟
+      }
+      //如果超過分節下限
+      if (iSection <= 1) {
+        $("#uOld").attr("disabled", true);  //往下關閉
+      } else {
+        $("#uOld").attr("disabled", false); //往下開啟
+      }
+    }
+
+    //顯示彈出訊息
+    function ShowMsg(cTitle, cBody) {
+      $("#uMsgBox span").html(cTitle);
+      $("#uMsgBox div.modal-body").html(cBody);
+      //Boostrap 5拋棄jQuery後，產生的呼叫方式
+      var oModal = new bootstrap.Modal("#uMsgBox", { keyboard: false });
+      oModal.show();
+    }
+  </script>
+
+  <script>
+    $(function () {
+      //偵測網址看看是否有參數可以捕獲
+      let oMatch = window.location.href.match(/p=(\d+)/);
+      if (oMatch) {
+        iSection = oMatch[1];
+      } else {
+        iSection = 0;
+      }
+      //開始讀取文章資料
+      var cURL = "/.data/articles.json";
+      $.ajax({
+        url: cURL,
+        dataType: "json"
+      })
+      .done(function (oData) {
+        //將拿到的資料灌入系統變數
+        oArticles = oData;
+        //交握給控制中心
+        ControlCenter();
+      })
+      .fail(function (jqXHR, textStatus, errorThrown) {
+        ShowMsg(
+          `發生錯誤`,
+          `錯誤原因：${jqXHR.status} / ${jqXHR.statusText}<br>資料網址：${cURL}`
+        );
+      });
+    });
+  </script>
+
+  <script src="/.file/site.js"></script>
+</body>
+</html>

@@ -1,0 +1,19 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>Javascript箭頭函式（ArrowFunctions）踩坑：this</h1><p>慢慢地開始從老古板Javascript functions寫法轉向ES6的箭頭函式Arrow Functions寫法，不幸的因為jQuery踩到了一個Arrow Functions的坑，一切要從click事件說起。</p><h2>jQuery的click事件</h2><p>先說明，所有的問題都不關jQuery的click事件的事，程式碼如下：</p><pre><code class=language-html>&lt;div>
+  &lt;span title="TestingTitle">SPAN With title&lt;/span>
+  &lt;span>Pure SPAN&lt;/span>
+&lt;/div>
+</code></pre><pre><code class=language-js>//所有的span有出現title屬性的都select
+$("span[title]").click(function(){
+  alert("TitleSpan: " + $(this)[0].constructor);
+});
+//所有的span都select
+$("span").click(() => {
+  alert("PureSpan: " + $(this)[0].constructor);
+});
+</code></pre><p>在還沒有踩到坑之前，我一直以為這兩個method抓到的$(this)理論上應該會一樣的，會踩到這個坑是因為我發現為何我的$(this)操作總是回傳給我沒有這個屬性之類的錯誤？經過不斷的黑人問號後才發現...箭頭函式根本沒有this。</p><p>以上面的程式碼來說，當使用者點選了具備Title的span，會跳出兩個alert訊息如下：</p><pre><code class=language-js>//第一個可理解，這是我們期待的this物件回傳。
+TitleSpan: function HTMLSpanElement() { [native code] }
+
+//第二個this回傳Window物件是三小？
+PureSpan: function Window() { [native code] }
+</code></pre><h2>使用前請詳閱公開說明書</h2><p>去MDN一查才發現，人家開宗明義就跟你聲明請不要把箭頭函式（<a href=https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Functions/Arrow_functions>Arrow function expressions</a>）當作method，因為他的this會去抓當前宣告語法的父層物件，而因為我們的jQuery寫法是寫在Javascript的root scope，所以抓到最上層的Window物件，原文如下，唉～</p><pre><code class=language-txt>Does not have its own bindings to this or super, and should not be used as methods.
+</code></pre><h2>心得筆記</h2><p>使用箭頭函式Arrow Functions用到this寫法要非常謹慎，甚至最好不要用。</p><h6>Javascript ArrowFunctions this $(this) jQuery ClickMethod</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

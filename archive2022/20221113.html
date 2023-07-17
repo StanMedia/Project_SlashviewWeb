@@ -1,0 +1,79 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>2023年版營利事業統一編號檢查規則：C#程式碼</h1><p>接續上一篇的規則，順手寫了新版統一編號驗證的程式碼，採用的是C# + LINQ語法，初步看起來沒有運作正常，若有後續的問題再請來信回報。</p><h2>新版統一編號驗證程式碼</h2><p>請注意這是新版的規則喔，舊版的規則請自行將<code>% 5</code>改回<code>% 10</code>，不過我想時至今日應該沒有這個需求了吧，程式碼如下：</p><pre><code class=language-cs>public static (bool bIsError, string cMessage) CheckTaxID(string cTax)
+{ //回傳結果集
+  var oResult = (bIsError: false, cMessage: "統一編號格式合法");
+  //邏輯乘數（財政部制定）
+  var cMagic = "12121241";
+  try
+  {
+    if (string.IsNullOrEmpty(cTax) || cTax.Length != 8 || !int.TryParse(cTax, out int iUnused))
+    { throw new System.Exception("請輸入八位數純數字");  }
+    //轉成數值陣列
+    var aryTax = cTax.ToCharArray().Select(x => (int)(x - '0')).ToArray();
+    var aryMagic = cMagic.ToCharArray().Select(x => (int)(x - '0')).ToArray();
+    //運算乘積
+    var aryResult = new int[8];
+    for (int i = 0; i &lt; aryTax.Length; i++)
+    { aryResult[i] = aryTax[i] * aryMagic[i]; }
+    //運算整理：大於10就進行位數相加
+    aryResult = aryResult.Select(x => x &lt; 10 ? x : x.ToString().ToCharArray().Select(y => (int)(y - '0')).Sum()).ToArray();
+    //運算整理：第七位數大於10之分拆
+    var oList = new System.Collections.Generic.List&lt;int[]>();
+    foreach (var cItem in aryResult[6].ToString().ToCharArray())
+    {
+      var aryTemp = aryResult.ToArray();
+      aryTemp[6] = (int)(cItem - '0');
+      oList.Add(aryTemp);
+    }
+    //運算整理：乘積和與除5判斷
+    if (!oList.Select(x => x.Sum()).Select(x => x % 5 == 0).Any(x => x))
+    { throw new System.Exception("統一編號格式不合法"); }
+  }
+  catch (System.Exception oEx)
+  {
+    oResult.bIsError = true;
+    oResult.cMessage = oEx.Message;
+  }
+  return oResult;
+}
+</code></pre><h2>驗證統一編號</h2><p>直接在main()區塊中順手亂打了幾組編號，看起來沒有甚麼問題：</p><pre><code class=language-cs>public static void Main()
+{ //04595257；合法性：True / 訊息：統一編號格式合法
+  var cTax = "04595257";
+  var oResult = CheckTaxID(cTax);
+  WriteLine($"{cTax}；合法性：{!oResult.bIsError} / 訊息：{oResult.cMessage}");
+
+  //04595252；合法性：True / 訊息：統一編號格式合法
+  cTax = "04595252";
+  oResult = CheckTaxID(cTax);
+  WriteLine($"{cTax}；合法性：{!oResult.bIsError} / 訊息：{oResult.cMessage}");
+
+  //10458575；合法性：True / 訊息：統一編號格式合法
+  cTax = "10458575";
+  oResult = CheckTaxID(cTax);
+  WriteLine($"{cTax}；合法性：{!oResult.bIsError} / 訊息：{oResult.cMessage}");
+
+  //10458574；合法性：True / 訊息：統一編號格式合法
+  cTax = "10458574";
+  oResult = CheckTaxID(cTax);
+  WriteLine($"{cTax}；合法性：{!oResult.bIsError} / 訊息：{oResult.cMessage}");
+
+  //10458570；合法性：True / 訊息：統一編號格式合法
+  cTax = "10458570";
+  oResult = CheckTaxID(cTax);
+  WriteLine($"{cTax}；合法性：{!oResult.bIsError} / 訊息：{oResult.cMessage}");
+
+  //22099131；合法性：True / 訊息：統一編號格式合法
+  cTax = "22099131"; //台積電
+  oResult = CheckTaxID(cTax);
+  WriteLine($"{cTax}；合法性：{!oResult.bIsError} / 訊息：{oResult.cMessage}");
+
+  //08878978；合法性：True / 訊息：統一編號格式合法
+  cTax = "08878978"; //亂打：舊版錯誤、新版正確
+  oResult = CheckTaxID(cTax);
+  WriteLine($"{cTax}；合法性：{!oResult.bIsError} / 訊息：{oResult.cMessage}");
+
+  //10458573；合法性：False / 訊息：統一編號格式不合法
+  cTax = "10458573"; //亂打：舊版錯誤、新版錯誤
+  oResult = CheckTaxID(cTax);
+  WriteLine($"{cTax}；合法性：{!oResult.bIsError} / 訊息：{oResult.cMessage}");
+}
+</code></pre><h3>相關參考</h3><ul><li><a href=/archive2022/20221112.html>2023年版營利事業統一編號檢查規則：驗證說明</a></li><li><a href=/archive2022/20221113.html>2023年版營利事業統一編號檢查規則：C#程式碼</a></li></ul><h6>2023年 112年 新版 新式 統一編號 統編 規則 檢查 驗證 說明 範例 實作</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

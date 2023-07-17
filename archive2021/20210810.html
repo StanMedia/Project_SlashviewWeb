@@ -1,0 +1,33 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>jQuery each總是自動幫你排序集合物件？</h1><p>寫那麼久的前端集合程序沒有發現到這個議題，最近剛好有需求才發現jQuery each竟然會把我從後端打過來的集合物件（javascript function's arguments object）重新按照index整理排序好，然後逐一的輸出給我，真是太驚訝了！</p><h2>jQuery each自動將集合物件排序好</h2><p>不囉嗦直接上程式碼：</p><pre><code class=language-js>var oList = {
+  "5": "55555",
+  "3": "33333",
+  "4": "44444",
+  "1": "11111",
+  "2": "22222",
+};
+
+$.each(oList, function (key, value) {
+  console.log(key + ":" + value);
+});
+</code></pre><p>出來的結果很明顯，貼心的幫你排好了呢！</p><pre><code class=language-txt>1:11111
+2:22222
+3:33333
+4:44444
+5:55555
+</code></pre><h2>不想被自動排序怎麼辦？</h2><p>首先要先了解這樣的原因，是因為瀏覽器對於enumeration都有自己的一套索引方式，你沒有辦法去更改這樣的設定，所以並不是jQuery each假敖，而是瀏覽器一開始讀入Javascript的集合物件時就幫你在記憶體裡面定義好索引樹。</p><p>而剛好上面的oList物件又採用了非常方便排序的整數鍵值（key），因此馬上就落入可被快速索引的演算之中了，若針對上述的問題解決方式也很好笑，就是把鍵值加入一些莫名其妙的字串即可，例如："xxx_1", "xxx_2" ...，你就會發現瀏覽器不幫你排序了。</p><p>但有時候這些鍵值對系統來說又是必要性的參數，而我們也不想再撰寫一些額外清洗鍵值的程式碼，這時候就要改用下列方式。</p><h2>陣列，是古老的陣列啊！</h2><p>改寫一下資料表示成陣列的方式：</p><pre><code class=language-js>var oList = [
+  ["5", "55555"],
+  ["3", "33333"],
+  ["4", "44444"],
+  ["1", "11111"],
+  ["2", "22222"],
+];
+//因為已經變成二維陣列，取出的意義已經不相同，故顯示值的方式也有所不同
+$.each(oList, function (aryIndex, arySub) {
+  console.log("ArrayIndex:" + aryIndex + " | Key:" + arySub[0] + "; Value:" + arySub[1]);
+});
+</code></pre><p>出來的結果就不幫你排序了，真不貼心！😛</p><pre><code class=language-txt>ArrayIndex:0 | Key:5; Value:55555
+ArrayIndex:1 | Key:3; Value:33333
+ArrayIndex:2 | Key:4; Value:44444
+ArrayIndex:3 | Key:1; Value:11111
+ArrayIndex:4 | Key:2; Value:22222
+</code></pre><p>所以，在我腦海中未經過實證的推論，同樣為資料的表述，在搜尋效率上來說應該Javascript function's arguments object會比pure array來的有效率，這個就交給有心想要實驗的程式設計師來證明了。</p><h6>Javascript DataCollections Array Objects jQuery Each Sort AutoSort AlwaysSort</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

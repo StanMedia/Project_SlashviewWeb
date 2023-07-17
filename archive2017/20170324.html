@@ -1,0 +1,82 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>具備事件（Events）的物件在進行序列化（Serialization）過程中的問題</h1><p>ORM的程式設計觀念在現代已經是大家普遍使用的技巧了，但是用來塑造ORM的類別，往往我們會賦予給他更多的非資料使用方式，例如可能會有一堆方法，甚至是事件的觸發。ClassType複雜歸複雜，但是總是運作的良好得當。BUT，人生最重要的就是這個BUT，當我們可能需要把這個類別狀態保留時（Application、Session、ViewState...或其他提供序列化Cache服務的機制），就需要序列化它，而事件若有被外部調用掛載，這時候你就會遭遇到莫名其妙的問題了。</p><p><img src=https://content.slashview.com/img/2017/20170324_01.jpg alt="" /></p><p>這個問題的中英文描述如下，大致上就是在跟你講某一個類別物件不可序列化：</p><pre><code class=language-txt>無法序列化工作階段狀態。在 'StateServer' 和 'SQLServer' 模式中，ASP.NET 將序列化工作階段狀態物件，因此不允許無法序列化的物件或 MarshalByRef 物件。在 'Custom' 模式中，自訂工作階段狀態存放區執行類似的序列化作業時，也會有同樣的限制。 
+
+Unable to serialize the session state. Please note that non-serializable objects or MarshalByRef objects are not permitted when session state mode is 'StateServer' or 'SQLServer'.
+</code></pre><p>其實這個問題有很多種解決方法，最常見的大概就是程式設計正規化魔人跟你說的，ORM物件就是ORM物件，你不要汙染它好嗎？請重構Brabra...說的是沒錯啦，但每個人有每個人的人生觀，畢竟這個系統現在是能動的沒錯吧？程式碼大致上也呈現了結構化而不是髒亂毫無章法沒錯吧？你要把人生浪費在Coding，我要把人生浪費在我覺得更美好的事物上，誰對誰錯？</p><h2>先來看出錯的程式碼：</h2><p>ORM_EventClass.cs</p><pre><code class=language-cs>namespace EventTest
+{
+  public delegate void EventHandler(object sender, EventArgs e);
+
+  [Serializable]
+  public class ORM_EventClass
+  {
+    public string cName { get; set; }
+    public string cPhone { get; set; }
+    
+    public event EventHandler OnWriteFinish;
+    
+    public void WriteToDatabase()
+    {
+      //BraBra... Do data write ...
+      if (OnWriteFinish != null) { OnWriteFinish(this, new EventArgs()); }
+    }
+  }
+}
+</code></pre><p>Test.aspx（錯誤會發生在Session回存調用時，理由是OnWriteFinish事件掛載方法無法序列化）</p><pre><code class=language-cs>&lt;script runat="server">
+  public void Page_Load(object sender, EventArgs e)
+  {
+    EventTest.ORM_EventClass oTemp = new EventTest.ORM_EventClass();
+    oTemp.cName  = "王小明";
+    oTemp.cPhone = "0912345678";
+    oTemp.OnWriteFinish += ShowSuccess;  //Can NOT serializable
+    oTemp.WriteToDatabase();
+    Session["JustTest"] = oTemp;
+  }
+
+  public void ShowSuccess(Object sender, EventArgs e)
+  {
+    uMsg.Text = "寫入成功。";
+  }
+&lt;/script>
+</code></pre><h2>解決方案Ａ</h2><p>重構的那件事情就不要再提了，誰有那種美國時間改牽一髮動全身的Code啊！答案就是在寫入Session前，把事件綁定卸除。蠢！但很有效！</p><pre><code class=language-cs>&lt;script runat="server">
+  public void Page_Load(object sender, EventArgs e)
+  {
+    EventTest.ORM_EventClass oTemp = new EventTest.ORM_EventClass();
+    oTemp.cName  = "王小明";
+    oTemp.cPhone = "0912345678";
+    oTemp.OnWriteFinish += ShowSuccess;  //Can NOT serializable
+    oTemp.WriteToDatabase();
+    //回存Session前先卸除
+    oTemp.OnWriteFinish -= ShowSuccess; //Stupid! But it works.
+    Session["JustTest"] = oTemp;
+  }
+
+  public void ShowSuccess(Object sender, EventArgs e)
+  {
+    uMsg.Text = "寫入成功。";
+  }
+&lt;/script>
+</code></pre><h2>解決方案Ｂ</h2><p>另外有一個解決方案就是對Class動刀，就是使用[NonSerialized]屬性來叫.NET不要幫你做事件掛載點這部分的序列化工作，但是這邊有雷，當我們把這個屬性（Attributes）鍵入下去的時候，會中另外一個雷，程式碼如下：</p><pre><code class=language-cs>namespace EventTest
+{
+  public delegate void EventHandler(object sender, EventArgs e);
+
+  [Serializable]
+  public class ORM_EventClass
+  {
+    public string cName { get; set; }
+    public string cPhone { get; set; }
+    
+    [NonSerialized]
+    public event EventHandler OnWriteFinish;
+    
+    public void WriteToDatabase()
+    {
+      //BraBra... Do data write ...
+      if (OnWriteFinish != null) { OnWriteFinish(this, new EventArgs()); }
+    }
+  }
+}
+</code></pre><p>編譯器會跟你講無法編譯，文字資訊如下：</p><pre><code class=language-txt>屬性 'NonSerialized' 在此宣告類型上無效。它只在 'field' 宣告上有效。
+
+Attribute 'NonSerialized' is not valid on this declaration type. It is only valid on 'field' declarations.
+</code></pre><p>這部分要正式的解法其實很曲折，不符合本人簡單解決事情的習慣，因此在這邊教大家一個小撇步來解決：</p><pre><code class=language-cs>[field: NonSerialized]
+public event EventHandler OnWriteFinish;
+</code></pre><p>Yes，收工！繼續快樂過生活。</p><p>請注意，當你採用解決方案Ｂ時，就不需要再使用解決方案Ａ：將事件移除的方法喔。</p><h6>ASP.NET Session Application ViewState ClassTypeSerialization Serialized NonSerialized Attributes Properties</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

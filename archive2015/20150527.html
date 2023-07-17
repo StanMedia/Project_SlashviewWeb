@@ -1,0 +1,125 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>利用C#對Google Spreadsheet進行線上即時存取</h1><p>今天發生了一個古怪的需求，就是需要利用程式的方式進去Google Spreadsheet，進行線上的資料存取。經過調查後發現，Google其實有釋出一些相關的API讓.NET陣營的存取，所以用C#的人有福了，基本上線上的文件非常的豐富，稍微有點經驗的程式設計師應該都可以看懂才對，在這邊將一些原始碼記錄下來，好日後翻找。</p><h2>四大觀念</h2><p>Google定義Spreadsheet API中有四大觀念，這個觀念請先建立後，再來看原始碼操作會比較有Feel！</p><ol><li>spreadsheet<br /> Google Sheets document, created with the Google Sheets user interface or with the Google Drive API.</li><li>worksheet<br /> Named collection of cells within a spreadsheet. All spreadsheets must have at least one worksheet, and have one worksheet by default.</li><li>list row<br /> Row of cells in a worksheet, represented as a key-value pair, where each key is a column name, and each value is the cell value. The first row of a worksheet is always considered the header row when using the API, and therefore is the row that defines the keys represented in each row.</li><li>cell<br /> Single piece of data in a worksheet.</li></ol><h2>下載Google Data API SDK包</h2><p>請到下列網址下載，當然，SDK請用越新版本越好，畢竟Google很愛改API版本也是眾所皆知的事。<br /> 下載網址：<a href=https://code.google.com/p/google-gdata/downloads/list>https://code.google.com/p/google-gdata/downloads/list</a></p><p>下載並安裝完成後，開啟VS專案時，別忘了「參考」一下應該參考的DLL檔。</p><h2>如何在Google Spreadsheet中插入一列資料</h2><p>這隻程式能夠運行的前提是，你必須在Google Drive中有一個Spreadsheet檔案名字叫「TestSpreadsheet」，然後裡面有一個頁籤WorkSheet叫「測試」，這個「測試」頁籤中，有五個欄位，分别叫「姓氏」、「名稱」、「英文名稱」、「Email」、「手機」。</p><p>如果沒有上述的預設前提，那麼你自己要寫程式利用cell去建立起來，在此不討論。</p><p>程式跑在Console Mode下，DLL記得在VisualStudio參考完後，也是要Using一下喔！</p><pre><code class=language-cs>using System;
+using System.IO;
+/* Google Data API */
+using Google.GData.Client;
+using Google.GData.Spreadsheets;
+
+namespace GoogleData
+{
+  class Program
+  {
+    static void Main(string[] args)
+    {
+      
+      userData oUser = new userData();
+      oUser.cAcc = "您的Google帳號";
+      oUser.cPwd = "您的Google密碼";
+      oUser.cFile = "TestSpreadsheet";
+      oUser.cSheet = "測試";
+      
+      //登入
+      Console.Write("登入中... ");
+      SpreadsheetsService myService;
+      SpreadsheetQuery query;
+      SpreadsheetFeed oSF;
+
+      try
+      {
+        myService = new SpreadsheetsService("MySpreadsheetIntegration");
+        myService.setUserCredentials(oUser.cAcc, oUser.cPwd);
+        //取得可用之工作表
+        query = new SpreadsheetQuery();
+        oSF = myService.Query(query);
+        Console.WriteLine("成功！");
+      }
+      catch
+      {
+        Console.WriteLine("失敗！");
+        return;
+      }
+
+      //如果有指定之工作表的話，就設定為這個指定工作表
+      string cSpreadsheetName = oUser.cFile;
+      
+      SpreadsheetEntry oSS = new SpreadsheetEntry();
+      foreach (SpreadsheetEntry entry in oSF.Entries)
+      {  if (entry.Title.Text == cSpreadsheetName) { oSS = entry; } }
+      
+      //如果沒有這張作業表（檔案），那就直接顯示找不到工作表，踢出去
+      if (string.IsNullOrEmpty(oSS.Title.Text))
+      {
+        Console.WriteLine(string.Format("找不到以「{0}」為名的Spreadsheet。", cSpreadsheetName));
+        return;
+      }
+
+      //如果這張作業表裡面，沒有指定的頁籤（工作表），那就踢出去
+      string cWorksheetName = oUser.cSheet;
+      WorksheetFeed oWF = oSS.Worksheets;
+      WorksheetEntry oWS = new WorksheetEntry();
+      foreach (WorksheetEntry entry in oWF.Entries)
+      { if (entry.Title.Text == cWorksheetName) { oWS = entry; } }
+
+      //如果沒有這張頁籤，那就直接顯示找不到頁籤，踢出去
+      if (string.IsNullOrEmpty(oWS.Title.Text))
+      {
+        Console.WriteLine(string.Format("找不到以「{0}」為名的Worksheet。", cWorksheetName));
+        return;
+      }
+
+      //取得本頁籤之連結，準備進行後續操作
+      AtomLink oWSLink = oWS.Links.FindService(GDataSpreadsheetsNameTable.ListRel, null);
+      ListQuery oQuery = new ListQuery(oWSLink.HRef.ToString());
+      ListFeed oFeed = myService.Query(oQuery);
+      ListEntry oFirstRow = oFeed.Entries[0] as ListEntry;
+      ListEntry oNewRow = new ListEntry();
+      
+      foreach (ListEntry.Custom oTemp in oFirstRow.Elements)
+      {
+        string cTemp = oTemp.LocalName;
+        string cValue = "";
+
+        if (cTemp.IndexOf("姓氏") != -1)
+        {
+          cValue = "王";
+        }
+        else if (cTemp.IndexOf("名稱") != -1)
+        {
+          cValue = "小明";
+        }
+        else if (cTemp.IndexOf("英文名稱") != -1)
+        {
+          cValue = "Ming, Wang.";
+        }
+        else if (cTemp.IndexOf("Email") != -1)
+        {
+          cValue = "XiaoMing@gmail.com";
+        }
+        else  //手機
+        {
+          cValue = "0912345678";
+        }
+
+        //加入一個欄位進入列
+        oNewRow.Elements.Add(new ListEntry.Custom()
+        {
+          LocalName = cTemp,
+          Value = cValue
+        });
+      }
+
+      //插入資料
+      ListEntry insertedRow = oFeed.Insert(oNewRow);
+      Console.WriteLine("插入資料成功。");
+    }
+  }
+
+  //參數物件化
+  class userData
+  {
+    public string cAcc { get; set; }
+    public string cPwd { get; set; }
+    public string cFile { get; set; }
+    public string cSheet { get; set; }
+  }
+}
+</code></pre><h6>GoogleSpreadsheet GoogleExcel 自動化插入 試算表</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

@@ -1,0 +1,5 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>jQuery的AutoComplete遇到中文字故障問題</h1><p>jQuery的AutoComplete非常好用，但是在某些瀏覽器搭配上特定的中文輸入法後，當使用這鍵入中文字元後並不會觸發彈出預測選單，這個問題是因為KeyPress, KeyDown的偵測問題！</p><p>服用下列Javascript程式碼可以進行修正：</p><pre><code class=language-js>//修正 jQuery AutoComplete 與中文輸入法之間的問題
+$("#uShool").bind("input.autocomplete", function(){
+  $(this).trigger('keydown.autocomplete');
+});
+</code></pre><h6>jQuery AutoComplete Javascript ChineseChar Error Bug</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

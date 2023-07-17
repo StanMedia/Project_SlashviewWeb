@@ -1,0 +1,21 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>iFrame的內容讀取風險</h1><p>iFrame被大量的網站初學者拿來濫用，不僅很不適用於移動端，更會產生許多隱性的風險。用jQuery去讀取iFrame是非常的輕鬆快速的，以下先示範如何用jQuery去讀取一個iFrame。</p><p>iFrame的內容讀取很簡單！以下是一個靜態網頁，利用jQuery去讀取一個iFrame內文的範例。</p><pre><code class=language-html>//a.html
+&lt;html>
+  &lt;head>
+    &lt;title>&lt;/title>
+    &lt;script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jquery/1.3.2/jquery.js">&lt;/script>
+  &lt;/head>
+  &lt;body>
+    &lt;button id="test">GET INFO&lt;/button>
+    &lt;iframe src="b.html" id="oFrame" style="width:500px;height:500px;" frameborder="0">&lt;/iframe>
+    &lt;script>
+      $("#test").click(function(){
+        var cTemp = $("#oFrame").contents().find("#uPassword");
+        alert(cTemp.val());
+      });
+    &lt;/script>
+  &lt;/body>
+&lt;/html>
+</code></pre><p>當a.html與b.html處於同一個網站（Domain）下時，假設b.html裡面有一個密碼文字方框叫「uPassword」，那麼a.html上的GET INFO鈕被點擊時，就可以取得b.html網站中的密碼欄位，也就是說如果你要的話，可以取得任何你想要的資訊。限同一個Domain下是基於瀏覽器的同源策略／同源政策（Same Origin Policy）。</p><h2>風險</h2><ol><li>使用者自己安裝強國牌包皮瀏覽器。</li><li>使用者自己把瀏覽器同源策略關起來（Disabled SOP）。</li><li>使用者自己電腦中病毒，而病毒把瀏覽器同源策略關起來（Disabled SOP）。</li><li>駭客利用漏洞破解瀏覽器的同源策略設定。</li></ol><p>一旦上面的任一條件成立時，你的網站就有可能被佈置成釣魚網頁，誘發使用者點擊，然後你網站使用者的密碼就被拿走了，此時就算網站上HTTPS（SSL）也是毫無意義的，因為它在送出前就被攔截了。</p><h2>防範</h2><p>基本上沒有什麼可以好可防止的方法，所幸所有漏洞問題的點，最終是看使用者的瀏覽器，基於這個利基點，X-Frame-Options就被發展出來了，也就是說在你的HTTP Header加入這個屬性，聽話的瀏覽器，就會阻止你的網站頁面被iFrame加入（無論是否同源都一樣）。雖然說蠻消極的，但總是聊勝於無。語法如下：</p><pre><code class=language-txt>//X-Frame-Options HTTP Header
+name = "X-Frame-Options"
+value = "DENY|SAMEORIGIN|ALLOW-FROM uri"
+</code></pre><h2>瀏覽器相容性 Browser compatibility</h2><p>依據MDN（Mozilla Developer Network）於2015.03.03表示，相容性如下方圖表。</p><p><img src=https://content.slashview.com/img/2015/20150303_01.jpg alt="" /></p><h6>jQuery iFrameContentsGet SameOriginPolicy XFrameOptions</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

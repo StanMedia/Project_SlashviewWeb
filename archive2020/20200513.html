@@ -1,0 +1,44 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>利用LINQ列舉陣列中所有可能性排列（Permutation）</h1><p>今天在網路上看到一個很有趣的題目，就是C#語言如何用最簡單的方式來達成列舉某陣列所有可能的排列（Permutation），亦稱為全排列。</p><p>舉例來說有一個「ABC」字串，那他可能出現六種的排列方式：</p><pre><code class=language-txt>1：ABC
+2：ACB
+3：BAC
+4：BCA
+5：CAB
+6：CBA
+</code></pre><p>我們可以從上面的例子得知，其實全排列的總個數就是P!，也就是3! = 3 * 2 * 1。</p><h2>以LINQ實作排列（Permutation）</h2><p>程式碼有動到LINQ與遞迴的觀念，所以可能大家要仔細看一下，採用遞迴的話當然要小心大長度的字串，可能會有StackOverflow的問題。</p><pre><code class=language-cs>private static System.Collections.Generic.IEnumerable&lt;string> Permutations(string cTemp)
+{ //如果文字長度是1就跳出
+  if (cTemp.Length == 1)
+  { return new System.Collections.Generic.List&lt;string> { cTemp }; }
+  //如果文字長度不是1就再度遞迴
+  return
+    from cChar   in cTemp
+    from cString in Permutations(new String(cTemp.Where(x => x != cChar).ToArray()))
+    select $"{cChar}{cString}";
+}
+</code></pre><p>調用方式很簡單，詳見下列程式碼：</p><pre><code class=language-cs>int counter = 0;
+foreach (var p in Permutations("ABCD"))
+{ Console.WriteLine($"{++counter}：\t{p}"); }
+</code></pre><p>結果如下，總數量確定為 4!=24：</p><pre><code class=language-txt>1： ABCD
+2： ABDC
+3： ACBD
+4： ACDB
+5： ADBC
+6： ADCB
+7： BACD
+8： BADC
+9： BCAD
+10：BCDA
+11：BDAC
+12：BDCA
+13：CABD
+14：CADB
+15：CBAD
+16：CBDA
+17：CDAB
+18：CDBA
+19：DABC
+20：DACB
+21：DBAC
+22：DBCA
+23：DCAB
+24：DCBA
+</code></pre><h6>C# CSharp Linq Permutate Permutation Combination 字串排列 字串組合 陣列排列 陣列組合</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

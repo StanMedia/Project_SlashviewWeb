@@ -1,0 +1,27 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>舊時代Javascript Escape Unicode字元編碼之探討與解碼</h1><p>至今還是有人持續在使用舊時代的javascript escape()函式，將Unicode文字進行編碼，然而javascript escape()函式早就因為無法全面進行Unicode的文字編碼而被拋棄了，所以在.NET Framework的伺服器端實作也被拋棄掉了。</p><p>但，就是有人偏偏要送這樣的字元給你，怎麼辦？</p><h2>編碼（Escape、Encode）</h2><p>javascript施以console.log(escape("測試"))，會得到下列的字串：</p><pre><code class=language-txt>%u6E2C%u8A66
+\u6E2C\u8A66  //而一般來說也會被以這樣的形態表示
+</code></pre><p>在.NET Framework端同樣實作escape的對映方法，稱為System.Web.HttpUtility.UrlEncodeUnicode()，然而隨著escape()函式的黯然退下，這個UrlEncodeUnicode方法也被微軟列為不再支援觀察名單。</p><pre><code class=language-cs>System.Web.HttpUtility.UrlEncodeUnicode("測試")
+%u6e2c%u8a66  //除了大小寫之外，其他的跟JS escape函式輸出一樣
+</code></pre><p>後來，javascript建議的是使用encodeURIComponent()方法：</p><pre><code class=language-js>encodeURIComponent("測試")
+%E6%B8%AC%E8%A9%A6  //不一樣的Unicode文字編碼方式了
+</code></pre><p>對映到.NET Framework自然是System.Web.HttpUtility.UrlEncode()方法：</p><pre><code class=language-cs>System.Web.HttpUtility.UrlEncode("測試")
+%e6%b8%ac%e8%a9%a6  //除了大小寫之外，其他的跟JS encodeURIComponent函式輸出一樣
+</code></pre><h2>解碼（Unescape、Decode）</h2><p>把這個古老的編碼在伺服器端解譯回來正常的Unicode是很輕鬆的，我們可以使用UrlDecode()方法：</p><pre><code class=language-cs>System.Web.HttpUtility.UrlDecode("%u6e2c%u8a66")
+測試
+System.Web.HttpUtility.UrlDecode("\u6e2c\u8a66")
+測試
+</code></pre><p>但這些訊息加上了JSON格式，可就不是那麼的順利了，例如有一個這樣的JSON字串：</p><pre><code class=language-json>{"cMessage":"\u6e2c\u8a66"}
+</code></pre><p>這串JSON丟到UrlEncode裡面是無效的，會傳回一模一樣的字串回來。</p><p>如果想要無腦的幫你解決某串JSON中隱含的舊時代javascript escape()編碼文字，其實可以使用.NET Framework的靜態方法System.Text.RegularExpressions.Regex.Unescape(String)來解決，但由於這個方法有可能會把你所有escape的字元都解掉，可能會影響到JSON中不想被解碼的字元，所以請慎用之。</p><p>如果你只想專注在解決這個\uXXXX的Unicode字元編碼上的話，可能就只能自己用正規表示式來解決了。</p><pre><code class=language-cs>System.Func&lt;string, string> ConvertEscapeChar = x =>
+{
+  return System.Text.RegularExpressions.Regex.Replace(
+    x,
+    @"\\[Uu]([0-9A-Fa-f]{4})",
+    m => char.ToString(
+      (char)ushort.Parse(
+        m.Groups[1].Value,
+        System.Globalization.NumberStyles.AllowHexSpecifier
+      )
+    )
+  );
+};
+</code></pre><h6>\uXXXX %uXXXX Javascript Escape Unescape PHP ASP.NET C# Decode Encode</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

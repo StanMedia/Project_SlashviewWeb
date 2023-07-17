@@ -1,0 +1,18 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>Azure Functions：回傳客戶端IP小程式</h1><p>今天心血來潮，在Azure上面設定了Azure Functions，體驗了無伺服器運算的使用感受，寫起來就像是在寫.ASHX泛型處理常式的舒暢感，但又不用管任何伺服器的佈署配、作業系統設定等問題，真好！</p><p>由於不知道要做甚麼主題，只好簡單草草的寫一個如果Client端透過GET、POST傳入，一律回應客戶端IP的簡單小應用，由於過程中特意盡量不要使用using（import），把完整的名稱空間寫出來好讓我可以知悉大致上使用到哪些類別，另外也拋棄我喜好引用的Json.NET，直接改用MVC的制式類別往外丟回JSON。</p><p>程式碼如下：</p><pre><code class=language-cs>namespace ClientIP
+{
+  public static class Function
+  {
+    [Microsoft.Azure.WebJobs.FunctionName("ClientIP")]
+    public static async System.Threading.Tasks.Task&lt;Microsoft.AspNetCore.Mvc.IActionResult> Run
+    (
+        [Microsoft.Azure.WebJobs.HttpTrigger(Microsoft.Azure.WebJobs.Extensions.Http.AuthorizationLevel.Anonymous, "get", "post", Route = null)]
+        Microsoft.AspNetCore.Http.HttpRequest req,
+        Microsoft.Extensions.Logging.ILogger log
+    )
+    {
+      var oIP = req.HttpContext.Connection.RemoteIpAddress;
+      return new Microsoft.AspNetCore.Mvc.JsonResult(new { ClientIP = oIP.ToString() });
+    }
+  }
+}
+</code></pre><p>比較有趣的是，如果在Azure中設定Azure Functions的運作平台是<code>Linux</code>，就不能直接在Azure線上使用瀏覽器直接寫程式碼。而如果選用運作平台是<code>Windows</code>就可以在線上用瀏覽器直接寫程式碼，這是我比較不能夠理解之處？話說到.NET Core之後不是都可以跨平台了嗎？</p><p>運作平台是<code>Linux</code>在Azure的世界中顯然會實現比較低的資源耗用，這通常也就意味著金額支出較少，希望微軟可以改善這種問題。</p><h6>Microsoft Azure Functions C# CSharp ClientIP GetIP AJAX</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

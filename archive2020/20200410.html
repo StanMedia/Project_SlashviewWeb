@@ -1,0 +1,42 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>.axd：直接在.cs類別（DLL）裡面實作IHttpHandler</h1><p>在ASP.NET WebForm中，我們要高速的進行一些運算處理往往會選擇.ashx（泛型處理常式），來幫我們跳過煩人緩慢的System.Web.UI.Page類別所引爆的事件生命週期。.ashx很好用，但往往很少人知道還有一個.axd副檔名的存在，今天就來介紹一下.axd的用法。</p><p><img src=https://content.slashview.com/img/2020/20200410_01.jpg alt="" /></p><h2>.ashx與.axd是攣生兄弟但少了實體路徑</h2><p>不知道你是否有發生過兩個大致上處理同樣事情，只有些許不一樣的.ashx撰寫經驗，往往我們會進行的是把這個同樣事情的程式碼寫成.cs類別檔案並往/bin目錄塞，然後外面再包皮.ashx來調用，不一樣的.ashx進行同樣類別的調用但處理不太一樣的事情，大致上這樣的使用是沒有問題的。</p><p>如果有一天你需要直接調用\bin下面的純類別，你可能又要包皮一隻.ashx，然後再去調用這個純類別。</p><p>.axd的出現就是要解決這個痛點，它同樣實作了System.Web.IHttpHandler，且可以用一種近似Url Rewrite的方法來調用，如此一來你就不必再寫一隻包皮.ashx，直接把你要做的事情寫在這個類別檔案裡面就可以了。</p><p>再更直白地說一句：</p><p>.axd是一種可透過網址直接調用DLL的技術。</p><h2>簡單.axd範例</h2><p>Step 1. 將你常用的.ashx寫法，存成.cs類別檔並放到/bin目錄下。</p><pre><code class=language-cs>namespace YourCompany.Utility
+{
+  public class SaySomething : System.Web.IHttpHandler
+  {
+    public void ProcessRequest(System.Web.HttpContext oContext)
+    {
+      string cTemp = oContext.Request["cMsg"] as string;
+      //如果沒有參數就顯示預設值
+      if (string.IsNullOrEmpty(cTemp))
+      { cTemp = "Hello World!"; }
+      oContext.Response.Write(cTemp);
+    }
+    public bool IsReusable { get { return false; } }
+  }
+}
+</code></pre><p>Step 2. 將這個類別檔案註冊到web.config之中。這裡要特別注意的是，很多介紹.asd的網頁都叫你去用system.web＞httpHandlers標籤註冊，這是錯誤的做法，因為這是早期IIS應用程式集區（Application Pools）的Managed管線模式（Managed Pipeline Mode）為典型（Classic mode）的寫法。IIS的應用程式集區現代大部分都被設定成整合式（Integrated mode），所以正確的做法應該是system.webServer＞handlers才對。</p><p>以下範例：</p><pre><code class=language-xml>&lt;system.webServer>    
+  &lt;handlers>
+    &lt;add verb="*" name="MyAxdTest" path="Hello.axd" type="YourCompany.Utility.SaySomething" />
+  &lt;/handlers>
+&lt;/system.webServer>
+</code></pre><p>大功告成，開始測試！</p><p>請輸入網址：</p><pre><code class=language-txt>//輸出Hello World!
+http://localhost/Hello.axd
+//輸出Hi There
+http://localhost/Hello.axd?cMsg=Hi%20There
+</code></pre><h2>喔對了！忘了告訴你.axd副檔名其實是沒有具體意義的！</h2><p>把.axd拿掉同樣可以動作喔，且網址更精緻可閱讀，可拿來進行SEO優化！</p><pre><code class=language-xml>&lt;system.webServer>    
+  &lt;handlers>
+    &lt;add verb="*" name="MyAxdTest" path="Hello" type="YourCompany.Utility.SaySomething" />
+  &lt;/handlers>
+&lt;/system.webServer>
+</code></pre><p>測試網址沒有.axd的效果：</p><pre><code class=language-txt>//輸出Hello World!
+http://localhost/Hello
+//輸出Hi There
+http://localhost/Hello?cMsg=Hi%20There
+</code></pre><h2>.axd註冊路徑之特殊性</h2><p>.axd型態的網址路由是非常特殊的，關於System.Web.Routing.RouteCollection或是System.Web.Routing.RouteTable.Routes.MapHttpRoute等相關的網址路由都不會影響他的能力，甚至彼此也不會干擾。</p><p>以舉例來說，當我們輸入下列網址，都會統一調用到指定的DLL喔！</p><pre><code class=language-txt>//輸出Hello World!
+http://localhost/Hello
+//輸出Hello World!
+http://localhost/product.aspx/Hello
+</code></pre><p>假設你的網站裡面有某個短網址註冊在RouteCollection裡面，名為/get/product/new，當你跑到這個網址的時候會回應「OK」兩個字給你。然後你事後不小心也在web.config之.axd所屬的path裡面寫著/get/product/new，猜猜會怎麼樣？</p><pre><code class=language-txt>//輸出OK兩個字
+http://localhost/get/product/new
+//輸出Hello World!
+http://localhost/get/product/new/get/product/new
+</code></pre><p>如上述程式碼結果，也就是說當RouteCollection有命中的時候，會被先攔截拿去用掉了。當RouteCollection沒有命中但卻命中.axd規則時，則IIS會選擇把流程交給你自己撰寫的類別！雖然說這樣蠻惡搞的（不會把IIS搞到爛掉），但是實務上還是盡量避免這樣的衝突發生會比較好。</p><p>.axd的使用其實是WebForm末期很方便的做法，無奈Url Rewrite與ASP.NET MVC Routing的崛起與成熟，導致這項技巧沒有受到很多人的重視，如果你有這方面的需求的話，其實它是一種很快速有效率的技巧，另外的缺點就是必須動到web.config，這可能也是他不太受到歡迎的原因。</p><p>相關連結：<a href=/archive2019/20190125.html>在ASP.NET網站中啟用內建的Trace訊息追蹤功能</a></p><h6>.ashx .axd UrlRewrite ASP.NET MVC Routing RouteTable MapHttpRoute DirectCallDLL</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

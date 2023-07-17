@@ -1,0 +1,10 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>Javascript的頁面操作：返回上一頁、重新整理本頁方式整理</h1><p>沒什麼營養，參考參考即可。</p><h2>返回上一頁</h2><ol><li>window.history.go(-1);：</li></ol><p>返回上一頁，form裡面的資料都還在不會重新整理。（不同瀏覽器不同作業系統有不同刷新與否之效果）</p><ol start=2><li>window.history.back();：</li></ol><p>返回上一頁，form裡面的資料會被重新整理而消失。（不同瀏覽器不同作業系統有不同刷新與否之效果）</p><ol start=3><li>window.location.href = document.referrer;：</li></ol><p>返回上一頁，form裡面的資料會被重新整理而消失。（推薦！確定會刷新）</p><h2>備註</h2><p>使用這種JS級的回到上一頁要注意的是，有時候客戶端收到EMAIL去點擊某個連結進入到某個畫面，而該瀏覽器頁籤並沒有任何的歷史紀錄，這時候回到上一頁的功能就可以說是失效了，因此建議改寫成下列思路：</p><pre><code class=language-js>$("#uBack").click(function () {
+  if (!document.referrer) {
+    //1. 通常會發生在使用者收到信件並直接點擊連結進入之時，這時候系統會找不到任何從哪一頁來的資訊。
+    //2. 若直接踢回去上一頁亦不妥，有可能使用者瀏覽器的上一頁是其他非相關網頁，因此建議做法是導向與本頁面最具關聯性的預設頁面
+    window.location.href = '與本頁最具關聯性的預設頁面';
+  } else {
+    window.location.href = document.referrer;
+  }
+});
+</code></pre><h2>重新整理當前頁面</h2><ol start=4><li>window.location.reload();</li></ol><p>重新整理本頁面。</p><h6>HTML5 Javascript BackPage PreviousPage ReloadPage</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

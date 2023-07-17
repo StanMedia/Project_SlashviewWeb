@@ -1,0 +1,48 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>利用LINQ to XML讀取資料</h1><p>XML在現代的眼光來說，可以說已經完全被JSON取代掉了，所以其實用到的機率非常的低，從早期的System.Xml手動在節點之間跳躍操作，到晚期的利用JSON.NET快速地幫我把資料ORM化，其實也都還算適應。但是，由於XML天生帶有Attribute屬性的特性，剛好成為專門處理JSON資料格式的JSON.NET之最大罩門（就算你建立了正確的匿名型別，依然是BUG連連，非常難以處理），因此在這次的CASE中，我試著改用LINQ to XML來進行操作，並將心得化成簡單的範例紀錄於此。</p><p><img src=https://content.slashview.com/img/2019/20190105_01.jpg alt="" /></p><p>首先，先乖乖地引入參考命名空間吧！</p><pre><code class=language-cs>using System.Linq;
+using System.Xml.Linq;
+</code></pre><p>其實來到了LINQ時代，對比之前的手動尋訪XML實在是方便太多了，事實上你也可以完全拋棄xDocument等傳統相關的XML操作觀念了，光一行System.Xml.Linq.XElement.Load就有各式的多載方法，讓你輕鬆地把XML檔案讀近來。但是因為我們這次的目的是概念示範，因此我採用字串假資料建立後，透過System.Xml.Linq.XElement.Parse(XmlString);將其讀入。</p><p>另外在讀取時期值得一提的是，System.Xml.Linq.XElement相關解析XML的能力非常的低，所以一些不應該出現在XML字串裡面的東西，請先期進行處理，例如：＆應該改成＆ａｍｐ；。</p><h2>利用LINQ to XML讀入XML字串資料的範例程式碼</h2><p>其實過程並沒有多複雜，但使用這些操作指令的前提是，你的LINQ要有一定的熟悉度就是了。</p><pre><code class=language-cs>//假XML資料
+string cXML =
+@"
+&lt;data>
+&lt;member cName=""王小明"">
+  &lt;tel>0912-345678&lt;/tel>
+  &lt;device>
+    &lt;item cModel=""MacBook Pro"" />
+    &lt;item cModel=""iPhone Xs+"" />
+  &lt;/device>
+&lt;/member>
+&lt;member cName=""李小華"">
+  &lt;tel>0987-654321&lt;/tel>
+  &lt;device>
+    &lt;item cModel=""Surface Pro"" />
+    &lt;item cModel=""Surface Phone"" />
+  &lt;/device>
+&lt;/member>
+&lt;/data>
+";
+
+//讀入XML
+System.Xml.Linq.XElement oData = System.Xml.Linq.XElement.Parse(cXML);
+
+//LINQ挑選資料
+var oResult = oData.Elements().SelectMany
+( //利用SelectMany的第二個Selector，進行雙層拍扁
+  member => member.Elements("device").Elements("item"),
+  (member, deviceItem) => new
+  {
+    cName = member.Attribute("cName")?.Value,
+    cTel = member.Element("tel").Value,
+    cDevice = deviceItem.Attribute("cModel")?.Value
+  }
+);
+
+//輸出資料
+foreach (var oItem in oResult)
+{
+  Console.WriteLine($"{oItem.cName} / {oItem.cTel} / {oItem.cDevice}");
+}
+</code></pre><p>輸出結果</p><pre><code class=language-txt>王小明 / 0912-345678 / MacBook Pro
+王小明 / 0912-345678 / iPhone Xs+
+李小華 / 0987-654321 / Surface Pro
+李小華 / 0987-654321 / Surface Phone
+</code></pre><h6>LinqToXml XmlRead String SelectMany Select</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

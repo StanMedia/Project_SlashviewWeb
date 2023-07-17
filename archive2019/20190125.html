@@ -1,0 +1,14 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>在ASP.NET網站中啟用內建的Trace訊息追蹤功能</h1><p>說來汗顏，從古老時代.NET Framework 1.1就擁有的內建功能（trace）到今天才將其部屬到實驗環境中，目的為的是追求在日益複雜的網路資料交換架構下，利用「應用程式層級的追蹤」紀錄每一次執行與交叉調用相關網頁下的動作，以及紀錄當下的環境參數與Session記憶體內部相關數據，在此紀錄一下設定方式。</p><p><img src=https://content.slashview.com/img/2019/20190125_01.jpg alt="" /></p><h2>啟用ASP.NET內建的Trace功能</h2><p>很簡單，到Web.Config中寫入下列的XML就可以啟用內建的訊息追蹤功能，完全不需要安裝任何套件。</p><pre><code class=language-xml>&lt;system.web>
+  &lt;trace enabled="true" requestLimit="20" mostRecent="true" localOnly="false" />
+&lt;/system.web>
+</code></pre><p>參數簡略說明如下，如果要詳細說明請自己翻MSDN。</p><ol><li>enabled: 啟用訊息追蹤 / 錯誤追蹤。</li><li>requestLimit: 最大紀錄幾筆資料，建議不要太大以免消耗伺服器資源。</li><li>mostRecent: 是否只記錄現在最即時的資料？這個屬性很有趣，當他是false時且伺服器已經紀錄到達requestLimit上限，則伺服器會自動Disable Trace。如果是true，則伺服器會以requestLimit為容量不斷的紀錄歷程，超過的紀錄會被自動拋棄了。</li><li>localOnly: 安全性設定，如果你要讓遠端可以看到錯誤紀錄，那就設定成false，否則只有運行在本機才可以看到。</li></ol><h2>將自訂字串寫入trace log中</h2><p>其實你沒有太多選擇，要顯示紅色文字程式碼中就寫「Trace.Warn」，一般黑色文字就寫「Trace.Write」，就這麼簡單。</p><h2>觀察Trace時期的相關資訊</h2><p>經過上面的設定後，你的網頁基本上已經被ASP.NET監控中，要查看相關資訊只要在任何地方輸入HTTP handlers的制定指令「trace.axd」，即可看到追蹤畫面。</p><p><img src=https://content.slashview.com/img/2019/20190125_02.jpg alt="" /></p><p>舉凡SessionID、WebForm的每一個事件、所有的ServerControl、CustomControl（ascx）之組合順序、耗用ViewState大小、SessionState狀態、ApplicationState狀態、Cookie狀態、HTTP完整標頭、QueryString集合等，無一不側錄啊！</p><p><img src=https://content.slashview.com/img/2019/20190125_03.jpg alt="" /></p><h2>完全關閉trace.axd路徑</h2><p>trace.axd由於內建於Handler中，因此就算沒有啟用（或設定停用）也會出現YSOD（黃底紅字錯誤畫面），透過下列web.config設定可將其強制從Handler中移除，這樣可以解決掉某些弱點偵測軟體之警告。</p><pre><code class=language-xml>&lt;system.webServer>
+  &lt;handlers>
+    &lt;remove name="TraceHandler-Integrated-4.0" />
+  &lt;/handlers>
+&lt;/system.webServer>
+</code></pre><h2>關於trace.axd名稱覆寫（改寫；更改名稱）</h2><p>其實說實在的，trace.axd到臨時要用的時候，有時候還真的會忘記這個名稱，這時候我們會想如果可以在網址上直接打上一句熟悉的debug字眼那該多好，其實是辦的到的，請參考下列的web.config設定即可。</p><pre><code class=language-xml>&lt;system.webServer>
+  &lt;handlers>
+    &lt;add verb="GET" name="TraceAxdAlias" path="Debug" type="System.Web.Handlers.TraceHandler" />
+  &lt;/handlers>
+&lt;/system.webServer>
+</code></pre><p>相關連結：<a href=/archive2020/20200410.html>.axd：直接在.cs類別（DLL）裡面實作IHttpHandler</a></p><h6>ASP.NET Trace trace.axd logs</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

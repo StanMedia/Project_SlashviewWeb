@@ -1,0 +1,22 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>利用C#呼叫一個外部執行檔，並且偵測是否已經完成執行</h1><p>接到一個與外部廠商界接系統的任務，該廠商不愛用DLL反而愛用EXE來解決問題，於是我們兩造雙方得像傳統銀行一樣的在那邊算字碼數拋接文字檔案，搞得很像摩登原始人，實在給他有夠無奈。但是沒辦法，工作就是用來浪費生命換錢的，我們還是低頭乖乖寫吧！</p><p>有關於調用EXE執行檔案其實並沒有太大的問題，但是「要怎麼樣知道這個EXE執行檔已經執行完成」了，這可是一個大問題，查了一下網路資料，大部分的人都是用同步（Synchronous）呼叫的方式來調用WaitForExit()來解決，程式碼如下：</p><pre><code class=language-cs>System.Diagnostics.Process oProcess = new System.Diagnostics.Process();
+oProcess.WaitForExit();
+</code></pre><p>同步的寫法其實也還好，只是UI方面會有卡住的問題，而且很浪費CPU效能。如果想要在等待運行的過程中把CPU放出來給其他的程式用，那麼你應該學我應該採用非同步（Asynchronous）的寫法才對（或者可以稱作事件觸發、Callback），不多說了，完整程式碼如下：</p><pre><code class=language-cs>System.Diagnostics.Process oProcess = new System.Diagnostics.Process()
+{
+  StartInfo = new System.Diagnostics.ProcessStartInfo()
+  {
+    FileName = @"Demo.exe",
+    Arguments = "",
+    UseShellExecute = false,
+    CreateNoWindow = true,
+    RedirectStandardOutput = true
+  },
+  EnableRaisingEvents = true,
+};
+//委派一個EventHandler
+oProcess.Exited += (s, e) =>  {
+  System.Diagnostics.Process oTemp = (System.Diagnostics.Process)s;
+  oTemp.Close();
+};
+//開始執行
+oProcess.Start();
+</code></pre><h2>執行完畢不代表資源已經釋放</h2><p>當上述確認EXE運行完畢，這並不代表這個EXE所占用的資源都已經讀寫完成並釋出（released），請觀察我第一段的文字中所描述，我們兩造雙方是透過TEXT檔案交換，這意味著，當我確定他的EXE檔已經運行完畢，這並不代表：</p><p>這並不代表：</p><ol><li>TEXT檔案已經完成建立，或建立中。（有可能才剛開始CreateFile）</li><li>TEXT檔案他已經釋放所有的讀寫權限。（有可能他的程式開啟獨佔文字檔模式）</li></ol><p>如果你看到這裡發出會心的一笑，那代表看到這篇文章的你，應該遇到跟我差不多一樣的公司。事實上述的問題還是有解法的，只是已經不是我們這一篇文章討論的重點了，等有機會我再開一篇文章討論之。</p><p>最後送一句話給那寫打算寫EXE檔案的來進行資訊交換的開發者，如果你想要讓別人用你的程式用的更有效能，那麼你應該知道這個世界上，有一種叫做「ProcessStartInfo.RedirectStandardOutput」的屬性。真的！你大可以不必使用超級耗效能的FileIO，讓我們彼此在記憶體中交換資料好嗎？</p><h3>相關參考</h3><ul><li><a href=/archive2016/20160517.html>利用C#呼叫一個外部執行檔，並且偵測是否已經完成執行</a></li><li><a href=/archive2017/20170206.html>透過Console執行Exe檔案，並動態取回回傳值</a></li><li><a href=/archive2023/20230202.html>執行外部EXE檔案時考量逾時、路徑錯置、檔案資源釋放之方法</a></li></ul><h6>.NetFramework C# CallEXE CallExecute Observation DetectHadFinish DetectHadExit</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

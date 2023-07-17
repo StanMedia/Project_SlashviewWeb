@@ -1,0 +1,120 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>C#高速MD5檔案雜湊值產生器</h1><p>今日工作上有一個基於備份的角度，需要一個運算檔案雜湊值得需求，因為有自己的功能性要求，又不放心使用網路上的執行檔，因此乾脆自己寫一個比較妥當。</p><p><img src=https://content.slashview.com/img/2015/20151026_01.jpg alt="" /></p><p>MD5演算法當然是直接使用.NET Framework提供的System.Security.Cryptography命名空間來進行設計啦，但這裡面有一個盲點，就是如果你沒有針對FileStream調整讀取的Buffer緩衝區空間，那麼在預設為4096 Bytes的基礎下，MD5運算的速度整個塞在頻繁的Disk IO上，算GB等級的檔案少說也要30分鐘起跳，真的是慢爆啦！</p><h2>高速MD5運算程式碼</h2><p>其實所謂的高速不過就是把緩衝區調整大一點而已，以下面的程式碼為例，我是用100MB來當作緩存，如果你有自己的需要可以再調整更高一些。另外我也設計了一個運算時的Console狀態顯示指標，以免在運算大型檔案時，會讓人有算到當機的誤解。程式碼如下：</p><pre><code class=language-cs>class Program
+{
+  //運算狀態字元
+  public static int iPrcoessState = 0;
+  //目前座標
+  public static int iCurrY = 0;
+  public static int iCurrX = 0;
+  //狀態更新計時器
+  public static System.Timers.Timer oTimer = new System.Timers.Timer(30);
+  //設定雜湊讀取緩衝區
+  public static int iBufferBytes = 1024 * 1024 * 100; //100MB
+
+  static void Main(string[] args)
+  {
+    //目錄下現有的檔案列舉
+    System.IO.FileInfo[] oFileList;
+    //偵測操作模式
+    if (args.Length == 0)
+    {
+      //使用自動抓取多檔案模式
+      try
+      {
+        System.IO.DirectoryInfo oDI = new System.IO.DirectoryInfo(System.Environment.CurrentDirectory);
+        oFileList = oDI.GetFiles();
+      }
+      catch
+      {
+        WriteLine("列舉執行路徑下所有檔案時發生錯誤。");
+        return;
+      }
+      //查看目錄下是否有檔案
+      if (oFileList.Length == 0) { WriteLine("此執行路徑下沒有任何檔案。"); return; }
+    }
+    else
+    {
+      //使用手動設定單一檔案模式
+      System.Collections.Generic.List&lt;System.IO.FileInfo> oList = new System.Collections.Generic.List&lt;System.IO.FileInfo>();
+      foreach (string cFile in args)
+      {
+        if (System.IO.File.Exists(cFile)) { oList.Add(new System.IO.FileInfo(cFile)); }
+      }
+      if (oList.Count > 0)
+      {
+        oFileList = oList.ToArray();
+      }
+      else
+      {
+        WriteLine("系統偵測到使用單一檔案模式，但所列舉的檔案裡沒有任何檔案是合法存在的。");
+        return;
+      }
+    }
+    //開始進行雜湊工作
+    //掛載事件
+    oTimer.Elapsed += PrintProcessState;
+    //進入處理
+    foreach (System.IO.FileInfo oItem in oFileList)
+    {
+      Write($" # {oItem.Name}: ");
+      iCurrY = CursorTop;
+      iCurrX = CursorLeft;
+      //啟動計時器
+      oTimer.Start();
+      string cHash = "";
+      using (System.IO.FileStream oFS = new System.IO.FileStream(
+        oItem.Name,
+        System.IO.FileMode.Open,
+        System.IO.FileAccess.Read,
+        System.IO.FileShare.ReadWrite,
+        iBufferBytes))
+      {
+        System.Security.Cryptography.MD5 oHash = System.Security.Cryptography.MD5.Create();
+        cHash = BitConverter.ToString(oHash.ComputeHash(oFS)).Replace("-", "");
+      }
+      //終止計時器
+      oTimer.Stop();
+      //將運算狀態指示器座標洗掉
+      CursorTop = iCurrY;
+      CursorLeft = iCurrX;
+      //印出雜湊
+      WriteLine(cHash);
+    }
+    //關掉資源
+    oTimer = null;
+  }
+
+  /// &lt;summary>
+  /// 純粹顯示目前的執行狀況
+  /// &lt;/summary>
+  /// &lt;param name="sender">&lt;/param>
+  /// &lt;param name="e">&lt;/param>
+  public static void PrintProcessState(Object sender, EventArgs e)
+  {
+    CursorTop = iCurrY;
+    CursorLeft = iCurrX;
+    string cTemp = "";
+    switch (iPrcoessState)
+    {
+      case 0:
+        cTemp = @"-";
+        iPrcoessState++;
+        break;
+      case 1:
+        cTemp = @"\";
+        iPrcoessState++;
+        break;
+      case 2:
+        cTemp = @"|";
+        iPrcoessState++;
+        break;
+      case 3:
+        cTemp = @"/";
+        iPrcoessState = 0;
+        break;
+    }
+    Write(cTemp);
+  }
+}  
+</code></pre><p>經過實際運算測試，拿一個「CentOS-7-x86_64-DVD-1503-01.ISO」大約4.xGB檔案來運算，在4代i7等級的CPU運算時間落在8秒到9秒之間，算是可以接受的速度了。</p><pre><code class=language-txt>C:\>MD5Hash.exe CentOS-7-x86_64-DVD-1503-01.iso
+ # CentOS-7-x86_64-DVD-1503-01.iso: 99E450FB1B22D2E528757653FCBF5FDC
+</code></pre><p>懶得編譯的人，我這邊也有將編譯完成的檔案（bin、exe）上傳了，歡迎下載使用。支援兩種動作，無參數的模式下，會自動抓取執行檔案現在的目錄下的所有檔案，全部算一次MD5；有參數的模式下，參數即為檔案名稱，他只會運算你指定檔案的雜湊值，例如：「MD5Hash.exe A.zip B.tar」。</p><p><a href=https://content.slashview.com/file/20151026/MD5Hash.zip>Fast MD5 hashcode Download</a></p><h6>System.Security.Cryptography Fast Boost MD5 SHA1 Hash</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

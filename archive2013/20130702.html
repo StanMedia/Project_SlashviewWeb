@@ -1,0 +1,20 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>Java初探：package與classpath</h1><p>這一個部份是我很討厭Java的一點，就是他把namespace的觀念跟資料夾綁在一起，是很好找啦，但是何必呢？能夠建構出龐大的類別繼承的程式設計師，會不懂系統檔案的管理？這樣的做法多數的時刻會引起不必要的麻煩。舉例來說好了，System.Utility跟System.Utility.Code就不可以被放在同一個目錄下，但多數的程式設計師還是希望資料夾的管理越扁平化越好。</p><p><img src=https://content.slashview.com/img/2013/20130701_01.jpg alt="" /></p><h2>package</h2><p>廢話不多說了，先來討論package。如上圖所示，我們建立了一個叫做javaTest的資料夾，並且把我們等一下要寫的程式寫在這裡面，同時也在這個資料夾中進行編譯的動作。所以在C:\javaTest的目錄下，會出現一個PrintString.java與編譯後的PrintString.class類別檔。程式碼如下：</p><pre><code class=language-java>package System.Utility;
+
+public class PrintString {
+  public static void main(String[] args) {
+    System.out.println("Hello!");
+  }
+}
+</code></pre><p>大家可以從上面的程式碼發現，第一行出現了package的關鍵字，這代表這個類別的名稱空間namespace是在System.Utility下，依照java的蠢慣例，也就是說你應該把PrintString.java、PrintString.class這兩個檔案放在C:\javaTest\System\Utility目錄下，原因是比較好管理。當然啦，真正運行時是看*.class檔案，所以你的*.java原始碼檔案要不要一起放在這個目錄下其實無所謂，只是一般來說我們不會這樣做就是了。</p><p>所以搬移後的目錄變成這樣：</p><p><img src=https://content.slashview.com/img/2013/20130701_02.jpg alt="" /></p><p>接下來我們就很開心的在命令模式下，切到C:\javaTest\System\Utility下，然後開開心心的打下我們熟悉的運行指令。先不要開心，現在才是苦難的開始，首先你會收到這個錯誤訊息「Exception in thread "main" java.lang.NoClassDefFoundError」。</p><p>接下來，我們會想到說，唉呦對厚，我的類別應該要冠上namespace了，所以我們改成輸入全名「java System.Utility.PrintString」，一輸入後噔噔，得到下列錯誤訊息：「錯誤: 找不到或無法載入主要類別。」</p><p><img src=https://content.slashview.com/img/2013/20130701_03.jpg alt="" /></p><p>然後我們再想到，對厚，之前不是說java是用目錄區分namespace的嘛，也就是說我們在C:\javaTest\System\Utility運行java System.Utility.PrintString，也就是他會在這個目錄下再去找子目錄，也就是說他試圖找下列目錄運行類別「C:\javaTest\System\Utility\System\Utility」，那當然是找不到的啦！為了解決這個問題，所以我們應該要退回C:\javaTest目錄下，再輸入「java System.Utility.PrintString」，就可以順利的看到Hello啦！</p><p><img src=https://content.slashview.com/img/2013/20130701_04.jpg alt="" /></p><p>蠢事正要開始，你可能會想說，不是吧？那我在「C:\javaTest\System\Utility」就不能運行嗎？那我在「C:\」就不能運行嗎？之類的問題，我只能說，Java並沒有你想像中聰明，它根本沒辦法知道你現在的目錄結構，也不會主動去探索感知，你唯一能夠跟它說的，就是告訴它要從哪裡為基準，然後開始運行類別。</p><h2>ClassPath</h2><p>這個參數是掛在java.exe下，也就是告訴它要從哪裡為基準，然後開始運行類別的指令。一般來說都會直接用縮寫「-cp 路徑」來表示。以剛才的例子，如果你堅持要在「C:\javaTest\System\Utility」下運行，則下列的指令可以協助你成功運行。</p><pre><code class=language-txt>/* 直接從C碟開始指定最快最直接 */
+C:\javaTest\System\Utility>java -cp C:\javaTest System.Utility.PrintString
+Hello!
+
+/* 其中的..\是退回上一層目錄的意思，因為範例中需要有兩層，故重覆兩次。 */
+C:\javaTest\System\Utility>java -cp ..\..\ System.Utility.PrintString
+Hello!
+
+/* 就算是身在C碟根目錄，一樣是可以跑的 */
+C:\javaTest\System\Utility>cd \
+C:\>java -cp C:\javaTest System.Utility.PrintString
+Hello!
+</code></pre><p>以上就是package跟ClassPath的介紹，相信應該比很多言不及義的書或投影片要好上很多吧！初學時曾經看過一本SCJP的書，講的亂七八糟根本就是在寫給作者自己看的，差點沒吐血。Java並不是我在主力使用的語言，在寫下這篇文章後或許過了多年我自己也會忘記這些鳥規定，因此記錄起來可以讓自己以後快速回憶用。</p><h2>可再接續參考：</h2><ul><li><a href=/archive2013/20130703.html>Java初探：基於package之import使用方式</a></li><li><a href=/archive2013/20130705.html>Java初探：利用跨package之類別編譯，來展示成員存取限制（權限）</a></li></ul><h6>Java SCJP package classpath -cp Path</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

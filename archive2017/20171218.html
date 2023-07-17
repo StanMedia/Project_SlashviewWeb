@@ -1,0 +1,38 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>利用各國的地區文化慣例來進行日期的輸出並進行客製化</h1><p>在一般的狀態下，我們在日期的輸出情下都是採用.ToString("yyyyMMdd HH:mm:ss")來使用，但現在遇到一個特別的Case，是要依據不同的語系進行特定的日期表示，這個網頁將使用System.Globalization.CultureInfo類別並以台灣作為範例，但是因為同事寫的輸出格式不太符合我對於日期格式的莫名龜毛要求，因此稍微改了一下程式碼，並展示如何進行日期時間的輸出改寫。</p><p><img src=https://content.slashview.com/img/2017/20171218_01.jpg alt="" /></p><h2>調用.NET Framework的CultureInfo來格式化輸出字串</h2><p>方便的NET Framework已經為我們提供全球化的資訊，基本上只要調用這個類別就可以進行格式化帶入「System.Globalization.CultureInfo("國別資訊")」。</p><p>接下來我們寫一個簡短的程式碼，用來進行日期縮短的輸出，規則如下：</p><ol><li>同年月日：輸出時間。</li><li>同年月：輸出月日。</li><li>不同年：輸出年月。</li><li>進行客製化：所有年月日輸出，只要數字是個位數的，一律前面補0。</li><li>進行客製化：所有時間輸出，一律採用24小時制。</li></ol><p>程式碼如下：</p><pre><code class=language-cs>static public string TSimplyDate(System.DateTime dSource, System.Globalization.CultureInfo oCultureInfo = null)
+{
+  if (oCultureInfo == null)
+  {
+    oCultureInfo = new System.Globalization.CultureInfo("zh-TW");
+    oCultureInfo.DateTimeFormat.MonthDayPattern  = "MM'月'dd'日'";
+    oCultureInfo.DateTimeFormat.YearMonthPattern = "yyyy'年'MM'月'";
+    oCultureInfo.DateTimeFormat.ShortTimePattern = "HH:mm";
+  }
+
+  System.DateTime oNow = System.DateTime.Now;
+  string cCultureExpression = "{0:yyyyMMdd HH:mm:ss}";
+
+  if (oNow.Year == dSource.Year)
+  { //同年份
+    if (oNow.Month == dSource.Month)
+    {
+      if (oNow.Day == dSource.Day)
+      { cCultureExpression = "{0:t}"; } //同月同日
+      else
+      { cCultureExpression = "{0:m}"; } //同月不同日
+    }
+    else                          
+    { cCultureExpression = "{0:m}"; }   //不同月份
+  }
+  else
+  { cCultureExpression = "{0:y}"; }     //不同年份
+  
+  //回覆轉換後資料
+  return string.Format(oCultureInfo, cCultureExpression, dSource);
+}
+</code></pre><p>調用後輸出結果大致上如下：</p><pre><code class=language-txt>//同年月日：
+06:36      //原本會輸出成：上午 12:00
+//同年月：
+12月09日  //原本會輸出成：12月9日
+//不同年：
+2016年12月
+</code></pre><h6>客製化時間日期 具備地區語言化的時間日期 System.Globalization.CultureInfo</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

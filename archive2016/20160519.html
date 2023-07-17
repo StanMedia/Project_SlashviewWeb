@@ -1,0 +1,36 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>利用字串名稱（String）來動態取出某一個類別下的欄位或屬性的值（Variable value）</h1><p>有沒有可能，我們透過一個單一的方法，以字串（變數的名稱）的方式傳入某類別的方法裡面，以模擬的方式去取出現在裡面被設定成private、const的欄位（Fields）？理論上這是一個不應該存在的狀態，一個物件的某個欄位、屬性、方法被封裝起來，就是他不希望你直接存取個。你今天去亂動就是不對的作法。那為何我們還是想要亂搞呢？理由很簡單，因為我們懶惰。（我是說我啦！）</p><p><img src=https://content.slashview.com/img/2016/20160519_01.jpg alt="" /></p><p>假設一個情境，如下列程式碼：</p><pre><code class=language-cs>class Test
+{
+  private const int _iMoney1 = 10;
+  private const int _iMoney2 = 20;
+  private const int _iMoney3 = 30;
+  private const int _iMoney4 = 40;
+  private const int _iMoney5 = 50;
+}
+</code></pre><p>我想要在外部調用這個Test類別的的私有欄位，但是又不想很蠢的在那邊一行行寫iMoney get();的相關程式碼（以我自己遇到的例子，私有的常數高達２０幾個），在確定這個類別只有「自己人」在「頭腦清楚」的狀況才會使用的話，其實我們可以寫出一個萬用取欄位值的方法，你猜得沒錯，System.Reflection反射（反映）大神又要出動了。</p><p>利用System.Reflection來達成私有常數欄位的回傳之程式碼如下，要特別注意System.Reflection.BindingFlags這邊的設定，不然你會撈不到自己想要的欄位喔（所以我說這種做法很危險）：</p><pre><code class=language-cs>class Test
+{
+  private const int _iMoney1 = 10;
+  private const int _iMoney2 = 20;
+  private const int _iMoney3 = 30;
+  private const int _iMoney4 = 40;
+  private const int _iMoney5 = 50;
+  public int getConst(string cTemp)
+  {
+    return System.Convert.ToInt32(
+      this.GetType()
+      .GetField(
+        cTemp,
+        System.Reflection.BindingFlags.NonPublic |
+        System.Reflection.BindingFlags.Instance |
+        System.Reflection.BindingFlags.Static)
+      .GetValue(this)
+    );
+  }
+}
+</code></pre><p>取得欄位的程式碼，相信不用多說應該都了解吧！</p><pre><code class=language-cs>static void Main(string[] args)
+{
+  Test oTemp = new Test();
+  //會印出50
+  WriteLine(oTemp.getConst("_iMoney5"));
+  Read();
+}
+</code></pre><p>最後再次聲明，這種做法僅限於利用這個類別的程式設計師都是自己人，不然出事（Exception）是遲早且必然的事情，切記！</p><h6>System.Reflection BindingFlags StringToVariableName AccessingVariable UsingString Containing VariableName</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

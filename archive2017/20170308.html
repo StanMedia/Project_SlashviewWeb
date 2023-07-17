@@ -1,0 +1,55 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>在ASP.NET WebForm架構下，利用WebMethod實作AJAX</h1><p>身為ASP.NET界的沙場老將「WebForm」架構，本來以為對它的了解已經略顯透徹，沒想到今天在網路搜尋SPA（Single Page Application）架構時，看到一個自己從來沒有用過的方法叫做WebMethod，雖然經過了解後日後採用的可能性也不大，不過還是練習一下做功課，以備日後不時之需。</p><p><img src=https://content.slashview.com/img/2017/20170308_01.jpg alt="" /></p><p>WebMethod簡單的說，就是透過前端的HTML Button直接調用後端（伺服器端）的Page class static Method，屌啊！</p><h2>如何不透過runat="server"的按鈕，來調用runat="server"的方法？</h2><p>其實有很多方法，例如可以透過偷偷呼叫WebForm底層的__doPostBack來解決，但請注意，WebMethod完全不是這麼一回事喔！（如果是這樣的話也不用在特地寫一篇文章介紹了）</p><p>Step 1. 伺服器端的方法撰寫方式（Sample.aspx）：</p><pre><code class=language-cs>&lt;script runat="server">
+  public void page_load(Object sender, EventArgs e)
+  {
+    //看到這個方法，就可以知道這個是WebForm無誤
+  }
+
+  [System.Web.Services.WebMethod(enableSession: true)]
+  public static String TestMethod(int iX, int iY)
+  {
+    HttpContext.Current.Session["TestSession"] = HttpContext.Current.Session["TestSession"] ?? "YA! I got session. " + System.DateTime.Now;
+    return Newtonsoft.Json.JsonConvert.SerializeObject(new {
+      cName = "中文字串",
+      iMoney = iX + iY,
+      bSex = false,
+      cSession = HttpContext.Current.Session["TestSession"]
+    });
+  }
+&lt;/script>
+</code></pre><p>上述程式碼值得注意的事項：</p><ol><li>WebMethod的驅動方法很簡單，就是設定[System.Web.Services.WebMethod]屬性即可。</li><li>enableSession: true表示這個方法需要使用到Page.Session。</li><li>在靜態方法裡面調用Session，要用HttpContext.Current.Session來取用。</li><li>方法中定義的傳入引數，如果跟前端調用時期傳入的JSON不匹配，那就是直接忽略嘍。</li><li>打回前端可以設定成String即可（JSON本來就是字串）。</li><li>打回前端，可以調用JSON.NET來幫你序列化物件會比較方便。</li></ol><p>Step 2. 前端的JavaScript程式碼寫法：</p><pre><code class=language-js>$(function() {
+  $('#ButtonCal').click(function() {
+    //取得用戶輸入的參數
+    var cJSON = { 'iX': parseInt($('#iX').val()), 'iY': parseInt($('#iY').val()) };
+    //呼叫API
+    $.ajax({
+      type: "POST",
+      url: "Sample.aspx/TestMethod",
+      data: JSON.stringify(cJSON),
+      contentType: "application/json; charset=utf-8",
+      dataType: "json",
+      success: function(response) {
+        if (response != null &amp;&amp; response.d != null) {
+          var data = response.d;
+          data = $.parseJSON(data);
+          $("#uMsg").html(
+            data.cName + "&lt;br>" +
+            data.iMoney + "&lt;br>" +
+            data.bSex + "&lt;br>" +
+            data.cSession
+          );
+        }
+      }
+    });
+    //如果前端觸發按鈕有被包在Form內的話，中斷它去進行表單送出
+    return false;
+  });
+});
+</code></pre><p>上述程式碼值得注意的事項：</p><ol><li>從前端界面拿到的資料，組合成JSON字串後，記得使用JSON.stringify()將其序列化。</li><li>透過正常的AJAX Post即可調用WebMethod，調用方式是「你這隻程式碼.aspx/你的後端方法名稱」，這很重要！</li><li>WebMethod回傳的JSON資料會包一個大腸頭叫做「d」（無言），大腸頭的定義請搜尋本網站。</li><li>收下來的資料，記得使用$.parseJSON()解回實體物件。</li></ol><p>Step 3. 前端HTML寫法：</p><pre><code class=language-html>&lt;form>
+  &lt;div>
+    &lt;p>請輸入Ｘ：&lt;input type="text" id="iX" />&lt;/p>
+    &lt;p>請輸入Ｙ：&lt;input type="text" id="iY" />&lt;/p>
+    &lt;p>&lt;button id="ButtonCal">Test WebMethod&lt;/button>&lt;/p>
+    &lt;p id="uMsg">&lt;/p>
+  &lt;/div>
+&lt;/form>
+</code></pre><p>上述程式碼值得注意的事項：</p><ul><li>基本上就是大家熟悉的HTML，唯一要注意的是，如果要觸發WebMethod事件的按鈕有被form標籤包起來，那麼這個按鈕本身有可能會觸發整個form submit提交，進而讓整個頁面刷新重新整理一次。因此，若有這種架構性的問題，請記得自己在JavaScript中jQuery做完AJAX時，進行一下超級中斷「return false;」。</li></ul><p>大家來看一下完成結果吧！結果非常的棒！</p><p><img src=https://content.slashview.com/img/2017/20170308_02.jpg alt="" /></p><h2>最後來談談使用WebMethod的缺點與優點</h2><ol><li>缺點：無助於資料分離架構，資料只有真正跟頁面程式碼脫鉤，才可以達到真正的資料重用。（例如：網站、手機都共用同一個JSON）</li><li>缺點：就算不考慮資料分離，其實把前後端、AJAX全部同一支程式碼，在檢視程式碼上也是顯得有點亂。獨立一個ASPX或ASHX頁面，透過JavaScript去調用顯得清爽許多。</li><li>優點：當然就是目錄結構整潔，單一隻程式碼從頭Debug到尾就是爽。（與上面的缺點互斥）</li><li>優點：對了，忘了說一點，WebMethod跟PostBack並不會互相衝突，所以可以放心使用（包括Get URL Parameters都可以）。</li></ol><h3>相關連結</h3><p><a href=/archive2021/20210811.html>傳送陣列或資料物件集合至WebMethod</a></p><h6>ASP.NET WebForm WebMethod JSON</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

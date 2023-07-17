@@ -1,0 +1,76 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>泛型委派（General Delegates）之研究</h1><p>泛型委派（或稱通用委派）（General Delegates）與黏巴達表示式（Lambda Expressions）兩者，在C# 3.0時代後之程式碼，簡直是烽火連天的出現在各大論壇，好像現在的程式不寫成這樣就不夠潮的感覺，沒有了它LINQ可是連動都沒辦法動喔！</p><p>泛型（通用）委派General Delegates分成四種型態：（Since .NET Framework 3.5）</p><ol><li>不需要傳回值的委派：<code>Action</code>, <code>Action&lt;T></code>, <code>Action&lt;T1, T2></code>, … <code>Action&lt;T1, …, T16></code></li><li>需要傳回值的委派：<code>Func&lt;TResult></code>, <code>Func&lt;T, TResult></code>, <code>Func&lt;T1, T2, TResult></code>, … <code>Func&lt;T1, …, T16, TResult></code></li><li>需要傳回布林值的委派（特別型態）：<code>Predicate&lt;T></code></li><li>事件的委派，T為事件參數：<code>EventHandler</code>, <code>EventHandler&lt;TEventArgs></code></li></ol><p>話不多說，直接看下列程式碼吧！</p><pre><code class=language-cs>using System;
+
+namespace DelegateTesting
+{
+  class Program
+  {
+    //基本型委派聲明
+    public delegate void BasicDelegate(int x);
+
+    static void Main(string[] args)
+    {
+      //基本型委派：需要聲明（delegate）
+      //這樣寫也可以 BasicDelegate oTemp_0 = new BasicDelegate(Delegate_0);
+      BasicDelegate oTemp_0 = Delegate_0;
+      oTemp_0(10);
+
+      //泛型委派：Action式：不需要聲明（delegate）
+      Action&lt;int> oTemp_1 = new Action&lt;int>(Action_1);
+      oTemp_1(20);
+
+      //泛型委派：Action式：不需要聲明（delegate）：雙參數
+      Action&lt;int, int> oTemp_2 = Action_2;
+      oTemp_2(30, 40);
+
+      //泛型委派：Action式：不需要聲明（delegate）：三參數：使用匿名函式（黏巴達表示式、Lambda Expressions）
+      //如此一來可以省掉委派對像之函數宣告
+      Action&lt;string, bool, int> oTemp_3 = (x, y, z) => {
+        string cTemp;
+        cTemp  = "我叫：" + x + "、";
+        cTemp += "我是：" + y + "生、";  //這裡是示範，不要太在乎
+        cTemp += "今年：" + z + "歲。";
+        Console.WriteLine(cTemp);
+      };
+      oTemp_3("王小明", true, 50);
+
+      //泛型委派：Func式：不需要聲明（delegate）：雙參數
+      Func&lt;int, bool> oTemp_4 = x => { return (x > 100); };
+      Console.WriteLine("60是否有大於100: {0}", oTemp_4(60));
+
+      //泛型委派：Func式：不需要聲明（delegate）：三參數
+      Func&lt;string, int, System.Collections.ArrayList> oTemp_5 = (x, y) => {
+        System.Collections.ArrayList oAL = new System.Collections.ArrayList();
+        for (int z = 0; z &lt; y; z++) { oAL.Add(x + "；運行次數: " + z); }
+        return oAL;
+      };
+      foreach (var item in oTemp_5("迴圈", 7)) { Console.WriteLine(item); }
+
+      //泛型委派：Predicate式：不需要聲明（delegate）：單參數（永遠只有一個參數）
+      Predicate&lt;int> oTemp_6 = x => {
+        if (x > 100) { return true; } else { return false; }
+      };
+      Console.WriteLine("80是否有大於100: {0}", oTemp_6(80));
+
+      Console.Read();
+    }
+
+    public static void Delegate_0(int x) { Console.WriteLine("Basic Delegate: {0}", x); }
+    public static void Action_1(int x) { Console.WriteLine("General Delegate (Action): {0}", x); }
+    public static void Action_2(int x, int y) { Console.WriteLine("General Delegate (Action): {0}", x + y); }
+
+  }
+}
+</code></pre><p>以下是輸出結果：</p><pre><code class=language-txt>Basic Delegate: 10
+General Delegate (Action): 20
+General Delegate (Action): 70
+我叫：王小明、我是：True生、今年：50歲。
+60是否有大於100: False
+迴圈；運行次數: 0
+迴圈；運行次數: 1
+迴圈；運行次數: 2
+迴圈；運行次數: 3
+迴圈；運行次數: 4
+迴圈；運行次數: 5
+迴圈；運行次數: 6
+80是否有大於100: False
+</code></pre><p>第一種形態是最原始的委派寫法，通常出現在C# 1.0時代，這樣的寫法我個人覺得沒有什麼大的不妥，甚至覺得易讀性是很夠的（至少一個還沒有接觸過委派寫法的人來看，應該都看的懂）。但是缺點就是程式設計師必須要在很多地方開刀，例如你要先聲明（delegate）一個function（BasicDelegate），然後再用這個function去模擬類別實體化一個操作函數（oTemp_0），然後再將它派掛給一個正規的function去運行（Delegate_0），光用說就很累了，更別說要做很多程式設計師最不願意的「命名」工作。</p><p>進入到C# 2.0至3.0時代後，這樣的寫法有了演變，例如泛型委派的寫法，就徹底的讓delegate這個字眼消失，然後Lambda Expressions這種匿名函式的寫法，又讓獨立的function宣告必要性消失，讓C# 1.0時代的問題都慢慢的被解決了。當然，原本的優點也瞬間變成缺點，就是程式的易讀性降低了。</p><h2>泛型委派Action&lt;T, T>在編譯時期發生錯誤</h2><p>可能會有使用者在VisualStudio中編輯泛型委派<code>Action&lt;T, T></code>程式碼時，有發現很奇怪的問題，那就是Action單參數時可以正常工作，雙參數時（例如：<code>Action&lt;T, T></code>）就會發生問題，如下圖發生的問題：</p><p><img src=https://content.slashview.com/img/2014/20141117_01.jpg alt="" /></p><p>錯誤訊息載明：使用泛型類型'System.Action'時需要1個類型引數，這問題就是：請把你的.NET Framework 2.0運行環境升到.NET Framework 3.5以上。原因不需要多說明，請見下圖：</p><p><img src=https://content.slashview.com/img/2014/20141117_02.jpg alt="" /></p><p>相關連結：</p><ul><li><a href=/archive2014/20140514.html>C#之委派之演進史與匿名函式之應用</a></li><li><a href=/archive2014/20141201.html>利用Predicate泛型委派，進行類別方法委派之實作</a></li><li><a href=/archive2019/20190111.html>新舊委派的撰寫與呼叫方式：以購物車折扣為例</a></li><li><a href=/archive2021/20210111.html>利用委派讓List(T)可以使用Lambda運算式寫法</a></li></ul><h6>C# AnonymousFunctions LambdaExpressions GeneralDelegates Action Func Predicate</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

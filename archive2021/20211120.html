@@ -1,0 +1,108 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>手動建立DataTable資料與動態生成ExpandoObject屬性</h1><p>這篇文章的出現是基於某個專案使用了來自文字檔案作為資料庫所衍生的產物，沒有甚麼特別的內容，紀錄最主要的目的是把語法使用方式記憶起來，並且把思路過程中的盲點做一次檢討，供給日後參考。</p><h2>有關於鍵值重複的議題</h2><p>最初的發想是想要允許使用者可以有如EXCEL一樣自由的定義欄位標題，就算重複也沒關係，而基於這個條件下自然是不可能使用IDictionary系列的集合，因此開始往NameValueCollection這個方向發想，發現所有的解決方案都是請你另外處理命名屬性成唯一值（並廢話般的警告你會有鍵值重複的問題），進而再尋找Json.NET之序列化物件JsonConvert.SerializeObject為何只能支援IDictionary的疑慮時，腦海突然猛然一震！</p><p>豬頭，我心中一直在想幫使用者創造下方的JSON資料表示環境，但事實上JSON Data也不可能讓你有重複的屬性名稱啊！</p><pre><code class=language-json>//錯誤：我當下心中的想法
+{
+  name: "John1",
+  age: 18,
+  name: "John2"
+}
+</code></pre><pre><code class=language-json>//正確：事實的資料會等效於
+{
+  age: 18,
+  name: "John2" //name: "John1"被覆蓋了
+}
+</code></pre><p>另外一面，我希望透過文字檔案快速地把資料灌入動態創建的DataTable，這邊也有一個以前從來都沒有注意到的細節值得被記錄起來：我一直以為DataColumn名稱是可以重複的，但事實不然，DataColumnName必須是唯一值，插入重複的名稱會跳例外喔！唯一可以動手操刀的只剩下Caption這個屬性（相當於顯示端的屬性）。</p><h2>文字資料動態轉DataTable並透過ExpandoObject客製化成想要的列舉型態</h2><p>最終，把程式碼紀錄在下方供給日後參考，這段程式碼沒有甚麼特別的技術性，但有許多有趣的寫法可供一覽。</p><ol><li>快速建立DataTable欄位屬性與名稱等結構。</li><li>快速填充一列Row資料進入DataTable。</li><li>DataTable透過System.Data.DataSetExtensions的擴充方法，可以AsEnumerable()轉換IEnumerable集合化。</li><li>動態生成ExpandoObject的屬性的方法，原來ExpandoObject有實作<code>IDictionary&lt;string, object></code>介面。</li><li>強大的Json.NET其實可以直接把DataTable序列化。</li></ol><p>程式碼範例：</p><pre><code class=language-cs>/* ***** DataTable建立與填充值 ***** */
+var oDT = new System.Data.DataTable();
+//新增欄位結構
+try
+{
+  oDT.Columns.AddRange(
+    new System.Collections.Generic.List&lt;string>() { "帳號,密碼,姓名,錄取部門,成績1,成績2" }
+    .FirstOrDefault()
+    .Split(",".ToCharArray())
+    .Select(x => new System.Data.DataColumn(x, typeof(string)))
+    .ToArray()
+  );
+}
+catch (Exception oEx)
+{
+  WriteLine($"發生錯誤，請檢查是否欄位名稱重複：{oEx.Message}");
+  ReadKey(); return;
+}
+
+//新增資料
+oDT.Rows.Add("user1,password1,王小明,A部門,99,88".Split(",".ToCharArray()));
+oDT.Rows.Add("user1,password1,王小明,B部門,77,66".Split(",".ToCharArray()));
+oDT.Rows.Add("user2,password2,李大華,C部門,55,44".Split(",".ToCharArray()));
+
+/* ***** 篩選資料並手動整理成動態物件集合 ***** */
+var oResult = oDT
+  .AsEnumerable()
+  .Where(x =>
+    //第一欄位驗證
+    (x.Field&lt;string>(0).ToUpper() == "user1".ToUpper())
+    &amp;&amp;
+    //第二欄位驗證
+    (x.Field&lt;string>(1).ToUpper() == "password1".ToUpper())
+  )
+  .Select(x =>
+    {
+      dynamic oTemp = new System.Dynamic.ExpandoObject();
+      foreach (System.Data.DataColumn oColumn in oDT.Columns)
+      {
+        ((System.Collections.Generic.IDictionary&lt;string, object>)oTemp).Add($"欄位名稱｜{oColumn.ColumnName}", x[oColumn.ColumnName]);
+      }
+      return oTemp;
+    }
+  );
+
+//將資料序列化
+WriteLine("原始資料：");
+WriteLine(Newtonsoft.Json.JsonConvert.SerializeObject(oDT, Newtonsoft.Json.Formatting.Indented));
+WriteLine("自定義且篩選過的dynamic資料：");
+WriteLine(Newtonsoft.Json.JsonConvert.SerializeObject(oResult, Newtonsoft.Json.Formatting.Indented));
+ReadKey();
+</code></pre><p>輸出畫面：</p><pre><code class=language-json>原始資料：
+[
+  {
+    "帳號": "user1",
+    "密碼": "password1",
+    "姓名": "王小明",
+    "錄取部門": "A部門",
+    "成績1": "99",
+    "成績2": "88"
+  },
+  {
+    "帳號": "user1",
+    "密碼": "password1",
+    "姓名": "王小明",
+    "錄取部門": "B部門",
+    "成績1": "77",
+    "成績2": "66"
+  },
+  {
+    "帳號": "user2",
+    "密碼": "password2",
+    "姓名": "李大華",
+    "錄取部門": "C部門",
+    "成績1": "55",
+    "成績2": "44"
+  }
+]
+</code></pre><p>自定義且篩選過的dynamic資料：</p><pre><code class=language-json>[
+  {
+    "欄位名稱｜帳號": "user1",
+    "欄位名稱｜密碼": "password1",
+    "欄位名稱｜姓名": "王小明",
+    "欄位名稱｜錄取部門": "A部門",
+    "欄位名稱｜成績1": "99",
+    "欄位名稱｜成績2": "88"
+  },
+  {
+    "欄位名稱｜帳號": "user1",
+    "欄位名稱｜密碼": "password1",
+    "欄位名稱｜姓名": "王小明",
+    "欄位名稱｜錄取部門": "B部門",
+    "欄位名稱｜成績1": "77",
+    "欄位名稱｜成績2": "66"
+  }
+]
+</code></pre><h2>附註</h2><p>若看到文末你還是想要用Caption屬性來完成上面那個JSON表示的格式，應該可以死了這條心，因為JOSN會有覆蓋屬性的問題發生，除非去改變JSON的表示格式（例如改用陣列的形式）不然永遠無解。</p><h3>相關連結</h3><ul><li><a href=/archive2015/20150729.html>利用ExpandoObject類別，在執行期動態加入和移除成員</a></li><li><a href=/archive2021/20211120.html>手動建立DataTable資料與動態生成ExpandoObject屬性</a></li><li><a href=/archive2021/20210224.html>在C#的SwitchExpression下使用模式比對（Pattern Matching）</a></li><li><a href=/archive2022/20221029.html>C#如何將匿名型別（AnonymousTypes）傳遞到方法中</a></li></ul><h6>TextToDataTableExpress FastCreateDataTableSchemaAndData DataTableToIEnumerable DynamicExpandoObject ProgrammingToSetExpandoObjectDynamically</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

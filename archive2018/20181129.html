@@ -1,0 +1,25 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>讓GetType()可以支援switch語法</h1><p>因為某種資料庫欄位型別自動化轉換問題，因此需要利用GetType()進行欄位類型的分析，例如如果是string就OO，如果是Int32就XX...等。乍聽之下好像很簡單，只要去GetType()後再利用typeof()去比對就好，當然，這樣的想法在傳統的if下是沒有問題的，但在switch下卻是無法執行。</p><p><img src=https://content.slashview.com/img/2018/20181129_01.jpg alt="" /></p><h2>傳統的GetType()上switch陳述式寫法</h2><pre><code class=language-cs>switch (oTemp.GetType().ToString())
+{
+  case "System.String":
+    ...
+    break;
+  case "System.Int32":
+    ...
+    break;
+  case "System.DateTime":
+    ...
+    break;
+}
+</code></pre><p>看一下上面的程式碼，看起來還算簡潔，但是case那邊的字串實在看起來讓人覺得很礙眼，不僅無法使用IntelliSense來撰寫，以字串的型態來判斷的話，容易因為打錯字而在執行期才把臭蟲爆出來，這簡直是無奈啊！</p><h2>利用GetTypeCode來支援switch語法</h2><p>好在天無絕人之路，萬能的.NET Framework在1.1時期就有支援System.Type.GetTypeCode，用以求取.NET基礎類型（原生型別），這簡直是太棒了。但是不要高興得太早，如果是自訂的型別（Custom Class）就只能殘念了。</p><p>範例程式碼請看下方：</p><pre><code class=language-cs>switch (System.Type.GetTypeCode(oTemp.GetType()))
+{
+  case System.TypeCode.String:
+    ...
+    break;
+  case System.TypeCode.Int32:
+    ...
+    break;
+  case System.TypeCode.DateTime:
+    ...
+    break;
+}
+</code></pre><p>可以回歸用C#的列舉（Enum）來表示雀屏中選的型別，這代表可以大方的使用IntelliSense來協助你寫程式，這下再也不用怕手殘打錯字了，真是太妙了！</p><p>參考連結：<a href=https://docs.microsoft.com/en-us/dotnet/api/system.typecode>MSDN System.TypeCode Enum</a></p><h6>C# ValueType GetType() typeof() Switch SelectionStatement</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

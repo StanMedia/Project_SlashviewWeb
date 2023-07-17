@@ -1,0 +1,44 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>SQL筆記：利用SQL CLR打造繁體轉簡體文字的純量函式</h1><p>一直以來對於T-SQL的語法樣式很感冒，今天透過同事的介紹，發現了可以用.NET Framework的方法，撰寫DLL部屬到SQL Server，然後再透過SQL調用純量函式的方法來進行呼叫，簡直是太美妙了！因此把實作的方式記錄在這邊，供給有需要的人參考。</p><p>這種調用方法為SQL Server 2005（含）以後才支援，所以更早之前的SQL只能夠升級了喔！</p><h2>建立SQL CLR純量函式</h2><p>Step 1. 先到你的目標對象SQL Server，查詢現在平台上的.NET Framework CLR是採用哪個版本。</p><pre><code class=language-sql>select * from sys.dm_clr_properties
+</code></pre><p>Step 2. 在VisualStudio裡面開啟一個專案（類別庫 .NET Framework），記得參考「Microsoft.VisualBasic」，並參考Step 1設定對應的.NET Framework版本號。一切完備後，請撰寫下列程式碼：</p><pre><code class=language-cs>public class TSConverter
+{
+
+  [return: Microsoft.SqlServer.Server.SqlFacet(MaxSize = -1)]
+  [Microsoft.SqlServer.Server.SqlFunction(IsDeterministic = true, DataAccess = Microsoft.SqlServer.Server.DataAccessKind.Read)]
+  public static System.Data.SqlTypes.SqlString Simplified(string cTemp)
+  {
+    return new System.Data.SqlTypes.SqlString(
+      Microsoft.VisualBasic.Strings.StrConv(
+        cTemp,
+        Microsoft.VisualBasic.VbStrConv.SimplifiedChinese,
+        2052
+      )
+    );
+  }
+}
+</code></pre><p>Step 3. 切換到Release模式，編譯成DLL檔案，並將DLL複製到SQL Server的「C:\SlashviewCLR\」目錄下。</p><p>Step 4. 開啟SSMS，新增一個查詢，找出要植入純量函式的資料庫桶子（例如：myDB），並開始進行下列的指令設定：</p><pre><code class=language-sql>--啟用CLR 
+EXEC sp_configure 'clr enabled', 1  
+GO  
+RECONFIGURE  
+GO
+
+--啟用Trustworthy 
+Use myDB 
+ALTER DATABASE master SET TRUSTWORTHY ON 
+Go 
+
+--建立Assembly
+Use myDB 
+Create ASSEMBLY Slashview
+FROM 'C:\SlashviewCLR\TSConverter.dll'
+WITH PERMISSION_SET = SAFE 
+GO 
+
+--建立SQL純量函式
+CREATE FUNCTION Simplified(@cInput [nvarchar](max)) 
+RETURNS NVARCHAR(MAX) WITH EXECUTE AS CALLER 
+AS EXTERNAL NAME Slashview.TSConverter.Simplified
+</code></pre><p>Step 5. 大功告成！你可以在「myDB的桶子＞可程式性（Programmability）＞純量值函式（Sclar-valued Functions）」裡面，找到Simplified函式。也可以在「myDB的桶子＞組件（Assemblies」裡面，找到Slashview組件（也就是你的DLL啦！）。</p><h2>驗證繁體轉簡體的SQL純量函式</h2><p>輸入一下函式名稱，進行轉換看看。</p><pre><code class=language-sql>use myDB
+select dbo.Simplified('大家都是中國人，相逢何必曾相識。')
+</code></pre><pre><code>轉換後結果：
+大家都是中国人，相逢何必曾相识。
+</code></pre><h2>移除SQL CLR純量函式</h2><p>只要把建立的程序反過來，就可以順利的移除嘍！</p><p>Step 1. 「myDB的桶子＞可程式性（Programmability）＞純量值函式（Sclar-valued Functions）」裡面，刪除Simplified函式。</p><p>Step 2. 「myDB的桶子＞組件（Assemblies」裡面，刪除Slashview組件。</p><p>Step 3. 到「C:\SlashviewCLR」目錄下，把「TSConverter.dll」砍掉。</p><h6>SQL C# VB.NET DLL SqlServerClrIntegration .NetFramework 正體中文 簡體中文 繁體中文 轉換</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

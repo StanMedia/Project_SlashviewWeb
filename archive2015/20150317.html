@@ -1,0 +1,16 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>SQL筆記：SQL多次矩陣表的排序與顯示</h1><p>SQL的奧妙之處在於你永遠可以找到一些很強的該系統專屬語法（函式），來完成你本來在程式裡面要做二重或多重Select後，在記憶體組建半天才跑出來的結果。基於台灣企業的程式開發環境下永遠不可能會有專屬的DBA，因此我們就只好乖乖的在這裡記錄起自己一定會忘記的事情吧！假設你有一個小系統，資料關聯與結果如下圖：</p><p><img src=https://content.slashview.com/img/2015/20150317_01.jpg alt="" /></p><p>我們在上圖中可以發現，主表的iAutoIndex關聯到副表的iMap2Index欄位，也就是說，目標1號下面，會產生數項工作，目標2號下面照舊也會出現數項工作，而這些工作可能無時無刻都一直被插入數筆新的資料。我們想要的結果是，「列出全部主要目標（DISTINCT）當下的最後一筆記錄」。在結果集中你會發現我們目標1跟目標2都只出現一筆（因為全部也只有兩種目標），而最後一筆被插入的資料也被挑選出來了！</p><h2>傳統程式怎麼做？</h2><p>如果你的運算要全部在Server端運行，那麼你可能要先先去SELECT主表的iAutoIndex做DISTINCT，然後跑foreach去副表[_TEST]裡面逐一SELECT iMap2Index來求出所屬的_TEST.iAutoIndex，再去ORDER BY dInsertDate DESC，再去取第一筆。最後將結果逐一塞入某個ListArray中，然後再用迴圈去把它打到前端顯示。當然，上面說的這些過程或許可以再透過某些SQL指令或伺服端動作小小的簡化一下，不過主要程序八九不離十了。</p><h2>Microsoft SQL Server 2005之後的做法</h2><p>有了特別的函式提供，當然這些工作瞬間就便成一次性的完成。我個人是覺得很方便，但是等於運算資源移到資料庫後端去了！以下是步驟的展示：</p><p>第一步：利用ROW_NUMBER()函式來進行Partition的切割與分隔式的日期逆排序。</p><pre><code class=language-sql>SELECT * 
+FROM ( 
+  SELECT ROW_NUMBER() OVER ( 
+      PARTITION BY [iMap2Index] ORDER BY [dInsertDate] DESC
+    ) AS TempRank,
+    * FROM [_TEST]
+  ) as TempTable
+</code></pre><p><img src=https://content.slashview.com/img/2015/20150317_02.jpg alt="" /></p><p>第二步：利用分割式的日期逆排序後，產生每個目標的暫存排行欄TempTable.TempRank，再去找出第一筆資料即可。</p><pre><code class=language-sql>SELECT * 
+FROM ( 
+  SELECT ROW_NUMBER() OVER ( 
+      PARTITION BY [iMap2Index] ORDER BY [dInsertDate] DESC
+    ) AS TempRank,
+    * FROM [_TEST]
+  ) as TempTable
+WHERE TempRank = 1
+</code></pre><p><img src=https://content.slashview.com/img/2015/20150317_03.jpg alt="" /></p><h2>缺點</h2><p>講完優點後當然要講缺點，這樣的做法缺點就是假設有一個目標3出現，但是副表沒有半筆工作資料，這時候目標3並不會出現在步驟二的結果集之中（因為完全找不到，自然就無法切割出Partition了）。所以，當您全部列舉時，可能就無法完成下列的結果：</p><p>目標１ └ 最後一筆工作為 BraBra ... 目標２ └ 最後一筆工作為 BraBra ... 目標３ └ 無（←要顯示成這樣，用目前的SQL指令無法達成）</p><p>不過這也不是無解的事，有需要或有興趣的人可以自己再找看看方法。</p><h6>MicrosoftSQLServer ROW_NUMBER() SQLCommand</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

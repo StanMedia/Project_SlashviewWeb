@@ -1,0 +1,36 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>攔截HttpWebResponse.GetResponse引發非200OK的錯誤碼</h1><p>當我們在進行網路HTTP通訊的設計下，有一個詭異的情況會發生，當我們試圖去用System.Net.HttpWebRequest去取用遠端的某一個頁面，並在程式碼外圍包覆一層Try-Cache，事實上當某頁面回傳的HTTP代碼並非200 OK（System.Net.HttpStatusCode.OK）時，例如：GetResponse()時對方Http Header返回404 FileNotFound（System.Net.HttpStatusCode.NotFound），這時候程式碼竟然會幫你跳到Catch段（該說貼心嗎？）</p><p>程式碼長的如下：</p><pre><code class=language-cs>using (System.Net.HttpWebResponse oRep = (System.Net.HttpWebResponse)oReq.GetResponse())
+{
+  //當遠端回傳404頁面資訊，這時候根本不會進來此處執行，而是跳到Catch段落
+}
+</code></pre><p>一般來說，這也不是甚麼大問題，但倘若你想要做某種程度的自定義顯示，例如顯示對方到底返回給你怎麼樣的Http Status Code，這下就慘了，因為你根本連HttpWebResponse物件都還沒取得就跳錯誤了，又怎麼能取得Http Status代碼呢？</p><h2>WebException.Status無法提供充足的資訊</h2><p>有些人會說，那就用<a href=https://docs.microsoft.com/en-us/dotnet/api/system.net.webexceptionstatus>WebException.Status</a>屬性啊？問題是在上述404的情況下，他只會回給你「ProtocolError 7」的錯誤，當然你去取ErrorMessage裡面可能真的會出現Http Status的404代碼啦，不過，你確定要分析與拆解文字嗎？</p><h2>不妨試試看WebException.Response</h2><p>原來WebExceptionu有一個隱藏的Response的屬性，偷偷的實作返回一個抽象類別<a href=https://docs.microsoft.com/en-us/dotnet/api/system.net.webresponse>System.Net.WebResponse</a>，把一切本應該是System.Net.HttpWebResponse接收的資料都收進去了，所以，就用System.Net.HttpWebResponse把這些資訊拿回來吧！喔對了，<a href=https://docs.microsoft.com/en-us/dotnet/api/system.net.httpwebresponse>System.Net.HttpWebResponse</a>繼承自System.Net.WebResponse喔。</p><p>以我們這篇文章的例子，其實我們只需要拿回Http Status狀態而已。廢話不多說，看程式碼吧：</p><pre><code class=language-cs>try
+{
+  using (System.Net.HttpWebResponse oRep = (System.Net.HttpWebResponse)oReq.GetResponse())
+  { /* 當遠端回傳404頁面資訊，這時候根本不會進來此處執行，而是跳到Catch段落 */ }
+}
+catch (System.Net.WebException oEx)
+{ //取得HTTP錯誤代碼
+  if (oEx.Response is System.Net.HttpWebResponse)
+  { var eStatus = (oEx.Response as System.Net.HttpWebResponse).StatusCode; }  //拿到對方回傳給的狀態碼了
+  else
+  { var eStatus = System.Net.HttpStatusCode.InternalServerError; }
+  //取得錯誤描述詳細資訊
+  cMessage = $"錯誤資訊如下：{oEx.Status.ToString()}／{oEx.Message}";
+}
+catch (System.Exception oEx)
+{ 
+  //發生其他錯誤時
+}
+</code></pre><p>同場加映：</p><p>再補充一下，有時候我們很不希望GetResponse()把這種通訊協定等級的Http錯誤，當作嚴重錯誤拋到Try-Catch段，或許反而我們是希望在Catch時期把對方網頁給你的資訊再進行某一種程度的處理或回拋，這時候可能需要下列的程式碼來協助嘍。</p><pre><code class=language-cs>catch (System.Net.WebException oEx)
+{ //ProtocolError才可能會有HTTP回傳內容
+  if (oEx.Status == System.Net.WebExceptionStatus.ProtocolError)
+  { //再次確認是否為HttpWebResponse，以防萬一
+    if (oEx.Response is System.Net.HttpWebResponse)
+    { //拿到狀態碼
+      System.Net.HttpStatusCode eStatus = (oEx.Response as System.Net.HttpWebResponse).StatusCode;
+      //拿到真正回傳的內容
+      using (System.IO.StreamReader oSR = new System.IO.StreamReader((oEx.Response as System.Net.HttpWebResponse).GetResponseStream(), System.Text.Encoding.UTF8))
+      { string cContent = oSR.ReadToEnd(); }
+    }
+  }
+}
+</code></pre><h6>System.Net.HttpWebRequest System.Net.HttpWebResponse System.Net.HttpStatusCode System.Net.WebException System.Net.WebExceptionStatus</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

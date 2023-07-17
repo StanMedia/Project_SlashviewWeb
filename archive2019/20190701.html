@@ -1,0 +1,8 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>Javascript：勾選CheckBox並啟用Button按鈕</h1><p>這是一個蠻常見到的應用，當使用者勾選了已經閱讀／已經同意的確認方框後，才可以去點選某按鈕進行其他的行為動作。這篇文章就是將這個後端的Javascript記錄下來，以後要用到可以馬上提取。</p><p>Step 1. 建立按鈕HTML以及CheckBox勾選方框，其中按鈕部分將其預設Disabled。</p><pre><code class=language-html>&lt;button type="button" id="uExport" class="btn btn-lg btn-success" disabled>匯出資料&lt;/button>
+&lt;input id="uHadRead" type="checkbox" value="1"> 我已閱讀聲明
+</code></pre><p>Step 2. 建立jQuery事件，掛載在CheckBox下。</p><pre><code class=language-js>$(function () {
+  $("#uHadRead").click(function () {
+    $("#uExport").prop("disabled", !$("#uHadRead:checked").length);
+  });
+});
+</code></pre><h2>範例展示</h2><p><button type=button id=uExport class="btn btn-lg btn-primary me-3" disabled>匯出資料</button><input id=uHadRead type=checkbox value=1 /> 我已閱讀聲明 (勾選方可匯出資料)</p><h6>Javascript HTML CheckBox Checked Enable Disable Button</h6><script>$(function(){$(document).ready(function(){$("#uHadRead").click(function(){$("#uExport").prop("disabled",!$("#uHadRead:checked").length)})})})</script></main><footer></footer><script src=/.file/site.js></script></body></html>

@@ -1,0 +1,33 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>類别中有靜態的欄位或方法，產生出來的效應</h1><p>在物件類別（Class）中，我們有時候會使用到靜態的方法（methods）或欄位（fields），至少我本人就很喜歡用啦，今天看到一篇網路的文章有一種很特別的寫法，可以用來記錄生成實體（instance）的數量，蠻有趣的，由於之前在實務上完全沒有這方面的需求，所以從來沒有寫過這樣的程式碼，所以就來研究看看。</p><p>我們假設有一個車輛的物件，裡面有3個私有欄位，其中一個是靜態欄位（這就是重點），以及一些方法及靜態方法，程式碼如下：</p><pre><code class=language-cs>public class Car
+{
+  private int _iOil;
+  private string _cName;
+  private static int _iCount = 0;
+  //constructor
+  public Car(string cTemp, int iTemp)
+  {
+    _cName = cTemp;
+    _iOil = iTemp;
+    _iCount++;
+  }
+  //object detail
+  public string getDeatil()
+  {
+    return "車名：" + _cName + "; 油量：" + _iOil;
+  }
+  //static method
+  public static int getCars()
+  {
+    return _iCount;
+  }
+}
+</code></pre><p>上面程式碼的重點是這段private 「static」 int _iCount = 0;，中間擴號起來的字就是宣告他是一個靜態的欄位。如果沒有這一個關鍵字，那麼下面的getCars()方法中，你就沒有辦法直接調用_iCount變數了。</p><p>實驗的環境是我工作中常用的ASP.NET環境，所以我另外寫了一小段物件調用的程式碼，放在Page_Load裡面。</p><pre><code class=language-cs>public void Page_Load(object sender, EventArgs e)
+{
+  Car objA = new Car("BMW", 10);
+  Car objB = new Car("Benz", 20);
+  showMe.Text = objA.getDeatil();
+  showMe.Text += objB.getDeatil();
+  showMe.Text += Car.getCars().ToString();
+}
+</code></pre><p>透過上面的小程式，就會順利的傳回目前總共被產生幾台車出來，我想這樣簡單的程式碼可以用於觀察目前的instance被生成的數量（次數）有多少？我的工作是從來沒有遇過這樣的需求，或許某一天會用到吧！例如：自伺服器被開啟以來到訪的人數...之類的。</p><p>但是等等，怎麼會是自「伺服器被開啟以來...！？」，是的，這個答案在你按下F5重新整理時就會驚訝，車輛總數竟然會遞增，儘管我們的ASPX Page 早就完成了生命週期。但我們也會隨即釋懷，因為可以馬上連想到，static物件一開始生成的時候，就被丟到Heap區暫存了，這道理同樣的適用於非靜態的類別中，出現的靜態欄位或方法。</p><p>更詳細的講，就單指這個靜態欄位_iCount，他在IIS生命結束前，永永遠遠的不會被Garbage Collection了。也就是說，他在網站第一次跑起來被引用後，就算再也沒有人參照過他，他也不會消失了。這代表著這樣的寫法，將會耗費一定程度的固定記憶體。</p><p>所以本篇的結論是，儘量不要寫靜態的欄位或方法，甚至再去用其掛載一個大型的物件實體instance，不然的話你很容易的就會耗用記憶體。附上微軟論壇的討論：<a href=http://goo.gl/386WrV>http://goo.gl/386WrV</a>，節錄如下：</p><pre><code class=language-txt>Static variable is stored on the heap, the heap is separate from the normal garbage collected heap. GC will not do garbage collection on it during the app is running. So don’t store large instances infrequently used in static member.
+</code></pre><p>但是這無損我個人對於static寫法的喜好，我習慣在物件的後面提供static方法，再用這個方法本身去instance一個母實體起來進行複雜的操作，然後在外面程式中我只要寫一行就調用完成了。總之，大家自己看著辦吧！</p><h6>static fileds methods heap memory GC</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

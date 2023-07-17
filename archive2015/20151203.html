@@ -1,0 +1,27 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>變更Windows電源選項，將「電力不足等級」降低至5%以下</h1><p>在Windows的行動裝置中（例如Notebook），電源選項的設定來得格外的重要，畢竟在外面使用，省電模式真的可以有效地節省電量的消耗。但是，在我在外面使用Notebook常遇見的情境中，就是當電源快耗盡的時候，往往還有一些作業我們可能差兩三分鐘就完成了，這時候你就會發現明明電力還是足以支撐的，卻被Windows自動休眠或關機，這一點真的很令人沮喪，於是我們來到了進階電源設定畫面，並開始針對我們的所屬profiles進行調整。</p><p><img src=https://content.slashview.com/img/2015/20151203_01.jpg alt="" /></p><p>無論是你不是Administrator，一旦進入調整後你很快地就會發現一個令人感到沮喪的事實，那就是「電力不足等級」（Critical Battery Level）永遠無法調整到5%以下，這也就是說，我們無法把殘餘的電力榨乾，來幫我們完成最後一定要完成的事情，這一點你永遠無法再圖形介面上調整，因為你怎麼調整，最後還是會被重新設定成5%，這也就是說，該是PowerShell出場的時刻了。</p><p><img src=https://content.slashview.com/img/2015/20151203_02.jpg alt="" /></p><h2>將「電力不足等級」降低至5%以下</h2><p>Step 1. 請用Administrator的身分，執行一個PowerShell.exe的視窗。</p><p>Step 2. 輸入「powercfg -l」來列出現在的Profile的GUID清單，打星號部分，就是你現在所處的Profile。</p><pre><code class=language-txt>PS C:\WINDOWS\system32> powercfg -l
+</code></pre><pre><code class=language-txt>現存的電源配置 (* Active)
+-----------------------------------
+電源配置 GUID: 381b4222-f694-41f0-9685-ff5bb260df2e  (平衡)
+電源配置 GUID: 8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c  (高效能)
+電源配置 GUID: a1841308-3541-4fab-bc81-f71556f20b4a  (省電) *
+</code></pre><p>Step 3. 其中的省電設定檔就是我們要開刀的對象，因此輸入「powercfg -q a1841308-3541-4fab-bc81-f71556f20b4a」來列出現在的Profile下，所屬的全部子群組之GUID清單，仔細觀察後，我們就可以找到要開刀的對象「電力不足等級」了，就是那個該死的5%。</p><pre><code class=language-txt>PS C:\WINDOWS\system32> powercfg -q a1841308-3541-4fab-bc81-f71556f20b4a
+電源配置 GUID: a1841308-3541-4fab-bc81-f71556f20b4a  (省電)
+...(省略)
+  子群組 GUID: e73a048d-bf27-4f12-9731-8b2076e8891f  (電池)
+    GUID 別名: SUB_BATTERY
+    ...(省略)
+    電源設定 GUID: 9a66d8d7-4ff7-4ef9-b5a2-5a326ca2a469  (電力不足等級)
+      GUID 別名: BATLEVELCRIT
+      最小可能設定: 0x00000000
+      最大可能設定: 0x00000064
+      可能設定增量: 0x00000001
+      可能設定單位: %
+    目前的 AC 電源設定索引: 0x00000005
+    目前的 DC 電源設定索引: 0x00000005
+    ...(省略)
+</code></pre><p>Step 4. 設定值的動作，我們要呼叫「powercfg.exe -SetDCValueIndex [SCHEME_GUID] [SUBGROUP_GUID] [SETTING_GUID] [VALUE]」，我們可以觀察到中間的引數是-SetDCValueIndex，中間的關鍵字是DC，這意味著我們還需要設定AC這一部分的參數。組合出來的指定碼如下：</p><pre><code class=language-txt>powercfg.exe –setdcvalueindex a1841308-3541-4fab-bc81-f71556f20b4a e73a048d-bf27-4f12-9731-8b2076e8891f  9a66d8d7-4ff7-4ef9-b5a2-5a326ca2a469 1
+powercfg.exe –setacvalueindex a1841308-3541-4fab-bc81-f71556f20b4a e73a048d-bf27-4f12-9731-8b2076e8891f  9a66d8d7-4ff7-4ef9-b5a2-5a326ca2a469 1
+</code></pre><p>Step 5. 當你執行指令完成後，可以關掉所有UI視窗再回去看一次，你就會發現那個無法變更的5%真的被改變成1%了。</p><h2>匯出電源選項設定檔</h2><p>接著你可能會想要把所有您在電源選項中，所有的設定都備份下來，如此一來我們在電腦重灌後，就可以不用在進入視覺化界面，煩人的逐一點擊設定，指令碼如下：</p><pre><code class=language-txt>powercfg .exe -export C:\BatterySetting.pow a1841308-3541-4fab-bc81-f71556f20b4a
+</code></pre><p>經過了這個指令後，你就可以在C磁碟找到這個.pow設定檔。</p><h2>匯入電源選項設定檔</h2><p>Step 1. 請先將您的電源Profile切換到非使用的Profile，例如您想匯入省電模式的設定檔，那就請您先將Profile切到高效能設定檔之類的。</p><p>Step 2. 匯入設定檔時，你不可以複寫本來就存在的Profile，因此你必須先砍再匯，所以我們又要開始下指令了。</p><pre><code class=language-txt>powercfg .exe -d a1841308-3541-4fab-bc81-f71556f20b4a
+powercfg .exe -import C:\BatterySetting.pow a1841308-3541-4fab-bc81-f71556f20b4a
+</code></pre><p>Step 3. 當你執行指令完成後，可以關掉所有UI視窗再回去看一次，你就會發現原本省電模式下面所有的設定都被改變了。</p><h6>PowerOptions CriticalBatteryLevel LowBatteryLevel Export Import OutputFile InputFile</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

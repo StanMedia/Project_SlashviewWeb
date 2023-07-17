@@ -1,0 +1,24 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>更新造字字型檔（EUDC Fonts）的批次小程式</h1><p>盡管世界已經步入UTF-8時代近十年了，仍然有許多組織擺脫不了陳年的EUDC使用者造字字型檔的困擾，其中更新造字字型的手續更是讓久久才面對一次的程式設計師困擾，這篇文章就是把這個批次檔案開放，讓有這方面困擾的人可以自行取用。</p><h2>取得造字字型檔案</h2><p>總而言之，你的手上必須要有下列這兩個檔案：</p><ol><li>EUDC.EUF</li><li>EUDC.TTE</li></ol><h2>自行建立批次檔案</h2><p>請在桌面新增一個純文字文件命名為「UpdateFonts.bat」，並且把下列程式碼貼進去這個檔案中後，把此檔案搬移與上述那兩個造字檔案放在一起。</p><pre><code class=language-bat>@ECHO OFF
+chcp 65001 > nul
+
+ECHO 請確認使用「Run As Administrator」權限來執行才會成功覆寫！
+pause
+
+if not exist %~dp0*.TTE (
+  ECHO 找不到「*.TTE」檔案，請確認！
+  pause
+  exit /b
+)
+if not exist %~dp0*.EUF (
+  ECHO 找不到「*.EUF」檔案，請確認！
+  pause
+  exit /b
+)
+
+ECHO 刪除原始造字檔並複製新造字檔
+del /Q %SystemRoot%\fonts\eudc.*
+copy /Y %~dp0eudc.* %SystemRoot%\fonts\
+
+ECHO 檔案覆寫成功，若要看到新增造字必須重新開機。
+%windir%\system32\eudcedit.exe
+</code></pre><h2>執行</h2><p>使用「系統管理員」的身分執行這個批次檔後，就可以成功更新造字檔案，若要在「造字程式」中看到新增的造字文字，那麼必須重新開機讓Windows載入才行喔。</p><h3>相關參考</h3><ul><li><a href=/archive2018/20180927.html>列舉Windows作業系統下的造字檔內的所有文字（粗略版）</a></li><li><a href=/archive2022/20221222.html>列舉Windows作業系統下的造字檔內的所有文字（精準版）</a></li><li><a href=/archive2018/20180925.html>找出字串中隱藏的Big5造字字元，並用Unicode將其取代</a></li><li><a href=/archive2017/20170127.html>如何在在Excel中找出BIG5的使用者造字字元？</a></li><li><a href=/archive2021/20211122.html>更新造字字型檔（EUDC Fonts）的批次小程式</a></li></ul><h6>Windows EUDC EndUserDefinedCharacters ChangeEudcFonts ReplaceEudcFonts</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

@@ -1,0 +1,17 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>SQL筆記：SQL之IsNullOrEmpty、Concatenate、Case.Else.End</h1><p>在Microsoft SQL Server 2008時，還沒有支援字串相加的函式Concat（Concatenate），也沒有所謂的string.IsNullOrEmpty();。因此，要進行這些操作的話，需要一些小技巧來達成，以下是這篇文章的介紹。</p><h2>利用IsNull()來完成IsNullOrEmpty()</h2><p>SQL的IsNull語法如下：</p><pre><code class=language-sql>IsNull(check_expression, replacement_value )
+</code></pre><p>因此，我們可以利用這個函式來完成string.IsNullOrEmpty();的判斷功能。</p><pre><code class=language-sql>IsNull(Table.Column, '') = ''
+</code></pre><h2>變化成IsNullOrWhiteSpace()也沒問題</h2><pre><code class=language-sql>LTrim(IsNull(Table.Column, '')) = ''
+</code></pre><h2>用「+」符號來取代Concat（Concatenate）</h2><p>如標題所說，要到SQL 2012才開始支援在Oracle、MySQL上面在使用的Concat指令，在此之前，請使用M$派系慣用「+」符號，其實也是很直覺啦！</p><pre><code class=language-sql>SELECT Table.Column1 + '／' + Table.Column2 AS cTemp, Table.Column3 FROM Table
+</code></pre><h3>用Case...Else...End來完成IF判斷</h3><p>在SELECT VIEW時期，有時候需要進行先期的判斷，這時候你可以在SELECT的後端串上Case...Else...End結構來輔助這些判斷的需求。綜合一下上面的指令，下面的程式碼做一下範例。</p><pre><code class=language-sql>SELECT
+  CASE WHEN Table.Column1 IS NULL THEN
+    Table.Column2
+  ELSE
+    CASE WHEN IsNull(Table.Column2, '') = '' THEN
+      Table.Column1
+    ELSE
+      Table.Column1 + '／' + Table.Column2
+    END
+  END AS cTemp,
+  Table.Column3
+FORM Table
+</code></pre><h6>SQLCommand IsNullOrEmpty IsNullOrWhiteSpace COALESCE CONCAT Concatenate CaseElseEnd</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

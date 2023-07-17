@@ -1,0 +1,69 @@
+﻿<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link href="/.include/bootstrap/css/bootstrap.min.css" rel="stylesheet" />
+  <link href="/.include/custom/css/custom.css" rel="stylesheet" />
+  <link href="/.include/highlight.js/css/vs.min.css" rel="stylesheet" />
+  <link href="/.include/fontawesome/css/all.min.css" rel="stylesheet" />
+  <script src="/.include/jquery/jquery.min.js"></script>
+</head>
+<body>
+  <!-- 頁首區段 -->
+  <header></header>
+
+  <!-- 內文區段 -->
+  <main>
+    <h1>Development版面</h1>
+    <p>
+      後面帶上一組八碼數字（12345678.html），是為了要讓ＪＳ可以識別並自動產生日曆區段｜變高銀但命生出態標臺福房友細它……觀能組現星學生重上一他資就了、華奇白小他多，成室國再力道政性同型初雜真戲是，知期認；動能作時歌：提夫求我：經書種總定室人很意……前己行一的？音縣候？臺賽兩的日一日個，個語然親全進不、相養建，下投參新險機。女現環。你覺期己燈家合康美家足真成裡，倒嚴媽為終使魚不便些而的失刻你日人象動必際候高雖小的……能乎也也對。生子很多早。銀興因操，幾市先福她學行、都理的毒格春有法細會景投後去生處府天李與他它不那必像，子著的們內到小，能到知知會大易人那事上夜氣其常幾：立一海花提卻成說香我影醫她物每操主計我視那於……自時源念資，在無導銷調的獨器題似信道論未自門大就木活老地就才它。
+    </p>
+
+    <h2>Where can I get some?</h2>
+    <p>It is a long established fact that a reader will be distracted by the readable content of a page when looking at its layout. The point of using Lorem Ipsum is that it has a more-or-less normal distribution of letters, as opposed to using 'Content here, content here', making it look like readable English. Many desktop publishing packages and web page editors now use Lorem Ipsum as their default model text, and a search for 'lorem ipsum' will uncover many web sites still in their infancy. Various versions have evolved over the years, sometimes by accident, sometimes on purpose (injected humour and the like).</p>
+
+    <pre><code>/// &lt;summary&gt;
+/// 將數值轉換成編碼
+/// &lt;/summary&gt;
+/// &lt;param name="iValue"&gt;數值&lt;/param&gt;
+/// &lt;param name="bAutoPadding"&gt;是否自動補位&lt;/param&gt;
+/// &lt;returns&gt;編碼&lt;/returns&gt;
+public static string DecimalToBase(ulong iValue, bool bAutoPadding = false)
+{ 
+  var cResult = new System.Text.StringBuilder();
+  if (iValue == 0)
+  { cResult.Append("0"); }
+  while (iValue &gt; 0)
+  {
+    var iPoint = iValue % _iLength;
+    cResult.Insert(0, _arySymbols[iPoint]);
+    iValue = iValue / _iLength;
+  }
+  return bAutoPadding switch
+  {
+    true =&gt; cResult.ToString().PadLeft(GetEncodeMaxLength, '0'),
+    _ =&gt; cResult.ToString(),
+  };
+}</code></pre>
+
+    <p>There are many variations of passages of Lorem Ipsum available, but the majority have suffered alteration in some form, by injected humour, or randomised words which don't look even slightly believable. If you are going to use a passage of Lorem Ipsum, you need to be sure there isn't anything embarrassing hidden in the middle of text. All the Lorem Ipsum generators on the Internet tend to repeat predefined chunks as necessary, making this the first true generator on the Internet. It uses a dictionary of over 200 Latin words, combined with a handful of model sentence structures, to generate Lorem Ipsum which looks reasonable. The generated Lorem Ipsum is therefore always free from repetition, injected humour, or non-characteristic words etc.</p>
+
+    <h3>Where does it come from?</h3>
+    <p>Contrary to popular belief, Lorem Ipsum is not simply random text. It has roots in a piece of classical Latin literature from 45 BC, making it over 2000 years old. Richard McClintock, a Latin professor at Hampden-Sydney College in Virginia, looked up one of the more obscure Latin words, consectetur, from a Lorem Ipsum passage, and going through the cites of the word in classical literature, discovered the undoubtable source. Lorem Ipsum comes from sections 1.10.32 and 1.10.33 of "de Finibus Bonorum et Malorum" (The Extremes of Good and Evil) by Cicero, written in 45 BC. This book is a treatise on the theory of ethics, very popular during the Renaissance. The first line of Lorem Ipsum, "Lorem ipsum dolor sit amet..", comes from a line in section 1.10.32.</p>
+
+    <h4>測試資料插入區段</h4>
+    <p>{{CONTENT}}</p>
+
+    <h6>測試1 測試2 測試3 測試4 測試5 測試6 測試7 測試8</h6>
+  </main>
+
+  <!-- 頁尾區段 -->
+  <footer></footer>
+
+  <!-- 資源加載 -->
+  <script src="/.include/custom/js/custom.js"></script>
+  <script src="/.include/highlight.js/js/highlight.min.js"></script>
+  <script src="/.include/bootstrap/js/bootstrap.min.js"></script>
+</body>
+</html>

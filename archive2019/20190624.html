@@ -1,0 +1,143 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>探討IEnumable(T)扁平化與轉換成DataTable</h1><p>爾偶會有一些需求是要將ORM物件包轉換成DataTable的作法，其實.NET Framework在System.Data.DataSetExtensions有提供一個CopyToDataTable，但是因為太難用了乾脆自己寫一個比較快。話不多說直接看程式碼。</p><p><img src=https://content.slashview.com/img/2019/20190624_01.jpg alt="" /></p><p>以下的兩段程式碼，我都是寫成擴充類別，只要是IEnumable(T)都可以支援使用。</p><h2>將IEnumable(T)轉換成DataTable</h2><p>這一段程式碼我考慮的比較多，包括把一些簡單的List(T)都考慮進來了，所以程式碼會比較冗長，另外包括ORM常遇到的Nullable也有被考慮在其中。</p><pre><code class=language-cs>public static System.Data.DataTable ToDataTable&lt;T>(this System.Collections.Generic.IEnumerable&lt;T> oData, string cTemp = "未命名")
+{
+  System.Data.DataTable oDT = new System.Data.DataTable() { TableName = cTemp };
+  //如果沒有任何資料就回傳空表格
+  if (oData == null || !oData.Any()) { return oDT; }
+  //判斷是否為單型別資料，例如：List&lt;string>
+  bool bIsSingleColumn = typeof(T).IsPrimitive || typeof(T) == typeof(System.String);
+  //依照不同的資料型態進行不同的拆包
+  switch (bIsSingleColumn)
+  { //一半IEnumerable資料包
+    case false:
+      //將資料表反射屬性回來
+      System.Reflection.PropertyInfo[] oPIs = typeof(T).GetProperties();
+      //如果屬性裡面具有陣列型態的次資料，那就把它移除（DataTable只可以表示兩個維度的資料）
+      oPIs = oPIs.Where(p => !p.PropertyType.IsArray).ToArray();
+      //將物件屬性以陣列的方式插入到欄位
+      oDT.Columns.AddRange(oPIs.Select(p => new System.Data.DataColumn(p.Name, System.Nullable.GetUnderlyingType(p.PropertyType) ?? p.PropertyType)).ToArray());
+      //資料填充
+      System.Collections.ArrayList oAL;
+      for (int i = 0; i &lt; oData.Count(); i++)
+      {
+        oAL = new System.Collections.ArrayList();
+        foreach (System.Reflection.PropertyInfo oPI in oPIs)
+        { //如果是NULL的話就插入DBNull.Value
+          oAL.Add(oPI.GetValue(oData.ElementAt(i), null) ?? System.DBNull.Value);
+        }
+        oDT.Rows.Add(oAL.ToArray());
+      }
+      break;
+    //簡單單列資料包
+    default:
+      //因為不具備屬性，因此依照原先資料型態插入格式
+      oDT.Columns.AddRange(new System.Data.DataColumn[] { new System.Data.DataColumn("Data List", typeof(T)) });
+      //直接把所有的資料插入
+      for (int i = 0; i &lt; oData.Count(); i++)
+      { oDT.Rows.Add(oData.ElementAt(i)); }
+      break;
+  }
+  //回傳DataTable結果
+  return oDT;
+}
+</code></pre><h2>將多維度的IEnumable(T)扁平化成Key、Value</h2><p>這段程式碼算是比較單純的，引用了強大的JSON.NET來幫我們扁平化，然後再逐一的新增到Dictionary裡面。</p><pre><code class=language-cs>public static System.Collections.Generic.Dictionary&lt;string, string> ToFlatten&lt;T>(this System.Collections.Generic.IEnumerable&lt;T> oData)
+{
+  var oTokens = Newtonsoft.Json.Linq.JArray.FromObject(oData).Descendants().Where(p => p.Count() == 0);
+  return oTokens.Aggregate(
+    new System.Collections.Generic.Dictionary&lt;string, string>(),
+    (oList, oToken) =>
+    {
+      oList.Add(oToken.Path, oToken.ToString());
+      return oList;
+    }
+  );
+}
+</code></pre><h2>接下來是測試時間</h2><p>輸出DataTable的程式碼我就統一寫在這裡了，等一下就不顯示在程式碼裡面。</p><pre><code class=language-cs>//印出DataTable
+foreach (System.Data.DataRow oRow in oDT.Rows)
+{
+  foreach (System.Data.DataColumn oCol in oDT.Columns)
+  { Write($"{oRow[oCol]}, "); }
+  WriteLine();
+}
+</code></pre><p>簡單的List(string)範例：</p><pre><code class=language-cs>var oData = new System.Collections.Generic.List&lt;string>()
+{
+  "AAA111",
+  "BBB222"
+};
+System.Data.DataTable oDT = oData.ToDataTable();
+</code></pre><p>結果：</p><pre><code class=language-txt>AAA111,
+BBB222,
+</code></pre><p>進階的List(ORM)範例：</p><pre><code class=language-cs>class MyORM
+{
+  public string cName { get; set; }
+  public int iMoney { get; set; }
+}
+var oData = new System.Collections.Generic.List&lt;MyORM>()
+{
+  new MyORM(){ cName="小明", iMoney=1234 },
+  new MyORM(){ cName="小華", iMoney=5678 },
+};
+System.Data.DataTable oDT = oData.ToDataTable();
+</code></pre><p>結果：</p><pre><code class=language-txt>小明, 1234,
+小華, 5678,
+</code></pre><p>匿名型別且多維度範例：</p><pre><code class=language-cs>var oData = new[]
+{
+  new
+  {
+    cName = "小明",
+    iMoney = 1234,
+    cFamily = new[]
+    {
+      new
+      {
+        cRoot  = "小明爸爸",
+        cGroup = new[]
+        {
+          new { cName = "AAA", cRelation = "母子" },
+          new { cName = "BBB", cRelation = "姊弟" },
+          new { cName = "CCC", cRelation = "兄弟" },
+        },
+      }
+    }
+  },
+  new
+  {
+    cName = "小華",
+    iMoney = 5678,
+    cFamily = new[]
+    {
+      new
+      {
+        cRoot  = "小華媽媽",
+        cGroup = new[]
+        {
+          new { cName = "DDD", cRelation = "姊妹" },
+          new { cName = "EEE", cRelation = "兄妹" },
+          new { cName = "FFF", cRelation = "大姑" },
+          new { cName = "GGG", cRelation = "小姑" }
+        },
+      }
+    }
+  }
+};
+System.Data.DataTable oDT = oData.ToFlatten().ToDataTable();
+</code></pre><p>這種應用特別適用輸出在EXCEL檔案裏面，當你的資料關聯的維度很高時，客戶如果要求無論如何都要在EXCEL裡面顯示（但EXCEL只有兩個維度），其實這個擴充類別是一個很好的解決方案，一股腦丟給你，喜歡看自己去慢慢看吧。</p><pre><code class=language-txt>[0].cName, 小明,
+[0].iMoney, 1234,
+[0].cFamily[0].cRoot, 小明爸爸,
+[0].cFamily[0].cGroup[0].cName, AAA,
+[0].cFamily[0].cGroup[0].cRelation, 母子,
+[0].cFamily[0].cGroup[1].cName, BBB,
+[0].cFamily[0].cGroup[1].cRelation, 姊弟,
+[0].cFamily[0].cGroup[2].cName, CCC,
+[0].cFamily[0].cGroup[2].cRelation, 兄弟,
+[1].cName, 小華,
+[1].iMoney, 5678,
+[1].cFamily[0].cRoot, 小華媽媽,
+[1].cFamily[0].cGroup[0].cName, DDD,
+[1].cFamily[0].cGroup[0].cRelation, 姊妹,
+[1].cFamily[0].cGroup[1].cName, EEE,
+[1].cFamily[0].cGroup[1].cRelation, 兄妹,
+[1].cFamily[0].cGroup[2].cName, FFF,
+[1].cFamily[0].cGroup[2].cRelation, 大姑,
+[1].cFamily[0].cGroup[3].cName, GGG,
+[1].cFamily[0].cGroup[3].cRelation, 小姑,
+</code></pre><h6>System.Linq Newtonsoft.Json Json.Net DataFlatten Object ToDataTable ToFlatten</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

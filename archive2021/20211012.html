@@ -1,0 +1,88 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>SQL筆記：新增（Insert）或更新（Update）一次完成</h1><p>在寫資料庫的時候往往會遇到不存在就新增（INSERT）若存在就更新（UPDATE）的議題，有人偏好兩段式或分流處理，但其實可以把這個東西整併起來變成單一處理工序，寫起來程式碼會更精簡一點，端視使用情境而定嘍。</p><h2>Upsert：若資料存在就更新，否則就新增資料</h2><p>要注意的是若在很嚴謹的環境下，資料庫新增工序還是要鎖定資料列（ROWLOCK）並包入交易（Transaction）中，這無關分離執行或合併執行的問題（都會發生），不然在多重執行緒的WEB環境極有可能產生兩筆重複的PK，萬一資料庫沒有設定唯一鍵或複合索引鍵而出現這種問題就得不償失了。</p><p>以下是主要SQL寫法：</p><pre><code class=language-sql>IF EXISTS
+  (
+    SELECT
+      1
+    FROM
+      [cTableMain] WITH (ROWLOCK)
+    WHERE
+      cUserID = @cUserID
+  )
+  BEGIN
+    UPDATE
+      [cTableMain]
+    SET
+      cUserName = @cUserName,
+      iUserMoney = @iUserMoney
+    OUTPUT
+      INSERTED.iAutoIndex
+    WHERE
+      cUserID = @cUserID
+  END
+ELSE
+  BEGIN
+    INSERT INTO
+      [cTableMain]
+    OUTPUT
+      INSERTED.iAutoIndex
+    VALUES
+    (
+      @cUserID,
+      @cUserName,
+      @iUserMoney
+    )
+  END
+</code></pre><p>以下是程式碼示範（使用了ADO.NET與Dapper寫法）：</p><pre><code class=language-cs>try
+{ //主要SQL指令
+  string cSQL = $@"請自行將上面的SQL語法轉換至此";
+  //連線資料庫並設定交易
+  using var oConn = new System.Data.SqlClient.SqlConnection(cYourDatabasePath);
+  oConn.Open();
+  using var oTrans = oConn.BeginTransaction(System.Data.IsolationLevel.Serializable);
+  try
+  {
+    var iAutoIndex = oConn.QuerySingle&lt;int>(
+      cSQL,
+      new {
+        cUserID = oData.cUserID,
+        cUserName = oData.cUserName,
+        iUserMoney = oData.iUserMoney
+      },
+      oTrans
+    );
+    oTrans.Commit();
+    //如果成功就將iAutoIndex回寫到資料物件包
+    oData.iAutoIndex = iAutoIndex;
+  }
+  catch (System.Exception oEx)
+  {
+    oTrans.Rollback();
+    throw new System.Exception($"新增或更新失敗：{oEx.Message}。");
+  }
+  //回傳資料
+  //return序列化成功oData物件資料
+}
+catch (System.Exception oEx)
+{
+  //return序列化失敗oData物件資料
+}
+</code></pre><p>假設上面是一隻WebAPI，則當前端回傳一個資料物件包（oData）到後端時，它會使用cUserID去搜尋是否存在該筆資料（假設cUserID是唯一鍵值），若存在就進行ROWLOCK鎖定並開始既有資料的欄位更新作業。若不存在該筆cUserID資料就進行插入資料列動作。最後所有的動作完成後，統一傳回該資料表的自動增量索引鍵（iAutoIndex）供給後續使用。</p><h2>Delete If：若資料存在就不刪除，否則就刪除資料</h2><p>同樣的道理，我們也可以利用上面的SQL結構應用於一次性DELETE刪除，在傳統上我們可能會基於「如果Ｂ表有存在資料（關聯），那麼Ａ表就不刪除」這樣的思路在設計刪除動作，如果在這樣假設的前提下，我們可以把它轉換成下列的SQL指令碼：</p><pre><code class=language-sql>IF EXISTS
+  (
+    SELECT
+      1
+    FROM
+      Table_B
+    WHERE
+      iAutoIndex = @iAutoIndex
+  )
+  BEGIN
+    SELECT 0 --刪除失敗，筆數0
+  END
+ELSE
+  BEGIN
+    DELETE FROM
+      Table_A
+    WHERE
+      iAutoIndex = @iAutoIndex
+    SELECT @@ROWCOUNT --刪除成功，筆數N
+  END
+</code></pre><h6>SQL Insert Update Upsert Dapper</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

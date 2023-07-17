@@ -1,0 +1,69 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>利用鎖定（Lock）來保持資源在多執行緒間安全的共用與複寫</h1><p>其實這一篇就是在說明如何利用C# Lock來進行多執行緒間的安全共用問題。舉個最簡單的例子來說，當一個ASP.NET裡面被創造了一個Application["Bulletin"]的物件，這物件裡面可能有資料，也有可能沒有資料，又，這個網站定義了一個政策是，「當公告資料過了10分鐘，或者公告資料為空值時，就有義務更新它」。</p><p><img src=https://content.slashview.com/img/2017/20170411_01.jpg alt="" /></p><p>接下來問題就來了，這個ASP.NET網站可能平均每秒會有10個Session進入來讀取這個頁面，那麼當同一秒這10個Session同時起來，去讀取Application["Bulletin"]的物件時，也就是說極有可能會同時發生命中「當公告資料過了10分鐘，或者公告資料為空值時，就有義務更新它」條件。那問題就變得棘手了，本來Application["Bulletin"]的設計是為了要降低資料庫的存取，透過記憶體暫存的方式加速網頁的生成速度，結果所有的瓶頸反而落入在此刻之中，資料庫跟Application["Bulletin"]記憶體被重刷了10次。（實務上不可能全部的Session都命中條件，畢竟看似平行處理最終還是得進入Work Process堆疊工作，但至少發生2~3個命中是極有可能的事情）</p><h2>lock栓鎖物件的執行緒間認知問題</h2><p>在C#裡面叫做lock，在VB.NET裡面叫做SyncLock。之前第一次在MSDN上面接觸lock語法，因為MSDN舉的例子是在Console模式下，過於單純，因此當下心中第一個也是唯一一個問題就是，那麼要怎麼讓所有實例化這些類別的執行緒，都知道這個物件？畢竟在網站多工運作的環境下，情況事實上是很複雜的。</p><p>MSDN的Lock使用範例程式碼，出處詳見：<a href=https://docs.microsoft.com/en-us/dotnet/articles/csharp/language-reference/keywords/lock-statement>lock Statement (C# Reference)</a></p><pre><code class=language-cs>class Account  
+{  
+  decimal balance;
+  private Object thisLock = new Object();  //就是這一行，讓當時年少無知的我陷入了沉思
+  public void Withdraw(decimal amount)  
+  {  
+    lock (thisLock)  
+    {  
+      if (amount > balance)  
+      {  
+        throw new Exception("Insufficient funds");  
+      }  
+      balance -= amount;  
+    }  
+  }  
+}
+</code></pre><p>頓悟後答案很簡單，事情不是傻人想的那麼複雜，就是使用static修飾詞（Modifier）來共用靜態物件啊！</p><h2>利用lock栓鎖某物件，來達成執行緒同步資源鎖定</h2><p>以下這個例子是剛好工作時有遭遇到類似的案例，所以稍微寫一下SampleCode來POC，加強自己以前對於lock的認知性。這個情境改為有一個網站計數器，被放在System.Web.HttpContext.Current.Cache裡面。當ASP.NET每一個Session進入每一頁時，都會對這個計數器進行賦值（理論上是加１，程式碼裡面使用的是亂數）。在這邊要特別聲明一下，這只是我為了POC去亂掰出來的使用方式，如果閣下真的要建立網站計數器機制，千萬不要用這個方法，不僅是根本毫無效益可言，且有可能會造成你的網站掛掉喔！</p><p>建立一個叫做SiteCount.cs類別</p><pre><code class=language-cs>public class SiteCount
+{
+  private static System.Object oLock = new System.Object();  //請注意這個栓鎖欄位（Field）被設定為private static
+  private System.Random oRnd = new System.Random();
+  public SiteCount() { }
+
+  public int GetOrAddCount()
+  {
+    string cVarName = "MemberCount";
+    //第一層檢查
+    var oCount = System.Web.HttpContext.Current.Cache[cVarName];
+    if (oCount == null)
+    {  //鎖定
+      lock (oLock)
+      { //第二層檢查
+        oCount = System.Web.HttpContext.Current.Cache[cVarName];
+        if (oCount == null)
+        {
+          System.Threading.Thread.Sleep(5000);  //模擬耗費大量時間
+          System.Web.HttpContext.Current.Cache.Insert
+          (
+            key: cVarName,
+            value: oRnd.Next(100, 1000),
+            dependencies: null,
+            absoluteExpiration: System.DateTime.Now.AddSeconds(10),
+            slidingExpiration: System.Web.Caching.Cache.NoSlidingExpiration
+          );
+        }
+      }
+    }
+    //回傳參數
+    return (int)System.Web.HttpContext.Current.Cache[cVarName];
+  }
+}
+</code></pre><p>建立一個叫做test.aspx的測試頁面</p><pre><code class=language-cs>public void page_load(Object sender, EventArgs e)
+{
+  SiteCount oTemp = new SiteCount();
+  Response.Write(oTemp.GetOrAddCount());
+}
+</code></pre><p>使用方式很簡單，你開兩個完全不同的Ａ、Ｂ瀏覽器，並把test.aspx網址貼在兩個瀏覽器的網址列。接下來去Ａ瀏覽器執行test.aspx，當然，Ａ就被栓鎖住且卡在Sleep(5000);了，然後你在過去Ｂ瀏覽器執行test.aspx，這時候你會發現Ａ、Ｂ兩個瀏覽器都卡住沒有回應，要注意的是，Ｂ瀏覽器沒有回應是因為lock (oLock)而不是Sleep(5000);喔。</p><p>最後當Ａ瀏覽器解開Sleep(5000);往下跑建立Cache亂數暫存，並且印出（假設是）1234後，Ｂ瀏覽器瞬間也會出現自Cache取出的1234。</p><h2>有兩個地方值得討論</h2><p>一、private static System.Object oLock：</p><p>在整個ASP.NET網站起來且眾多執行緒尚未執行時，oLock欄位就會存在，也就是說test.aspx中的SiteCount oTemp = new SiteCount();執行與否，與oLock欄位無關，也就是因為static修飾詞，讓所有的執行緒在一開始就認識了這個oLock欄位。</p><p>二、Lock前檢查一次Cache是否為null，Lock後又檢查一次是有事嗎？</p><p>不，這是一種預防萬一的安全檢查機制，因為在實務上你檢查Cache為null～進行lock之間，還是有可能會被其他的執行緒來惡搞你這個共用的存取資源。這個寫法叫做<a href=https://en.wikipedia.org/wiki/Double-checked_locking>Double-checked locking</a>，更安全的甚至我還有看過Triple-checked locking（好像也叫做Sandwich Locking？），詳細出處我忘了。下面是一個典型的Double-checked locking機制程式碼：</p><pre><code class=language-cs>private static object ThisLock = new object();
+foo = GetCache();
+if (foo == null) //1st check
+{
+  lock (ThisLock)
+  {
+    foo = GetCache();
+    if (foo == null) //2nd (double) check
+    {
+      //Your work...
+    }
+  }
+}
+</code></pre><h3>相關連結</h3><ol><li><a href=/archive2018/20180114.html>利用安全且非獨占的方式，將檔案內容讀取或寫回</a></li><li><a href=/archive2018/20181226.html>Task非同步作業的等候與終結</a></li><li><a href=/archive2020/20200421.html>單例模式（Singleton Pattern）搭配非同步方法與驗證</a></li></ol><h6>C# VB.NET lock SyncLock PrivateStatic Session Application System.Object Serialization Thread Multi-Threads</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

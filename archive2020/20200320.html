@@ -1,0 +1,42 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>Telegram Bot機器人取得Webhook後的檔案型資訊</h1><p>Telegram Bot機器人在Webhook時期傳入的東西不只是文字而已，而是幾乎現代流行的多媒體資料都可以被送進來讓你的機器人擷取，美中不足的有下列幾點原因，需要撰寫程式的人稍微注意一下。</p><p><img src=https://content.slashview.com/img/2020/20200320_01.jpg alt="" /></p><p>Telegram Bot機器人擷取資料的限制與缺點（20200320版本；未來會不會調整請自己看官網API文件）</p><ol><li>可以獲取檔案，但最大只給你下載20MB內的檔案。</li><li>可以獲取照片，但只會給你一堆以JSON Array表示的縮圖資料，其中最大的縮圖只給你1280*720格式的相片。（這是我自己測試出來的結論，官方API沒有陳述）</li><li>可以獲取所有使用者傳送的多媒體資料格式，但每一種多媒體資料格式的JSON表示式都不盡相同，如果你要自己寫解析＋強型別的話，我敢說你光定義資料型態你就會暴怒了，或許用人家寫好的類別會好上許多。</li><li>堅持想要自己做的話，強烈建議走匿名型別或動態型別。（例如C#的System.Dynamic.ExpandoObject）</li></ol><h2>如何得知Webhool回傳的資料型態？</h2><p>開發環境在Localhost且有VisualStudio支援者，請考慮使用ngrok來幫你proxy一下傳入資料，這樣你就可以動態解譯觀察傳入的JSON了。（可參考：<a href=/archive2020/20200317.html>利用ngrok在localhost測試https Webhook</a>）</p><p>如果沒有相關的環境，建議可以加入一隻熱心網友提供的機器人，請搜尋：「@RawDataBot」，基本上你對這支BOT發送的任何訊息，他就會把他那邊GET到的JSON原封不動的送回來給你，你就可以藉機觀察這個訊息的JSON格式了。</p><h2>Telegram目前支援的多媒體檔案格式</h2><p>這是我自己整理的已知多媒體檔案格式，這些格式大都可以透過使用者的手機介面直接產生上傳到群組、聊天室中，也就是可以被BOT看到及處理的資訊。當然啦，這些多媒體的類型在往後的時間裡一定會被新增或調整的，所以屆時就請你自行調整知識了。</p><ol><li>text（文字訊息）</li><li>photo（照片）</li><li>video（影片）</li><li>document（檔案文件）</li><li>sticker（貼圖）</li><li>voice（影片）</li><li>location（地理位置）</li><li>video_note（影片備忘錄；短片）</li></ol><h2>如何下載Telegram多媒體型態JSON回傳的實體檔案？</h2><p>這裡要教大家的是如何透過BOT取得檔案、照片、貼圖的程序，基本上就是依靠file_id這個屬性，由於上面提過，Telegram所有多媒體資料回傳JSON的都不盡相同，我這邊只好舉例最常使用到的一般檔案來進行展示就好，其他的多媒體資料可以自行舉一反三即可。</p><p>Step 1. 查看BOT取得檔案型態JSON格式的返回值：</p><pre><code class=language-json>{
+  "update_id":0806449,
+  "message":{
+    "message_id":978,
+    "from":{
+      "id":5201314,
+      "is_bot":false,
+      "first_name":"OOO",
+      "username":"XXX",
+      "language_code":"zh-hans"
+    },
+    "chat":{
+      "id":5201314,
+      "first_name":"OOO",
+      "username":"XXX",
+      "type":"private"
+    },
+    "date":7878978,
+    "document":{
+      "file_name":"Test.xlsx",
+      "mime_type":"application/octet-stream",
+      "file_id":"ThisIsARandomSerialNumber", ← important!
+      "file_unique_id":"WhoCares",
+      "file_size":65535
+    },
+    "caption":"這是一個EXCEL檔案範例"
+  }
+}
+</code></pre><p>大家要注意上面這一段JSON最重要的就是「message.document.file_id」，他基本上就是一串無意義的亂數，以上面為例我將其數值取為「ThisIsARandomSerialNumber」，其餘的資訊我想你應該不會看不懂吧！</p><p>Step 2. 透過GET方法，將上面的file_id放入之中，例如：</p><pre><code class=language-txt>//註：花括號{}僅為醒目用途，實際上不需要打上喔！
+https://api.telegram.org/bot{YourBotAccessToken}/getFile?file_id={ThisIsARandomSerialNumber}
+</code></pre><p>Step 3. 如果一切無誤，Telegram會回應給你類似下面的JSON字串：</p><pre><code class=language-json>{
+  "ok": true,
+  "result": {
+    "file_id": "ThisIsARandomSerialNumber",
+    "file_unique_id": "WhoCares",
+    "file_size": 65535,
+    "file_path": "documents/file_0.xlsx" ← important!
+  }
+}
+</code></pre><p>在這個JSON回覆資料中，最重要的就是「file_path」屬性的值，以上例來說就是「documents/file_0.xlsx」。</p><p>Step 4. 接著請把「file_path」做一下URL Encode，接著用Telegram提供的檔案下載API，利用GET方法去下指令即可。</p><pre><code class=language-txt>//註：花括號{}僅為醒目用途，實際上不需要打上喔！
+https://api.telegram.org/file/bot{YourBotAccessToken}/{documents%2Ffile_0.xlsx}
+</code></pre><p>執行下去就會看到你的瀏覽器彈出下載了，而這個檔案就是你剛才上傳且被BOT看到的檔案。</p><h6>Telegram Bot Webhook JSON Files Documents Download StepByStep</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

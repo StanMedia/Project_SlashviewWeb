@@ -1,0 +1,22 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>在Windows事件檢視器中過濾出電腦的登入紀錄（包含遠端連線）</h1><p>因為一些資安的需求，需要在自己的電腦中的Windows事件檢視器中，快速地找出電腦登入的紀錄（包括遠端桌面連線的紀錄），在網路搜尋一下果然有人遇過這方面的需求，將各路的指令整併後列於下方，供給有需要的人參考。</p><h2>找出Windows系統中的登入紀錄</h2><p>Step 1. 首先要知道，所有有關於Windows的登入紀錄，都被記錄在「Windows紀錄」>「安全性」之中。</p><p>Step 2. 到「自訂檢視」中，右鍵選擇「建立自訂檢視」。</p><p>Step 3. 點選「依紀錄」>僅勾選「Windows紀錄」>「安全性」。</p><p>Step 4. 切換到XML頁籤，勾選「手動編輯查詢」，貼上下列XML字串（採 XPath 語法）：</p><pre><code class=language-xml>&lt;QueryList>
+  &lt;Query Id="0" Path="Security">
+    &lt;Select Path="Security">
+      *[
+        System[(EventID='4624')]
+        and
+        EventData[Data[@Name='TargetUserName']='電腦登入的帳號名稱']
+        and
+        (
+          EventData[Data[@Name='LogonType']='2']
+          or
+          EventData[Data[@Name='LogonType']='7']
+          or
+          EventData[Data[@Name='LogonType']='10']
+          or
+          System[(Keywords!='0x8020000000000000')]
+        )
+      ] 
+    &lt;/Select>
+  &lt;/Query>
+&lt;/QueryList>
+</code></pre><h2>補充說明</h2><ol><li>這個XPath語法只有支援到1.0（支援度有夠爛），寫起來其實限制多多，詳請參考<a href=https://docs.microsoft.com/zh-tw/windows/win32/wes/consuming-events#xpath-10-limitations>XPath 1.0 limitations</a>。</li><li>為了證明第一點，這裡有一篇微軟員工自己發表的文章（<a href=https://techcommunity.microsoft.com/t5/ask-the-directory-services-team/advanced-xml-filtering-in-the-windows-event-viewer/ba-p/399761>Advanced XML filtering in the Windows Event Viewer</a>），裡面有詳細講一些filtering思考路徑，但其實語法問題多多，拉到文章最下方可以看到有網友吐槽留言。</li><li>LogonType 2：正常互動登入、LogonType 7：解除鎖定登入、LogonType 10：遠端桌面登入</li></ol><h6>WindowsEventViewer Logon Login RemoteDesktopProtocol RDP Viewer Filter</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

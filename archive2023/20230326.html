@@ -1,0 +1,10 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>在Windows家用版本安裝本機群組原則編輯器</h1><p>Windows Home版本的作業系統，本機群組編輯器（gpedit.msc）被閹割掉，可是有時候需要用這個方便的GUI介面來快速設定一些東西，變得礙手礙腳，實在不太懂微軟把這個功能閹割是有啥特定目的，難道一般的使用者會用這個來提高生產力？還是以為沒了這個東西，使用者就更不會去破壞作業系統的設定？其實根本想太多，使用者是最無敵的存在好嗎？（破壞王）</p><h2>在Windows家用版把本機群組原則編輯器安裝回來</h2><p>依序進行下列兩個步驟，就可以把<code>gpedit.msc</code>安裝回來。</p><p>Step 1. 將下列程式碼存成<code>install.bat</code>，並使用<code>系統管理者</code>權限執行。</p><pre><code class=language-bat>@echo off pushd "%~dp0"
+
+dir /b %SystemRoot%\servicing\Packages\Microsoft-Windows-GroupPolicy-ClientExtensions-Package~3*.mum >List.txt
+
+dir /b %SystemRoot%\servicing\Packages\Microsoft-Windows-GroupPolicy-ClientTools-Package~3*.mum >>List.txt
+
+for /f %%i in ('findstr /i . List.txt 2^>nul') do dism /online /norestart /add-package:"%SystemRoot%\servicing\Packages\%%i"
+
+pause
+</code></pre><p>Step 2. 安裝完成後重新開機，點選<code>Windows + R</code>輸入<code>gpedit.msc</code>就可以看到效果嘍。</p><h6>Windows10HomeEdition Windows11HomeEdition GroupPolicyEditor gpedit.msc</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

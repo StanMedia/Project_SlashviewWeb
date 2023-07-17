@@ -1,0 +1,110 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>Telegram Bot機器人申請與Webhook指令全紀錄</h1><p>隨著高度爭議的LINE 2.0收費機制全面實施後，社會有一股力量慢慢地往免費的Telegram來推移，但我認為這樣的運動是沒有意義的，一來天下沒有永遠免費的午餐，二來現代化社會賦予給即時通訊軟體24小時溝通的本質，不會因為換了品牌而有所改變。想想看，就算Telegram永遠維持免費讓你無限發送訊息，那對手機使用者本身來說，這個環境是好還是不好？這問題或許永遠沒有標準答案（視應用場合而定），但就LINE對於發訊量的縮減政策，我相信他們與我想到的是同一件事情。</p><p>說了這麼多的引言只是發發牢騷，不代表我喜歡LINE這個軟體，事實上我非常討厭LINE。話不多說了，開始正題。</p><p><img src=https://content.slashview.com/img/2020/20200319_01.jpg alt="" /></p><h2>申請Telegram機器人與發送訊息</h2><p>Step 1. 申請一個Telegram帳號。</p><p>Step 2. 加入@BotFather為好友，對他輸入指令「/newBot」，假設機器人顯性ID為「@MyBot」，注意機器人的名稱可以不用Bot結尾，但@帳號最後一定是Bot結尾。</p><p>Step 3. @BotFather會給你一組機器人的AccessToken（假設：123456:ABCDEF-1234），這組序號千萬要保存好，如果外流就糟糕了。</p><p>Step 4. 建立一個Public Channel，假設名為「@MyTesting」，並將機器人「@MyBot」加入為Administrators。</p><p>Step 5. 利用HTTP GET方法進行第一次送訊，並請透過返回訊息觀察JSON中的result＞chat＞id，這代表這個Channel的編號（假設：-65535）：</p><pre><code class=language-txt>https://api.telegram.org/bot123456:ABCDEF-1234/sendMessage?chat_id=@MyTesting&amp;text=HelloWorldByReadableChatId
+</code></pre><p>Step 6. 基於安全與隱私，建議將Channel設定為Private尤佳，但是當Channel變成Private後上列第五步驟的chat_id就不能填上「公開實名」名稱了，必須使用「數字型態」的chat_id，例如：</p><pre><code class=language-txt>https://api.telegram.org/bot123456:ABCDEF-1234/sendMessage?chat_id=-65535&amp;text=HelloWorldByNumericChatId
+</code></pre><h2>貼心小提示</h2><p>無論是Channel或是Group，只要屬性是Public，都可透過「t.me/你的自訂名稱」使用GET型態的sendMessage發送訊息。例如下列指令：</p><pre><code class=language-txt>https://api.telegram.org/Bot{你的Token}/sendMessage?chat_id=@{你的自訂名稱}}&amp;text={你的文字}
+</code></pre><p>若你覺得改成Private還是可以傳送？那是因為Telegram伺服器的設定延遲，過個一分鐘後你再測試就會得到：</p><pre><code class=language-json>{
+  "ok": false,
+  "error_code": 400,
+  "description": "Bad Request: chat not found"
+}
+</code></pre><p>基本上若要使用Telegram Bot機器人，還是建議使用「數字型態的chat.id」回送會比較相容，因為無論Public或Private都可以接受這個格式。</p><h2>申請Telegram Bot Webhook，讓訊息遞送到你建立的程式碼處理</h2><p>其實Telegram Bot遞送訊息的通道有兩種，一種叫做getUpdates（Telegram Bot被動）另外一種叫Webhook（Telegram Bot主動）。getUpdates你必須主動的去Telegram API詢問現在有沒有指令或訊息，以現代的技術上來說不必要、負擔太大，也不太即時，使用的人應該很少才對。所以我們的重點會放在Webhook首，先先看一下建立、查看、刪除Webhook的相關指令列表：</p><pre><code class=language-txt>//Set Webhook
+https://api.telegram.org/bot123456:ABCDEF-1234/setWebhook?url=https://你的DomainName/你的程式路徑
+</code></pre><pre><code class=language-json>{
+  "ok": true,
+  "result": true,
+  "description": "Webhook was set"
+}
+</code></pre><pre><code class=language-txt>//Delete(Remove) Webhook
+https://api.telegram.org/bot123456:ABCDEF-1234/deleteWebhook
+</code></pre><pre><code class=language-json>{
+  "ok": true,
+  "result": true,
+  "description": "Webhook was deleted"
+}
+</code></pre><pre><code class=language-txt>//Get Webhook Information
+https://api.telegram.org/bot123456:ABCDEF-1234/getWebhookInfo
+</code></pre><pre><code class=language-json>{
+  "ok": true,
+  "result": {
+    "url": "",
+    "has_custom_certificate": false,
+    "pending_update_count": 0
+  }
+}
+</code></pre><p>你可以在getWebhookInfo中的JSON回傳看到一個叫做pending_update_count的屬性，這個的意思是指目前機器人收到的指令中，未處理的訊息有多少個。Telegram Bot Webhook有一個很有趣的實作，就是當你的伺服器傳回非200的HTTP response status codes，他會反覆的敲門喔！所以我建議大家在寫程式發生未預期的錯誤時盡量拋出Http 200 OK，不然你可能會被不斷敲門喔！</p><p>若真的有需要清除pending_update_count，可以手動呼叫一次getUpdates，我想拿回來什麼都不做，就是一種清除吧！</p><pre><code class=language-txt>https://api.telegram.org/bot123456:ABCDEF-1234/getUpdates
+</code></pre><h2>Telegram的Channel、Group與Bot Webhook之間的關係</h2><p>⭐ Channel 頻道：</p><ol><li>Channel可以LINK既有Group或建立新Group，當有人（包含Bot）在Channel發言時，所有被LINK到的Group都會出現相同的訊息。</li><li>Channel在意義上比較像是公有頻道、廣播頻道，適合被拿來做單向通知。</li><li>在Channel裡面發送的所有訊息，Bot都看得到也就是會觸發Webhook。（因為在Channel內的Bot身分強制是Administrators）</li></ol><p>⭐ Group 群組：</p><ol><li>Group在意義上比較像是討論群組，大夥在群組裡面私聊講些五四三的。</li><li>在Group裡面發送的所有訊息除非前面加上「\」符號，否則Bot看不到也就是不觸發Webhook。（除非特別設定）</li><li>要特別設定Bot可以看到群組裡面的每一句話（不需要加上「\」符號），就要請BotFather出來把「can_read_all_group_messages」選項設定為true。（跟BotFather講「/setprivacy」後，會有UI引導操作）</li></ol><h2>BOT 隱私知識</h2><ol><li>預設所有的Bot的privacy mode都是被Enabled的。</li><li>但如果該隻Bot的身分是Administrators，那麼他預設就看的到所有的訊息。（不需要加上「\」符號）</li></ol><p>觀察Bot是否能夠讀取群組的每一句訊息，可輸入下面指令：</p><pre><code class=language-txt>https://api.telegram.org/bot123456:ABCDEF-1234/getMe
+</code></pre><pre><code class=language-json>{
+  "ok": true,
+  "result": {
+    "id": 123456,
+    "is_Bot": true,
+    "first_name": "OOO",
+    "username": "OOOBot",
+    "can_join_groups": true,
+    "can_read_all_group_messages": false, //true 代表可到群組內所有訊息
+    "supports_inline_queries": false
+  }
+}
+</code></pre><h2>Telegramt Bot Webhook於Personal、Channel、Group傳入訊息JSON格式列表</h2><p>對Bot私聊：</p><pre><code class=language-json>{
+  "update_id":7878978,
+  "message":{
+    "message_id":78,
+    "from":{
+      "id":個人代表ID,
+      "is_Bot":false,
+      "first_name":"你的名字",
+      "username":"你的代號",
+      "language_code":"zh-hans"
+    },
+    "chat":{
+      "id":個人代表ID,
+      "first_name":"你的名字",
+      "username":"你的代號",
+      "type":"private"
+    },
+    "date":1234567890,
+    "text":"我在與機器人一對一聊天"
+  }
+}
+</code></pre><p>對Group群聊：</p><pre><code class=language-json>{
+  "update_id":7878978,
+  "message":{
+    "message_id":78,
+    "from":{
+      "id":個人代表ID,
+      "is_Bot":false,
+      "first_name":"你的名字",
+      "username":"你的代號",
+      "language_code":"zh-hans"
+    },
+    "chat":{
+      "id":-0806449,
+      "title":"群組名稱",
+      "type":"group",
+      "all_members_are_administrators":true
+    },
+    "date":1234567890,
+    "text":"/我在群組內進行群聊",
+    "entities":[
+      {
+        "offset":0,
+        "length":10,
+        "type":"Bot_command"
+      }
+    ]
+  }
+}
+</code></pre><p>對Channel發言：</p><pre><code class=language-json>{
+  "update_id":7878978,
+  "channel_post":{
+    "message_id":78,
+    "chat":{
+      "id":-0806449,
+      "title":"頻道名稱",
+      "username":"頻道唯一帳號",
+      "type":"channel"
+    },
+    "date":1234567890,
+    "text":"我在對頻道進行發言"
+  }
+}
+</code></pre><p>這三個JSON提供了一個很重要的資訊，就是chat＞id可以描述出回信的目標對象，text可以取得使用者到底講了什麼。但他們分處於不一樣的父屬性下（message、channel_post），我個人認為設計的蠻爛的，畢竟都有type屬性在跟你講說現在是Channel還是Group了不是嗎？總之，有了上面三種資訊，相信聰明的你要寫出一個Telegram Bot加上Webhook應該不是太難的事情了吧！Happy Coding！</p><h3>相關連結</h3><ul><li><a href=https://core.telegram.org/Bots/api>Telegram Bot API</a></li><li><a href=https://core.telegram.org/Bots>Bots: An introduction for developers</a></li></ul><h6>Telegram Bot Bots Create Set Remove Delete Webhook</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

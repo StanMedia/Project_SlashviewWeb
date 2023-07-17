@@ -1,0 +1,9 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>使用JSON.NET遭遇匿名型別轉換之錯誤捕捉寫法</h1><p>之前在使用JSON.NET的匿名型別（Anonymous Type）將JSON或XML資料轉換回ORM（Object-Relational Mapping）物件時，一般來說都是直接下指令轉換，一直以來也沒有太大的問題。但日前遭遇到一個一直不斷傳遞骯髒資料的組織，用不正常的格式將導致DeserializeAnonymousType出現錯誤，這時候就會遭遇到要如何把匿名型別與DeserializeAnonymousType包入Try-Catch的寫法。</p><p>這裡會遇到的難處是，因為回傳的ORM物件是必須要參考回匿名型別，所以如果將匿名型別直接包入到Try-Catch區段也不對。再者回傳的ORM物件一開始必須宣告在Try-Catch外面，否則在糾錯捕捉完成後就會失去，而匿名型別是不可以直接以var來做空宣告（null）的。</p><p>下面的寫法，oResult一跳開try-cache就不見了。</p><pre><code class=language-cs>try
+{ oResult = Newtonsoft.Json.JsonConvert.DeserializeAnonymousType(cJson, new  { Name = "", ID= "" }); }
+</code></pre><p>下面的寫法，var oResult;會出錯。</p><pre><code class=language-cs>var oResult;
+try
+{ oResult = Newtonsoft.Json.JsonConvert.DeserializeAnonymousType(cJson, new  { Name = "", ID= "" }); }
+</code></pre><h2>使用匿名型別轉換之錯誤捕捉寫法</h2><p>正確的範例如下，這篇文章的所有範例是使用XML Document為資料來源。</p><pre><code class=language-cs>var oResult = new { Name = "", ID= "" };
+try
+{ oResult = Newtonsoft.Json.JsonConvert.DeserializeAnonymousType(cJson, oResult); }
+</code></pre><h6>AnonymousType TryCatch Newtonsoft.Json.Net VarAnonymousType</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

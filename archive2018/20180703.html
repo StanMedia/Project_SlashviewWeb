@@ -1,0 +1,17 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>IIS設定僅開啟部分HTTP Verbs.的做法</h1><p>這個問題的觸發點也是因為弱點掃描，又是一個我不認為是問題的問題，原因是因為我的伺服器只開放了下列五個動詞：「OPTIONS, TRACE, GET, HEAD, POST」，第３、４、５項次我不認為有任何WEB伺服器可以不支援，第２項其實只是一個毫無風險的loop-back，剩下的就是第一個項次「OPTIONS」，而這個「OPTIONS」的目的也只能列出這四個項次，那...風險在哪？但是言歸正傳，想下班的話，人家說要關就關掉吧！</p><p><img src=https://content.slashview.com/img/2018/20180703_01.jpg alt="" /></p><p>在弱點掃描伺服器上，他顯示的資訊如下所示：</p><pre><code class=language-txt>OPTIONS method is enabled
+-----
+HTTP OPTIONS method is enabled on this web server. The OPTIONS method provides a list of the methods that are supported by the web server, it represents a request for information about the communication options available on the request/response chain identified by the Request-URI.
+</code></pre><h2>用UI的方式來限制IIS可提供的HTTP Verbs.</h2><p>Step 1. 打開IIS管理員，點選「要求篩選」進入設定。（如果沒有這個選項，那你要回去幫IIS裝一下這個套件）</p><p><img src=https://content.slashview.com/img/2018/20180703_02.jpg alt="" /></p><p>Step 2. 看你要用白名單/黑名單的思維，自己去設定要開放還是要封鎖的指令動詞。</p><p><img src=https://content.slashview.com/img/2018/20180703_03.jpg alt="" /></p><h3>用Web.Config的方式來限制IIS可提供的HTTP Verbs.</h3><p>說實在的，這是最快的方法了，而且在這個模式下，你可以更精確的指定是要採用黑名單工作方式，還是要採用白名單工作方式（allowUnlisted="true/false"）。</p><pre><code class=language-xml>&lt;configuration>
+ &lt;system.webServer>
+  &lt;security>
+   &lt;requestFiltering>
+    &lt;verbs allowUnlisted="false">
+      &lt;add verb="HEAD" allowed="true" />
+      &lt;add verb="GET"  allowed="true" />
+      &lt;add verb="POST" allowed="true" />
+    &lt;/verbs>
+   &lt;/requestFiltering>
+  &lt;/security>
+ &lt;/system.webServer>
+&lt;/configuration>
+</code></pre><h6>IIS HTTP Verb. Verbs. Change Disable Enable OPTIONS GET POST</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

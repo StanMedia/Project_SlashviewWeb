@@ -1,0 +1,96 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>利用ModelBinding處理FormData回傳表單「多值集合」與「多重檔案」之作法</h1><p>今天遇到使用Model Binding來快速處理表單AJAX回傳FormData時，表單中需要包含多值集合的項目，一直以來沒有在Model Binding的模型下進行這樣的資料型態處理，因此進行個小實驗來驗證一下，另外也順便實驗了多重檔案上傳的可能性，將程式碼紀錄於此供給有需要的人查閱。</p><h2>表單包含多值集合的項目</h2><p>舉例來說，有一份考卷資料，裡面包含了成績單的名稱，另外包含了一個學生成績清冊列表的集合，另外也有可能存在著考卷的影像檔案，這些資料如何透過FormData以AJAX的方式向後端傳送，並讓後端可以順利的讀取呢？</p><h3>後端資料模型</h3><pre><code class=language-cs>public class Exam
+{
+  public string cName { get; set; }
+  public System.Collections.Generic.List&lt;Student> oStudents { get; set; }
+}
+
+public class Student
+{
+  public string cName { get; set; }
+  public int iScore { get; set; }
+}
+</code></pre><p>值得一提的是，在一些網路文獻裡面有提到，可以在Exam類別下加上HttpPostedFile或是HttpPostedFileBase型別的檔案屬性資料，但就我實際上的測試來說，並不會被Model Binding自動識別與讀取。原因是先前我的WebForm DataBinding支援能力是從微軟的原始碼幹過來的，而有關於這方面全部的實作微軟早就轉移陣地至<a href=https://github.com/aspnet/AspNetWebStack/tree/2fa23f210cef96eed816b0f8c1361c745bd9450c/src/System.Web.Mvc>System.Web.MVC</a>之中，包含IValueProvider、ValueProviderFactories、HttpFileCollectionValueProviderFactory HttpFileCollectionValueProvider...等實作，這麼龐大的架構移植到現行的WebForm框架中根本不符成本，因此直接放棄改成由Request.Files（HttpFileCollection）來拿即可。</p><p>說白點就是有關「HTTP檔案上傳」這部分放棄由ModelBinding來完成。</p><h2>前端表單HTML</h2><p><img src=https://content.slashview.com/img/2022/20220307_01.jpg alt="" /></p><pre><code class=language-html>&lt;form id="myForm">
+  &lt;fieldset>
+    &lt;div class="form-row">
+      &lt;div class="form-group col-12">
+        &lt;label for="cKSUID">考卷名稱&lt;/label>
+        &lt;div class="input-group">
+          &lt;input type="text" class="form-control" id="cName" name="cName">
+        &lt;/div>
+      &lt;/div>
+    &lt;/div>
+    &lt;div class="form-row">
+      &lt;div class="form-group col-12 col-md-6">
+        &lt;label for="cKSUID">學生Ａ姓名&lt;/label>
+        &lt;div class="input-group">
+          &lt;input type="text" class="form-control" id="oStudents[0].cName" name="oStudents[0].cName">
+        &lt;/div>
+      &lt;/div>
+      &lt;div class="form-group col-12 col-md-6">
+        &lt;label for="iMoney">學生Ａ分數&lt;/label>
+        &lt;input type="text" class="form-control" id="oStudents[0].iScore" name="oStudents[0].iScore">
+      &lt;/div>
+    &lt;/div>
+    &lt;div class="form-row">
+      &lt;div class="form-group col-12 col-md-6">
+        &lt;label for="cKSUID">學生Ｂ姓名&lt;/label>
+        &lt;div class="input-group">
+          &lt;input type="text" class="form-control" id="oStudents[1].cName" name="oStudents[1].cName">
+        &lt;/div>
+      &lt;/div>
+      &lt;div class="form-group col-12 col-md-6">
+        &lt;label for="iMoney">學生Ｂ分數&lt;/label>
+        &lt;input type="text" class="form-control" id="oStudents[1].iScore" name="oStudents[1].iScore">
+      &lt;/div>
+    &lt;/div>
+    &lt;div class="form-row">
+      &lt;div class="form-group col-12 col-md-6">
+        &lt;label for="cKSUID">考卷影像檔1&lt;/label>
+        &lt;div class="input-group">
+          &lt;input type="file" id="oPaperFile1" name="oPaperFile1">
+        &lt;/div>
+      &lt;/div>
+      &lt;div class="form-group col-12 col-md-6">
+        &lt;label for="cKSUID">考卷影像檔2&lt;/label>
+        &lt;div class="input-group">
+          &lt;input type="file" id="oPaperFile2" name="oPaperFile2">
+        &lt;/div>
+      &lt;/div>
+    &lt;/div>
+  &lt;/fieldset>
+&lt;/form>
+</code></pre><h2>前端表單Javascript</h2><pre><code class=language-js>$.ajax({
+  url: cUrl,
+  type: "POST",
+  data: new FormData($("#myForm")[0]),
+  processData: false, //FormDataRequired
+  contentType: false, //FormDataRequired
+  dataType: "json",
+  beforeSend: function () {
+    //傳輸中
+  },
+  complete: function () {
+    //傳輸完成
+  },
+  error: function (oXHR, cStatus, cError) {
+    //傳輸錯誤
+  },
+  success: function (oData) {
+    //傳輸成功
+  }
+});
+</code></pre><p>觀察一下傳輸過去的資料：</p><p><img src=https://content.slashview.com/img/2022/20220307_02.jpg alt="" /></p><p>可以藉機看到multipart/form-data的依據，全部都是表單中的name屬性而已，所以在HTML中id屬性就算拿掉也可以正常運作。而「多值集合」與「多重檔案」的傳輸秘訣，關鍵就在於name屬性以陣列[n]的方式來描述即可。</p><p><img src=https://content.slashview.com/img/2022/20220307_03.jpg alt="" /></p><h2>後端讀取模型</h2><pre><code class=language-cs>//WebForm ModelBinding
+var oMB = WebFormModelBinding.ModelBinding&lt;Exam>();
+
+//取得試卷名稱
+oMB.oData.cName;
+//取得考生姓名與成績
+oMB.oData.oStudents.Select(x => $"{x.cName}|{x.iScore}");
+
+//取得前端AJAX回傳的檔案並儲存
+for (int i = 0; i &lt; Request.Files.Count; i++)
+{
+  var oFile = Request.Files[i];
+  oFile.SaveAs($@"\\YourFileServer\" + oFile.FileName);
+}
+</code></pre><p>Slashview.ModelBinding這個方法，可以在相關參考中找到之前的文章。</p><h3>相關參考</h3><ul><li><a href=/archive2020/20200430.html>進行物件Reflection反射後，將值Value寫入到物件屬性中</a></li><li><a href=/archive2020/20200511.html>在WebForm下使用ModelBinding（PostBack遭遇之問題）</a></li><li><a href=/archive2020/20200512.html>在WebForm下使用ModelBinding（打造ASHX可用的通用類別）</a></li><li><a href=/archive2022/20220307.html>利用ModelBinding處理FormData回傳表單「多值集合」與「多重檔案」之作法</a></li></ul><h6>ASP.NET MVC WebForm WebAPI FormData AJAX FileUpload Model ContainsLsit ContainsCollection ModelBinding</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

@@ -1,0 +1,12 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>SQL筆記：在SSMS裡面完整檢視NTEXT或NVARCHAR(MAX)大型文字欄位檔案</h1><p>一直以來有個困擾，就是在Microsoft進行Log資料表的追蹤時，對於常出現在Log裡面的NTEXT或NVARCHAR(MAX)等大型文件欄位很難一次性的透過滑鼠點擊與查閱，直接在欄位上按下COPY貼到記事本肯定資料會被截斷（不完整），甚至某些系統我還特別寫Web介面來提供完整檢視功能，但這種作法對於偶爾才需要手動人工查詢的某些系統Log資料表，又顯得耗時與不切實際。</p><h2>在SSMS完整檢視NTEXT或NVARCHAR(MAX)大型文字欄位</h2><p>常見有兩種方法可以看到完整資料，一種是修改SSMS檢視結果集，使其「盡量不要截斷」文字資料，修改的方法就是任意開啟資料表進入查詢模式視窗後，可以在選單點選「查詢」＞「查詢選項」＞「結果」＞「格線」＞「擷取的最大字元數」＞「非XML資料」，在這邊盡量調整數值使其越大越好。（但到底要調多少才夠用，天知道。）</p><p><img src=https://content.slashview.com/img/2022/20220213_01.jpg alt="" /></p><p>另外一種做法就是在這種大型文字的查詢結果集的欄位上按右鍵，彈出對話視窗後選擇「儲存結果」，這時候就可以把這筆資料儲存成CSV檔，接著再利用文字編輯軟體去打開來查閱即可。（但如果正處於十萬火急的除錯情境下，這種繁雜做法很惱人，無法有效的透過介面逐一尋訪綜覽問題）</p><p><img src=https://content.slashview.com/img/2022/20220213_02.jpg alt="" /></p><h2>直接在SSMS完整檢視NTEXT或NVARCHAR(MAX)大型文字欄位的方法</h2><p>這裡提供一個很有趣的方法讓大家參考一下，答案就是將欄位資料轉XML，並利用超連結標籤使XML變成可點擊，點擊後SSMS會跳出XML檢視視窗，讓你可以透過UI操作介面盡情的尋訪完整資料。</p><p>把下列語法儲存成資料庫對應的檢視表，下次SSMS直接開啟檢視表查詢時就可以透過點擊觀看，超舒服！</p><pre><code class=language-sql>SELECT
+  iAutoIndex,
+  XXX,
+  CAST
+  (
+    '&lt;A>&lt;![CDATA[' +
+    CAST(YourColumnNameOfLargeText AS NVARCHAR(MAX)) +
+    ']]>&lt;/A>' AS XML
+  ) AS ClickToViewDetail
+FROM
+  YourTableName
+</code></pre><h6>Microsoft SqlServer SSMS View Quick NText NVarchar(MAX)</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

@@ -1,0 +1,18 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>執行Microsoft Office Automation於IIS Server（ASP.NET）端的相關設定</h1><p>在使用Office Automation等相關功能（Word、Excel、PowerPoint）來進行檔案服務自動化時，我們往往會將Office安裝在伺服器當中，而在終端電腦（VisualStudio端）開發完成的程式碼轉移到伺服器端的時候，一定會遇到非常多權限屬性設定的問題，這篇文章即在探討這些出意外的狀況。</p><p>會發生這些雜七雜八的問題很簡單，因為微軟壓根兒就不想讓你使用COM+的方式來喚起Office家族，進行網站等級的遠端呼叫，因為Office所有的設計一開始就是基於使用者真實的身分登入且進行真實的互動（例如打字、點選），所以很多環境都是基於「這是一個真的使用者」的環境來進行設定，所以當這些設定找不到，或者是權限出問題時，問題就會環環相扣、接踵而至嘍。錯誤的問題比較常見如：</p><pre><code class=language-txt>擷取元件 (CLSID 為 {000209FF-0000-0000-C000-000000000046}) 的 COM Class Factory 失敗，因為發生下列錯誤: 80070005 存取被拒。 (發生例外狀況於 HRESULT: 0x80070005 (E_ACCESSDENIED))。 
+
+Retrieving the COM class factory for component with CLSID {000209FF-0000-0000-C000-000000000046} failed due to the following error: 80070005 Access is denied. (Exception from HRESULT: 0x80070005 (E_ACCESSDENIED)). 
+</code></pre><p>或者是NULL參照的錯誤訊息：</p><pre><code class=language-txt>System.NullReferenceException: 並未將物件參考設定為物件的執行個體
+Object reference not set to an instance of an object.
+</code></pre><h2>解決方法：</h2><p>總共有四個要點要注意，我所實驗的環境是Windows Server 2008 R2 + Office 2016 x64。</p><p>Setp 1. 去應用程式集區，設定好你的運行身分，這對一個IIS的管理者應該不會太難才是。（若如果你沒有一個單一個運行身分，請去電腦管理建立一個）</p><p><img src=https://content.slashview.com/img/2016/20161017_01.jpg alt="" /></p><p>Step 2. 將這個運行身分，加入到Administrators群組內。（我知道很危險！但是，當你決定要用Microsoft.Office.Interop時，你已經決定了這一切的風險了不是嗎？好好的把Microsoft.Office.Interop Service鎖定在有限的網路、服務範圍，才是比較實際的做法。）</p><p><img src=https://content.slashview.com/img/2016/20161017_02.jpg alt="" /></p><p>Step 3. 打開元件服務「dcomcnfg.exe」。進入到電腦（Computer）＞我的電腦（Local Computer）＞DCOM設定（Config DCOM）＞Microsoft Word 97-2003文件（Microsoft Word 97-2003 Documents），點選右鍵選擇內容。切換到識別身分（Identity）的頁籤，把執行啟動的使用者（Launching User）改為指定下列使用者（This User），所謂的使用者當然就是你建立的這個運行身分啦！</p><p><img src=https://content.slashview.com/img/2016/20161017_03.jpg alt="" /></p><p>※ 網路上有很多人教你要設定為互動式使用者（interactive user），這個就是我說的真實使用者身分，但選這個選項是錯誤的，因為哪一台伺服器不會登出？如果你不幸選到這個選項，那麼你的功能只有在Administrator等級的身分登入，才可以正常的運作。</p><p>Step 4. 在IIS的web.config中，加入下列字句：</p><pre><code class=language-xml>&lt;configuration>
+  &lt;system.web>
+    &lt;identity impersonate="true" userName="UserName" password="UserPassword"/>
+  &lt;/system.web>
+&lt;/configuration>
+</code></pre><p>大功告成！</p><p>※註一：如果真的還是會有錯誤的話，不妨到下列位置，加入一個叫做「Desktop」的資料夾，理論上是不用啦！</p><pre><code class=language-txt>Windows x64 + Office x86：
+C:\Windows\System32\config\systemprofile > Add「Desktop」
+
+Windows x86 + Office x86、Windows x64 + Office x64：
+C:\Windows\SysWOW64\config\systemprofile > Add「Desktop」
+</code></pre><p>※註二：如果有使用到UNC Path環境的IIS，請記得以Administrator的身分Login到OS中，在檔案總管輸入UNC網路芳鄰連線到目的網路磁碟機，並且記得一定要勾選儲存帳號密碼，這樣Microsoft Office才可以在登出（Logout）時順利的取得背景連線能力。否則你大概會得到下列錯誤訊息：</p><pre><code class=language-txt>HTTP 內部伺服器錯誤 500
+HTTP Internal Server Error 500
+</code></pre><h6>Microsoft.Office.Interop.Word.Application Microsoft.Office.Interop.Word.Document Documents.Open</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

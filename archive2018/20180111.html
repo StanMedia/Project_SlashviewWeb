@@ -1,0 +1,7 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>用.NET列舉本機裡面所有安裝完成的字型名稱</h1><p>如何正確地把字型名稱列舉出來，一直是困擾著我的事情。例如有時候在寫CSS的時候需要用到font-family時，就要跑到電腦的字型裡面按下右鍵＞內容＞詳細資料＞標題，才能找到字型名稱，重點是看到了名稱也無法複製出來，只能夠手動的逐一打出來。</p><p>今天在進行GDI+的時候，又需要再進行一次這樣的蠢事，於是怒爬MSDN找到有InstalledFontCollection這個好用的集合類別，程式碼非常簡單，列在Console下就可以開心地尋找與使用複製貼上大法，再也不用手動打字型名稱了。</p><h2>列舉本機所有的字型名稱</h2><pre><code class=language-cs>public static void Main()
+{
+  System.Drawing.Text.InstalledFontCollection oFonts = new System.Drawing.Text.InstalledFontCollection();
+  foreach (System.Drawing.FontFamily oItem in oFonts.Families)
+  { WriteLine(oItem.Name); }
+}
+</code></pre><p>列舉出來的畫面如下，都是字型名稱喔！</p><p><img src=https://content.slashview.com/img/2018/20180111_01.jpg alt="" /></p><p>P.S 這個功能也可以用在排除同一支程式在不同環境下運行的結果，例如Google的「 NotoSansMonoCJK-TC-Regular.otf」這個字型，安裝在Windows Server 2008 with .NET Framework 4.5是無法被列舉的（System.Drawing GDI+），但是同樣的程式搬到在Windows Server 2016就列舉的到，因此我們可以利用這個功能來進行字型是否可被讀取的偵測。</p><h6>C# ASP.NET Windows Fonts FontFamilies FontName Lists Collections GDI+</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

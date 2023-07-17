@@ -1,0 +1,12 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>SQL筆記：SQL先插入資料後取回PK/Index值</h1><p>在寫資料庫的時候一定會遇到先把資料寫入，再取回鍵值（Primary Key, PK）或AutoIndex自動增量值的情境，這時候你有三種方式可以選擇。</p><p>@@IDENTITY、SCOPE_IDENTITY和IDENT_CURRENT是類似的函數，因為它們都會傳回最後插入資料表之IDENTITY資料行的值。</p><h2>SCOPE_IDENTITY與@@IDENTITY</h2><p>SCOPE_IDENTITY和@@IDENTITY都會傳回資料表中所產生的最後一個識別值。</p><p>SCOPE_IDENTITY：執行這個程序會回傳目前當前作業的資料表中，最後增加的編號值。「範例：SELECT SCOPE_IDENTITY();」</p><p>@@IDENTITY：這個就是回傳目前資料庫的所有作業中，最後一個新增的自動編號值，應該不會用到。「範例：SELECT @@IDENTITY」</p><p>所以插入一筆資料後取回PK值的SQL語法大概會長的如下：</p><pre><code class=language-sql>INSERT INTO [Table]
+  ...
+VALUES
+  ...;
+SELECT CAST(SCOPE_IDENTITY() AS int);
+</code></pre><h2>IDENT_CURRENT</h2><p>IDENT_CURRENT不受範圍和工作階段的限制；它只限於指定的資料表。IDENT_CURRENT會傳回在任何工作階段和任何範圍中，產生給特定資料表的識別值。「範例：SELECT IDENT_CURRENT('table name')」</p><h2>建議做法：</h2><p>由於微軟自己都說這兩種做法也有可能會有取到錯誤的數值：（<a href=https://support.microsoft.com/zh-tw/help/2019779/you-may-receive-incorrect-values-when-using-scope-identity-and-identit>You may receive incorrect values when using SCOPE_IDENTITY() and @@IDENTITY</a>），因此如果你的SQL Server允許的話，建議使用OUTPUT語句（OUTPUT Clause）來進行，會來的穩定一些。</p><pre><code class=language-sql>INSERT INTO [Table]
+  ...
+OUTPUT
+  INSERTED.iAutoIndex  //這張資料表的索引欄位名稱
+VALUES
+  ...
+</code></pre><p>參考網址：</p><ol><li><a href=http://goo.gl/CmPyP>http://goo.gl/CmPyP</a></li><li><a href=http://goo.gl/uEWWU>http://goo.gl/uEWWU</a></li></ol><h6>SQL Command PK Index iAutoIndex 先寫入資料再取回索引值</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

@@ -1,0 +1,37 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>類別（Class）和結構（Struct）的相異之處</h1><p>在現代的程式設計中，其實已經越發少見到結構（Struct）的模式出現，但是結構（Struct）還是有其存在的意義性，讓我們透過這一篇文章來介紹一下類別（Class）和結構（Struct）的差異之處。</p><p><img src=https://content.slashview.com/img/2017/20170328_01.jpg alt="" /></p><p>首先先來建立一下這兩個型別的基本概念。</p><h2>結構（Struct）</h2><ol><li>是一種實質型別（Value Type）。</li><li>存放在記憶體的Stack區。</li><li>不需要使用new就可以產生一份新的Struct。</li><li>若裡面有N個欄位，那麼一定要把N個欄位填滿，這個Struct才可以開始被使用。</li><li>不能擁有空參數的建構子（Constructor），若一定要寫建構子，則在建構子內要把所有欄位都指派值進去。</li><li>欄位不可以使用初始化賦值，請走建構子一途。</li></ol><h2>類別（Class）</h2><ol><li>是一種參考型別（Reference Type）。</li><li>存放在記憶體的Heap區。</li><li>一定要使用new來產生一份新的Instance。</li><li>若裡面有N個欄位，那麼不需要把N個欄位填滿，這個Instance才可以開始被使用。</li><li>能購擁有空參數的建構子（Constructor）。</li><li>欄位可以使用初始化賦值，例如：public string cName = "尚未命名";。</li></ol><h2>結構（Struct）與類別（Class）最大的差別</h2><p>簡單的說，就是「效能」。使用「Stack」來存放的結構（Struct），在進行耗用大量記憶體來存放「資料」時，基本上完全不會產生記憶體碎片化的問題，且在Struct離開Function時，這些記憶體會馬上被Release出去，讓系統的記憶體佔用率極低。反觀使用「Heap」來存放的類別（Class），，在進行耗用大量記憶體來存放「資料」時，在那邊參考來參考去，不僅造成碎片化，且當程式設計師忘記把Reference釋出（Dispose、Null），這些被佔用的記憶體甚至等到整個程式的生命週期結束後都不見得會被釋放掉（Release），必須仰賴垃圾蒐集（GC, Garbage Collection）來幫我們回收。</p><p>話不多說，來看一下程式碼：</p><pre><code class=language-cs>static void Main(string[] args)
+{
+  SEmployee oS1;
+  oS1.cName = "王小明";
+  oS1.iSalary = 22000;
+  SEmployee oS2 = oS1;
+  oS2.iSalary = 23000;
+
+  Console.WriteLine($"{oS1.iSalary} / {oS2.iSalary}");
+
+  CEmployee oC1 = new CEmployee();
+  oC1.cName = "李小華";
+  oC1.iSalary = 3300;
+  CEmployee oC2 = oC1;
+  oC2.iSalary = 3400;
+  CEmployee oC3 = new CEmployee();
+  oC3.iSalary = 3500;
+
+  Console.WriteLine($"{oC1.iSalary} / {oC2.iSalary} / {oC3.iSalary}");
+
+  Console.Read();
+}
+
+struct SEmployee
+{
+  public string cName;
+  public int iSalary;
+}
+
+class CEmployee
+{
+  public string cName;
+  public int iSalary;
+}
+</code></pre><p>Struct由於是實質型別，所以「SEmployee oS2 = oS1;」根本不會互相干擾，因為這一段程式碼的作用僅是在Stack區域再分割另外一塊給新的SEmployee Struct來使用。第一段的輸出為：</p><pre><code class=language-txt>22000 / 23000
+</code></pre><p>Class由於是參考型別，所以「CEmployee oC2 = oC1;」會互相干擾，當我們下了這一行指令只是在Heap區塊新增一個指標oC2，指向跟oC1同樣的類別參考位址。當oC2改變金額，oC1自然也就改變了。不過，我們通常的寫法都是再new一個Instance，例如「CEmployee oC3 = new CEmployee();」，所以所謂Struct抗干擾（耦合）的優勢並不存在。第二段的輸出為：</p><pre><code class=language-txt>3400 / 3400 / 3500
+</code></pre><h2>總結</h2><p>如果你的程式碼中並沒有需要建立到超大量的物件關係對應（ORM, Object Relational Mapping），亦或者是你根本無法預測這個型別未來會發展成怎樣的態勢，那麼最好的方法就是「一律採用類別（Class）」。如果你希望寫出更短小精幹的程式碼，那麼Struct或許是你可以努力下功夫的地方。</p><h6>Struct ValueType Class ReferenceType Difference WhichOne WhenShouldYouUse</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

@@ -1,0 +1,140 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>Windows 10電源計畫快速切換並從Console調用吐司通知彈出顯示</h1><p>會進行這個專案的撰寫，是因為在筆記型電腦上實在是受不了Windows的電源計畫（PowerOptions、PowerPlan）的切換模式。理論上來說，Windows 10應該在通知中心的快速控制項目中，將電源計畫的切換製作成快速切換的捷徑，讓筆記型電腦可以在「高效能」與「省電」之間切換才對。</p><p><img src=https://content.slashview.com/img/2017/20170401_01.jpg alt="" /></p><p>為何筆記型電腦需要在這兩種模式中切換，因為筆記型電腦如果在有電源供應的情況下，一般來說我們都會希望他是以「高效能」模式來運行，但是出門在外有時候你只需要進行輕量級的文書處理，或者是遠端桌面回公司的電腦進行運算，在沒有任何電源可以支持的情況下，我們當然希望電腦耗用的功率越小越好，這時候我們就特別需要快速的把電源計畫切換到「省電」模式。</p><p>因為Windows的切換電源計畫過於鳥，且找遍網路並沒有一個很令人安心或滿意的程式讓我直接利用，於是我只好自己寫了。程式碼是採用C#，並且採用簡易的Console介面（事實上根本沒有介面），以下分兩個方面來介紹：</p><h2>利用PowerCfg.exe來求得當前的電源計畫狀態</h2><p>電源計畫在Windows裡面其實不需要透過複雜的API就可以調用到，只要執行PowerCfg.exe即可。其中三個電源計畫會各自以一組獨一無二的GUID來表示，而且我們也可以從中窺得現在電腦所選用的電源計畫為何（有打上星號的就是當前選用的模式）。話不多說，請看下列的程式碼：</p><pre><code class=language-cs>static void Main(string[] args)
+{
+  //查詢這台電腦的電源模式GUID
+  string cResult = RunExe("/l");
+  //分割字串
+  string[] aryMode = cResult.Split(new string[] { "\r\n" }, StringSplitOptions.None);
+  //定義出高效能與省電的GUID與現行系統運行狀態
+  //高效能物件
+  System.Tuple&lt;string, bool> oHigh = GetState(aryMode[4]);
+  //省電物件
+  System.Tuple&lt;string, bool> oLow = GetState(aryMode[5]);
+  //切換模式
+  switch (oHigh.Item2)
+  {
+    //若當前為高效能模式，那就切換到省電模式
+    case true:
+      cResult = RunExe(string.Format("/s {0}", oLow.Item1));
+      SendToastNotification("電源計畫切換通知", "已將電源計畫切換成「省電模式」。", "PerformanceLow.png"); //Switch power options to Power-saver mode.
+      break;
+    //若不是高效能模式，則一律切換到高效能模式
+    default:
+      cResult = RunExe(string.Format("/s {0}", oHigh.Item1));
+      SendToastNotification("電源計畫切換通知", "已將電源計畫切換成「高效模式」。", "PerformanceHigh.png"); //Switch power options to High-performance mode.
+      break;
+  }
+}
+
+/// &lt;summary>
+/// 執行PowerCfg.exe
+/// &lt;/summary>
+/// &lt;param name="cTemp">執行參數&lt;/param>
+/// &lt;returns>回傳字串&lt;/returns>
+static string RunExe(string cTemp)
+{
+  string cResult = "";
+  using (System.Diagnostics.Process oProcess = new System.Diagnostics.Process())
+  {
+    oProcess.StartInfo = new System.Diagnostics.ProcessStartInfo()
+    {
+      FileName = @"C:\Windows\System32\PowerCfg.exe",
+      Arguments = cTemp,
+      UseShellExecute = false,
+      RedirectStandardOutput = true,
+      CreateNoWindow = true
+    };
+    //啟動程序
+    oProcess.Start();
+    //取得輸出字串
+    cResult = oProcess.StandardOutput.ReadToEnd();
+    //等候程序結束
+    oProcess.WaitForExit();
+  }
+  return cResult;
+}
+
+/// &lt;summary>
+/// 分析當前的模式GUID以及狀態
+/// &lt;/summary>
+/// &lt;param name="cTemp">模式回傳的字串組合&lt;/param>
+/// &lt;returns>Item1: GUID、Item2: 系統是否設定其為當前之運行狀態&lt;/returns>
+static System.Tuple&lt;string, bool> GetState(string cTemp)
+{
+  string cFind = "GUID: ";
+  //如果找不到就傳回空值
+  if (cTemp.IndexOf(cFind) == -1) { return new Tuple&lt;string, bool>("", false); }
+  //如果有找到的話就繼續扒
+  int iStart = cTemp.IndexOf(cFind) + cFind.Length;
+  int iEnd = cTemp.IndexOf(" ", iStart);
+  //回傳值
+  return new Tuple&lt;string, bool>(cTemp.Substring(iStart, iEnd - iStart), (cTemp.IndexOf("*") == -1) ? false : true);
+}
+</code></pre><h2>利用C#以Console模式來調用Windows 10的土司通知</h2><p>從上面的程式碼的Main方法中，我們可以發現有一段程式碼叫做SendToastNotification()，它的作用是去調用Windows 10的土司通知，藉以彈出相關訊息讓使用者了解現在的電源狀態是處於哪一種模式下。程式碼如下列所示：</p><pre><code class=language-cs>/// &lt;summary>
+/// 送出彈出通知訊息（Windows 10 Toast Notification）
+/// &lt;/summary>
+/// &lt;param name="cMode">通知字串&lt;/param>
+static void SendToastNotification(string cSubject, string cBody, string cIconFileName)
+{
+  string cExePath = System.Environment.CurrentDirectory.Replace("\", "/");
+  
+  string cXml = 
+  $@"
+  &lt;toast launch=""app-defined-string"">
+    &lt;visual>
+      &lt;binding template='ToastGeneric'>
+        &lt;text>{cSubject}&lt;/text>
+        &lt;text>{cBody}&lt;/text>
+        &lt;image placement=""appLogoOverride"" src=""file:///{cExePath}/{cIconFileName}"" hint-crop=""circle"" />
+      &lt;/binding>
+    &lt;/visual>
+    &lt;audio src=""ms-winsoundevent:Notification.SMS""/>
+  &lt;/toast>
+  ";
+
+  Windows.Data.Xml.Dom.XmlDocument oXmlDoc = new Windows.Data.Xml.Dom.XmlDocument();
+  oXmlDoc.LoadXml(cXml);
+
+  Windows.UI.Notifications.ToastNotification oNotify = new Windows.UI.Notifications.ToastNotification(oXmlDoc);
+  oNotify.Tag = "PowerPlanToggle";
+  oNotify.Group = "PowerPlanToggle";
+
+  Windows.UI.Notifications.ToastNotificationManager.CreateToastNotifier("Power Plan Toggle - by Slashview").Show(oNotify);
+}
+</code></pre><p>吐司通知（Toast Notifications）其實原本微軟就不打算開放給Console來使用，所以易用的程度一定是UWP App＞Win32＞Console，也就是說上面的吐司通知的調用方式其實有一點不入流，但是，這點我並不打算深入去引用正規的方法，畢竟，有用可用直需用啊！</p><p>若你在Coding這段程式碼時，編譯器跟你說不認識甚麼叫做Windows.UI.Notifications.ToastNotification，請記得去下列的路徑（C:\Program Files (x86)\Windows Kits10\References\Windows.Foundation.UniversalApiContract\某個最新的版本號，例如3.0.0.0）下參考（Windows.Foundation.UniversalApiContract.winmd；微軟用來使Win32轉製UWP的程式庫之一）檔案喔！</p><p>想要更深入的了解吐司通知的XML格式以及互動方式（例如按鈕的點選或文字方框的建立），可以參考這個網址：<a href=https://docs.microsoft.com/zh-tw/windows/uwp/design/shell/tiles-and-notifications/adaptive-interactive-toasts>Adaptive and interactive toast notifications for Windows 10</a></p><h2>電源計畫快速切換程式：檔案下載</h2><p>最後放個福利，將這個程式碼編譯起來，給不熟悉程式語言的一般使用者下載。這個程式很簡單，就是當你點選程式讓他起來運行時，他會自動在「省電模式」以及「高效能模式」中自動切換，切換後會在Windows 10中彈出訊息通知，讓你知道現在已經切換到何種模式下。注意！只會在這兩種模式中切換，平衡模式對我來說是無意義的，所以我並沒有將其考慮在程式碼裡面。</p><p><a href=https://content.slashview.com/file/20170401/PowerPlanToggle%20Portable.zip>Windows PowerPlan Toggle Download</a></p><p>使用方式：下載檔案後，解壓縮將整個資料夾放到C:\PowerPalnToggle下，然後在「PowerPalnToggle.exe」上面按右鍵，選擇「釘選到開始畫面」，日後打開開始選單，點這個捷徑即可在兩種電源模式中快速切換了。程式基本上精簡到不行，不會耗用到你任何資源。但是這隻程式我只有在Windows 10的中文版本中試用過，若您使用其他版本的Windows，或許應該斟酌小心使用。</p><p>程式執行的畫面如下：（2017-11-14更新：因應真實的電源損耗情況，所以將兩個圖示對調了！）</p><p><img src=https://content.slashview.com/img/2017/20170401_02.jpg alt="" /></p><p>祝大家使用愉快。</p><h2>在微軟2017秋季更新後引發的問題 After 2017 Windows 10 Fall Creators Update</h2><p>在微軟的2017年Windows 10秋季更新後，我在我的筆電上就發現這隻程式無法使用了，由於本身事情太忙，所以拖到現在才稍微把CODE翻出來看一下。結論是兩點：</p><ol><li>我的筆電出現詭異的情況，就是在控制台的電源計畫裡面，不再同時出現高效能、平衡、省電這三個Profiles，反而是以更精簡的方式，只顯示出兩個，甚至只顯示最常用的那個Profile而已。這樣的情況將造成我上面程式碼將Powercfg回傳結果解回陣列時，出現抓取不到GUID的問題。這一點我已經將程式碼改善了（只有修正Main()程序，新的程式碼詳見下方），並且同步編譯、更新exe可執行檔案。</li><li>Windows 10 Fall Creators Update後，Windows.Foundation.UniversalApiContract.winmd的調用失效了，推測是微軟又把API改版了。這一點我並沒有去細追原因（太忙了），所以這部分暫且擱置，等到日後有需要應用到這部分的應用程式時，再來抓蟲。（註：沒有彈出吐司通知，並不會影響程式運行電源計畫的切換功能，只是少了一個狀態告知動畫而已。）</li></ol><pre><code class=language-cs>/* 針對Windows 10 Fall Creators Update引發的相關問題進行可用性修正 */
+static void Main(string[] args)
+{
+  //理論上，每一台電腦的預設電源計畫的GUID都一樣，所以直接寫死
+  string cPowerLow  = "a1841308-3541-4fab-bc81-f71556f20b4a"; //省電
+  string cPowerMid  = "381b4222-f694-41f0-9685-ff5bb260df2e"; //平衡
+  string cPowerHigh = "8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c"; //高效能
+  string cNowActive = "";
+  //查詢這台電腦的現階段被設定成ACTIVE的電源模式
+  string cResult = RunExe("/LIST");
+  //分割字串
+  string[] aryMode = cResult.Split(new string[] { "\r\n" }, StringSplitOptions.None);
+  //巡訪
+  foreach (string cItem in aryMode)
+  {
+    System.Tuple&lt;string, bool> oTemp = GetState(cItem);
+    //如果有找到存在「*」的狀態，就找出其GUID
+    if (oTemp.Item2) { cNowActive = oTemp.Item1; }
+  }
+  //利用if來進行連續式判斷
+  if (cNowActive == cPowerLow)
+  { //目前為省電模式，切換到高效能模式
+    cResult = RunExe(string.Format("/SetActive {0}", cPowerHigh));
+    SendToastNotification("電源計畫切換通知", "已將電源計畫切換成「高效模式」。", "PerformanceHigh.png"); //Switch power options to High-performance mode.
+  }
+  else if (cNowActive == cPowerHigh)
+  { //目前為高效能模式，切換到省電模式
+    cResult = RunExe(string.Format("/SetActive {0}", cPowerLow));
+    SendToastNotification("電源計畫切換通知", "已將電源計畫切換成「省電模式」。", "PerformanceLow.png"); //Switch power options to Power-saver mode.
+  }
+  else
+  { //理論上是平衡模式，但不管如何，直接切到高效能模式
+    cResult = RunExe(string.Format("/SetActive {0}", cPowerHigh));
+    SendToastNotification("電源計畫切換通知", "已將電源計畫切換成「高效模式」。", "PerformanceHigh.png"); //Switch power options to High-performance mode.
+  }
+}  
+</code></pre><h3>Code Update: 2017-11-14 修復吐司通知功能</h3><p>今日專案告一個段落，趁著比較空閒的時間，到網路尋找為何Windows 10 Fall Creators Update後Notification失效的問題，最後發現我們慣用的Windows.UI.Notifications.ToastNotificationManager.CreateToastNotifier("YourString").Show(oNotify)這種寫法已經被微軟正式廢棄（有一派論點說這是一個BUG），必須改引入正式的<a href="https://msdn.microsoft.com/zh-tw/library/windows/desktop/hh802768%28v=vs.85%29.aspx">AppUserModelID</a>機制，詳見微軟MSDN下面這段話：</p><pre><code class=language-txt>You must include the AppUserModelID of your app's shortcut on the Start screen each time that you call CreateToastNotifier. If you fail to do this, your toast will not be displayed.
+</code></pre><p>總之，這次的修正把所有以前用「非正式」管道的開發者都賞了一巴掌，所以，只好從善如流地把APP更新了。（這個版本已經恢復可以在Windows 10彈出通知嘍！）</p><p>另外要注意一點是，原本的「C:\Program Files (x86)\Windows Kits10\References\Windows.Foundation.UniversalApiContract」在Windows 10 Fall Creators Update後也不復存在，現在要找到Windows.Data.winmd以及Windows.UI.winmd，只能到「C:\Windows\SysWOW64\WinMetadata」或「C:\Windows\System32\WinMetadata」底下找了喔。</p><h6>Windows10 PowerOptions PowerPlan PowerSaver Balanced HighPerformance C# Console NotificationCenter ToastNotifications ToastNotify App Application Toggle</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

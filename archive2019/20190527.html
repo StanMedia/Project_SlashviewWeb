@@ -1,0 +1,52 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>Linux指令小筆記</h1><p>以CentOS為藍本，記錄自己在使用Linux上面的一些指令小筆記（小抄），日後會視情況隨時回來更新。</p><p><img src=https://content.slashview.com/img/2019/20190527_01.jpg alt="" /></p><h2>查詢CentOS版本</h2><p>cat /etc/centos-release</p><h2>Console系列</h2><h3>tty / pty /pts 縮寫說明</h3><p>tty（Teletypes）、pty（pseudo-tty，相當putty角色）、pts（pseudo-terminal slave，服務pty的奴隸）</p><h3>Ctrl + L</h3><p>清除畫面，相當於cls。</p><h3>Ctrl + Z</h3><p>暫停執行緒，可以再打入fg繼續執行。</p><h3>Ctrl + D</h3><p>送出結尾（結束）字元，例如：cat > test.txt，然後打了數行文字之後，就可以使用這個指令關閉檔案。</p><h3>Ctrl + U</h3><p>快速清除當前命令列所輸入的字串，不用一直按Backspace鍵。</p><h3>Ctrl + ALT + F1 ~ F6</h3><p>切換主控台，限定在本機主控台才有此運行功能。</p><h3>~</h3><p>Console下面的這個符號，代表你現在正在系統定義的home目錄內。可以使用「cd ~」快速切換到自己的home目錄。</p><h3>/usr</h3><p>用戶目錄。</p><h3>/root</h3><p>系統管理者目錄，沒有放在/home的原因是因為有些系統根本沒有任何user的home目錄。</p><h3>date</h3><p>查詢日期。</p><h3>logout</h3><p>登出系統。</p><h3>shutdown -h now</h3><p>-h 依照BIOS規範來進行關閉或休眠電腦；-P (一定要大寫) 強制關閉電腦；-r 重置電腦（相當reboot）。</p><h3>whereis</h3><p>查詢現在執行指令的檔案位於何處，例如：whereis logout。</p><h3>who</h3><p>查詢現在主機上有誰（無論本機或遠端）。</p><h3>whoami</h3><p>顯示現在使用者。</p><h3>passwd</h3><p>變更密碼。</p><h3>ip addr | ifconfig</h3><p>查詢網路卡相關資訊，CentOS 7後改ip addr。</p><h3>systemctl status NetworkManager.service</h3><p>測試CentOS 7的Network Manager是否有在運作，如果出現綠色的active (running)就代表有在執行。重新啟動服務：service network restart。</p><h3>nmtui</h3><p>進入視覺化的網路卡設定介面，亦可以在這裡面變更主機名稱。</p><h3>cat</h3><p>concatenate，用來檢查檔案或檢視目錄，例如：cat /etc/init[TAB][TAB]，就會幫你列舉出etc目錄下所有的init開頭的檔案。</p><h3>pwd</h3><p>Print Working Directory；顯示當前完整路徑。</p><h3>cp | mv | rm</h3><p>Copy、Move、Remove，加入-f參數（force）可以不用問Y/N。<br /> rm也有重新命名檔案的功能，例如在同一資料夾下：rm Old.txt New.txt就改成新名字了。</p><h3>mkdir | rmdir | rm -r</h3><p>mkdir 製作目錄<br /> rmdir 移除目錄（只能移除空目錄）<br /> 使用rm -r、rm -rf來進行強制刪除動作。</p><h3>man XXX</h3><p>manual；查詢XXX指令的使用說明，進行中可使用「/」可以搜尋內文。</p><h3>info XXX</h3><p>更口語化的指令說明書，但不一定什麼指令都有。</p><h3>more | less</h3><p>分頁檢視，建議使用less更佳，可前後翻頁捲動且利用冒號指定輸出筆數，按q離開。</p><h3>ln</h3><p>Link，建立檔案或資料夾的軟連結或硬連結，軟連結要下參數「-s」。例如：ln -s 原資料夾 新命名資料夾。</p><h3>df -h</h3><p>Disk Free，顯示系統硬碟容量（磁碟空間），檢視全部可以使用-ah。</p><h3>find / 檔案名稱</h3><p>從根目錄開始搜尋命中檔案名稱的檔案。</p><h3>grep</h3><p>global regular expression print；在特定對象檔案中，搜尋特定的字眼，例如：grep test Readme。</p><h3>yum / Ubuntu OS 請改使用 apt-get</h3><p>軟體套件安裝器，例如：yum -y install wget</p><pre><code class=language-txt>yum install 套件名稱  
+yum update 套件名稱  
+yum update（直接更新所有套件）  
+yum remove 套件名稱  
+yum search 套件名稱  
+yum list 列舉所有套件
+</code></pre><h3>sudo</h3><p>在每個指令的前面加上這個字眼，就是以最高管理權限root運行，類似Window UAC（User Account Control；使用者帳戶控制）機制。只是其實在Linux CLI介面裡，哪個動作不是你意圖以最高管理者的身分進行，所以弄到最後幾乎每一行都是sudo開頭，這樣一來就跟Windows Vista那時候被罵得要死的原因一致了，要規避這個問題，可以使用「sudo -i」直接切換到root，不過風險就跟關閉UAC一樣了。</p><h3>mount -t 檔案類型 /dev/設備 /media/名稱</h3><p>掛載設備，要進行指令前，請先到media mkdir一下。</p><pre><code class=language-txt>檔案類型列表：
+iso9660 CDROM
+msdos   Windows FAT16
+vfat    Windows FAT32
+ntfs    Windows NTFS
+nfs     Linux nfs
+smbfs   Samba
+ext2    EXT2
+ext3    EXT3
+ext4    EXT4
+</code></pre><h3>umount -v /dev/設備</h3><p>卸載設備，建議直接去解除/dev/設備（不會真的讓媒體不見），系統會發現這是一個device，進而去消除目前所有進行軟連結的目錄，例如移除/media/下面的cdrom目錄中所有的檔案，但不會刪除/media/cdrom/。</p><h3>mount USB 注意事項</h3><ol><li>如果你的USB隨身碟式USB 3.0，那記得要去變更VM裡面USB的相容性為3.0。</li><li>如果你是用VMWare的話，一定要點進去Console畫面中再去插入USB才抓的到，不然會被Windows攔截走。</li><li>基本上CentOS根本不認識NTFS，所以你要下載兩個安裝包。<ul><li>A、yum -y install epel-release #一定要先裝EPEL (Extra Packages for Enterprise Linux)</li><li>B、yum -y install ntfs-3g</li></ul></li><li>一旦識別到USB，/dev/裡面一樣會叫做sdb、sdb1之類的，通常後面有數字才是對的磁區。</li></ol><h3>建立群組與使用者</h3><p>建立群組：groupadd TestRD<br /> 建立使用者並綁定群組：useradd -g TestRD john<br /> 看一下使用者目前的群組資訊：id john 幫使用者改密碼：passwd john<br /> 幫使用者加入一個新群組：usermod -G 新群組名稱 john</p><h3>移除使用者</h3><ul><li>移除使用者（連同HOME目錄下的資料夾）： userdel -r john</li><li>如果使用者在線上就會顯示這個訊息： userdel: user john is currently used by process 7653</li><li>先用who查一下有哪些使用者：<br /> john pts/1 2019-05-01 15:36 (your.domain.name)</li><li>查一下pts/1當前的工作ProcessID： ps -t pts/1<br /> 7654 pts/1 00:00:00 bash</li><li>找到PID後就線上踢出（該使用者的putty會斷線）： kill -hup 7654</li><li>接著就可以移除使用者了： userdel -r john</li><li>刪除群組： groupdel TestRD</li></ul><h3>ps | top</h3><p>ps可以查看行程，並且搭配watch進行即時性更新，例如看前5大CPU使用的執行緒。</p><pre><code class=language-txt>watch -n1 "ps aux --sort=-pcpu | head -n 6"  
+# 6是包含標題計算進去；aux表示所有執行緒  
+</code></pre><p>可以用更精簡現代化的指令「top」，例如：</p><pre><code class=language-txt>top -d 1 # 進入後可以用按下「大寫P」看CPU排序、「大寫M」看Memory排序
+</code></pre><h3>ps 背景執行緒</h3><p>讓bash不要被執行緒鎖死，丟到背景跑。<br /> sleep 60 #睡60秒，此時bash可以繼續輸入指令<br /> ps -f #查看自己目前的執行緒，就可以看到剛才下的command有在背景跑</p><h3>kill pid</h3><p>殺掉背景執行緒，可以加入「-9 參數」強制執行。</p><h3>jobs</h3><pre><code class=language-txt>透過jobs指令可以觀察到利用「ps '執行緒' &amp;」藏到背景去的執行緒，其結果顯示的[ID]亦可以用來進行切換至前景觀察的指令目標，例如：[root@SlashCentOS ~]# jobs
+[1]-  Stopped                 top -d 1
+[2]+  Stopped                 watch -n1 'ps aux'
+
+可以利用fg 2切換過去觀察。
+</code></pre><h3>ntpdate</h3><p>網路校時：ntpdate watch.stdtime.gov.tw<br /> 回寫硬體RTC時間：hwclock -w</p><h3>crontab</h3><p>chronograph的縮寫<br /> 系統排程，存放於 /etc/crontab，例如每分鐘丟出訊息到信箱：<br /> */1 * * * * root echo $'Hello Wrold!'<br /> 編輯後可以用下列指令重置：systemctl restart crond.service</p><h3>alias</h3><p>自訂指令縮寫，例如：ll（代表ls -l）。<br /> 可以取出home目錄下的.bashrc起來編輯，開啟檔案就知道格式怎麼寫了。</p><h3>ftp | lftp | ncftp</h3><p>FTP Client端軟體。若有出現無法順利地使用加密連線，只能連線一般無加密陽春FTP的狀況，不妨請FTP網管人員，設定一下伺服器的config。<br /> pasv_enable=Yes<br /> pasv_max_port=10100<br /> pasv_min_port=10090<br /> 並且到FTP伺服器設定好被動式FTP的Port Mirror。</p><h3>bash</h3><p>Born-Again-SHell，Unix shell的一種。來一段可執行的小script：</p><pre><code class=language-txt>vi myBash
+-----
+#注意變數的賦值「等號左右不可以有空白，不然等著吃鱉」
+Today=$(date +%Y-%m-%d)
+RanNum=$RANDOM
+echo Today is "$Today", and you are "$USER".
+echo Your money total: "$RanNum"
+echo $'\a'    #設定電腦嗶嗶鈴聲
+-----
+chmod u+x myBash    #設定為可以執行
+-----
+./myBash    #執行Bash
+</code></pre><h3>ntsysv</h3><p>查看看Linux系統裡面有哪些開機被啟動的系統服務。</p><h3>httpd</h3><p>利用yum安裝Apache伺服器。<br /> 設定檔放置於 /etc/httpd/conf/httpd.conf | less<br /> 檔案目錄放置於 /var/www/html/</p><h3>systemctl status firewalld</h3><p>測試CentOS 7的防火牆是否有在運作，如果出現綠色的active (running)就代表有在執行。重新啟動服務：service firewalld restart。</p><h3>防火牆</h3><p>打開80 Port防火牆：<br /> firewall-cmd --zone=public --add-port=80/tcp --permanent<br /> firewall-cmd --reload</p><h3>變更檔案目錄擁有者</h3><p>chown 用戶名稱:群組名稱 某目錄或檔案</p><h3>變更檔案目錄存取權限</h3><p>chmod，權限計算請在網路搜尋「Chmod 計算機」。</p><p><img src=https://content.slashview.com/img/2019/20190527_02.jpg alt="" /></p><h3>vim相關操作</h3><pre><code class=language-txt>yy    #複製該行
+p     #貼上
+dd    #刪除整行
+u     #回復動作
+－－－－－
+i     #進入編輯模式
+esc   #離開編輯模式
+－－－－－
+/     #搜尋
+n     #下一個
+N     #上一個
+－－－－－
+:set nu    #顯示行號
+:set nonu  #不顯示行號
+:wq!       #寫入並離開
+</code></pre><h6>Linux Unix Command 指令 筆記 小抄</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

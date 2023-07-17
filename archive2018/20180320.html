@@ -1,0 +1,28 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>利用JavaScript來達成網頁倒數計時後，跳至特定頁面</h1><p>今天因為某些因素製作了一個網頁倒數計時後，轉跳至指定的頁面的小程式，在這邊分享給大家使用。使用到的技術是 CSS + JavaScript + HTML，非常的單純。</p><p>JS方面的重點程式碼：</p><pre><code class=language-js>&lt;script>
+  (function countdown(iCount, cUrl) {
+    if (iCount === 0) { window.location.assign(cUrl); }
+    document.getElementById('uCounter').innerHTML = iCount;
+    setTimeout(function () { countdown(iCount - 1); }, 1000);
+  })(10, "/YourUrl.html");
+&lt;/script>
+</code></pre><p>CSS方面的重點程式碼：</p><pre><code class=language-css>&lt;style>
+  .spinner {
+    width: 70px;
+    height: 70px;
+    background-color: #5b99de;
+    margin: 50px auto 50px auto;
+    animation: RotatePlane 1.5s infinite ease-in-out;
+  }
+  .text {
+    text-align: center;
+    font-weight: bolder;
+    font-size: 2rem;
+    color: #5b99de;
+  }
+  @keyframes RotatePlane {
+    0%   { transform: perspective(120px) rotateX(0deg) rotateY(0deg); }
+    50%  { transform: perspective(120px) rotateX(-180.1deg) rotateY(0deg); }
+    100% { transform: perspective(120px) rotateX(-180deg) rotateY(-179.9deg); }
+  }
+&lt;/style>
+</code></pre><h2>運行時期的畫面範例</h2><style>.spinner{width:70px;height:70px;background-color:#5b99de;margin:50px auto 50px auto}.spin{animation:RotatePlane 1.5s infinite ease-in-out}.text{text-align:center;font-weight:bolder;font-size:2rem;line-height:2.5rem;color:#5b99de}@keyframes RotatePlane{0%{transform:perspective(120px) rotateX(0deg) rotateY(0deg)}50%{transform:perspective(120px) rotateX(-180.1deg) rotateY(0deg)}100%{transform:perspective(120px) rotateX(-180deg) rotateY(-179.9deg)}}</style><div class=spinner></div><div class=text><span>倒數計時後會重新整理本頁面</span><br /> <span>Preparing website… <span id=uCounter>00</span>s</span></div><div class="text-center mt-3"><button id=uStart type=button class="btn btn-outline-danger btn-lg me-2">開始倒數計時</button></div><script>$(function(){$("#uStart").click(function(){$(".spinner").addClass("spin"),function n(t,i){t===0&&window.location.assign(i);document.getElementById("uCounter").innerHTML=t;setTimeout(function(){n(t-1,i)},1e3)}(10,window.location.href)})})</script><h6>HTML CSS JavaScript Countdown Redirect Jump LinkTo LoadSelf</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

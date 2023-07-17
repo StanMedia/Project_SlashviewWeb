@@ -1,0 +1,24 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>進行物件Reflection反射後，將值Value寫入到物件屬性中</h1><p>會寫這篇文章就是近期內遇到一個類似ASP.NET MVC架構裡面微軟幫你做好的模型繫結（Model Binding），你宣告好ViewModel，Controller裡面的Action就幫你把Model解析好。但因為我是要在WebForm的GET方法時期，依據傳入的QueryString拆解參數來跑這樣的功能起來，自然是得捲起袖子自幹了。</p><p>前期的拆解就不講了，毫無技術性可言。這篇文章要講的是自己之前沒有遇過的動態轉換型別並賦值的作法。</p><h2>建立ORM類別</h2><p>如下，只有兩個屬性，注意其中一個為decimal型別。</p><pre><code class=language-cs>public class DataORM
+{
+  public string cName { get; set; }
+  public decimal fMoney { get; set; }
+}
+</code></pre><h2>建立已經從QueryString拆解完的假資料</h2><p>這邊我採用的是NameValueCollection，如果你確定QueryString端使用者不會惡搞你（傳送重複鍵值的資料）的話，那你就大膽地採用KeyValue型態的集合物件吧。（勸你不要這樣幹！）</p><pre><code class=language-cs>var oPara = new System.Collections.Specialized.NameValueCollection();
+oPara.Add("cName",  "王小明");
+oPara.Add("fMoney", "123.456");
+</code></pre><h2>進行模型繫結（Model Binding）</h2><pre><code class=language-cs>//生成一個DataORM Instance來存放資料
+var oData = new DataORM();
+//由於NameValueCollection沒有辦法使用Linq，所以改為傳統的Foreach
+foreach(var cKey in oPara.AllKeys)
+{
+  oData.GetType().GetProperties().Select(x => {
+    if(x.Name == cKey)
+    { //自動轉型並寫入屬性值
+      x.SetValue(oData, System.Convert.ChangeType(oPara[cKey], x.PropertyType, null));
+    }
+    return x; //無意義的回傳，純粹迎合LINQ語法
+  }).ToList();
+}
+Console.WriteLine($"{oData.cName} / 新台幣：{oData.fMoney * 30}");
+</code></pre><p>上述的程式碼中最重要的就是解決自動轉型的問題，例如你單純的用SetValue試圖要把一個屬於字串型別的浮點數值（123.456），強灌到fMoney名稱的decimal型別屬性，這是會馬上跳Exception的。</p><p>解決的方式是巧妙的使用System.Convert.ChangeType來進行動態轉型，這樣大概可以解決一半以上的問題，其餘有特殊的問題我就沒有太深入研究，但大致上也可以使用switch-case來處理。（例如Enum就需要特別的處理，否則也沒有辦法自動轉型）</p><p>程式碼最後會印出下列文句，代表decimal真的可以運算啦！</p><pre><code class=language-txt>王小明 / 新台幣：3703.680
+</code></pre><h3>相關參考</h3><ul><li><a href=/archive2020/20200430.html>進行物件Reflection反射後，將值Value寫入到物件屬性中</a></li><li><a href=/archive2020/20200511.html>在WebForm下使用ModelBinding（PostBack遭遇之問題）</a></li><li><a href=/archive2020/20200512.html>在WebForm下使用ModelBinding（打造ASHX可用的通用類別）</a></li><li><a href=/archive2022/20220307.html>利用ModelBinding處理FormData回傳表單「多值集合」與「多重檔案」之作法</a></li></ul><h6>ASP.NET WebForm QueryString ModelBinding Reflection SetValue ConvertType</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

@@ -1,0 +1,7 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>網路芳鄰突然無法連線</h1><p>今天在一台Windows 8.1的電腦上，使用一直習慣在用的「NET USE」指令，去連線一台區域網路內的網路芳鄰所分享出來的資料夾，但是Windows 8.1一直告訴我無法連線，這可怪了，天天在用的指令怎麼可能會無法使用？我也很確定「Client for Microsoft Networks」協定有被我勾選啊！</p><p><img src=https://content.slashview.com/img/2015/20150521_01.jpg alt="" /></p><p>系統不斷的顯示錯誤訊息，且也很確定對方主機跟我的網路是通的：</p><pre><code class=language-txt>系統發生 121 錯誤。
+
+信號等待逾時。
+</code></pre><p>或者是出現這個錯誤...</p><pre><code class=language-txt>系統發生 64 錯誤。
+
+指定的網路名稱無法使用。
+</code></pre><h2>解決辦法</h2><p>經過一番的調查後，發現是自己白目，把Windows 8之後獨立出來的「SMB 1.0/CIFS 檔案共用支援」勾掉所致，勾選回去就好了！這事情在未來的Windows 10應該還是會再持續發生的吧，畢竟從Windows 8 / Windows Server 2012後，已經開始進入SMB 3.0的時代了！</p><p><img src=https://content.slashview.com/img/2015/20150521_02.jpg alt="" /></p><h6>Windows SMB CIFS UNCPath NetUse Error121 Error64</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

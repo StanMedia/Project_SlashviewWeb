@@ -1,0 +1,17 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>ASP.NET求得目前HTTP來源要求方法（GET、POST...）</h1><p>原本寫API都是單一用途，大家彼此律定好就成立。今天遇到一個需求是既要能用GET又要能支援POST，礙於在WebForm架構內GET與POST求取System.Collections.Specialized.NameValueCollection的方法途徑並沒有一致，因此需要視情況切換兩種指令來進行擷取。</p><h2>判斷客戶端是用哪個方式送出Http Request？</h2><p>答案很簡單，.NET有提供對應方法回傳字串（public string HttpMethod { get; }）：</p><p>.aspx寫法：</p><pre><code class=language-cs>System.Web.HttpContext.Current.Request.HttpMethod
+</code></pre><p>.ashx寫法：</p><pre><code class=language-cs>System.Web.HttpContext.Request.HttpMethod
+</code></pre><p>實作上建議還是先轉大寫會比較好，這裡.NET沒有提供enum回傳我個人覺得考慮欠佳：</p><pre><code class=language-cs>switch (oContext.Request.HttpMethod.ToUpper())
+{ //進行GET方法處理
+  case "GET":
+    if (!string.IsNullOrEmpty(oContext.Request.QueryString["xxx"]))
+    { cTemp = oContext.Request.QueryString["xxx"] as string; }
+    ...
+    break;
+  //進行POST方法處理
+  case "POST":
+    if (!string.IsNullOrEmpty(oContext.Request.Form["xxx"]))
+    { cTemp = oContext.Request.Form["xxx"] as string; }
+    ...
+    break;
+}
+</code></pre><p>備註：現代POST送過來的資料極有可能是JSON資料格式，所以建議在CASE POST裡面，加上驗證「oContext.Request.ContentType」是否為「application/json」，若為是再進行後續的處理尤佳。</p><h6>ASP.NET C# CSharp HTTP HTTPS Request Verbs Methods 動詞</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

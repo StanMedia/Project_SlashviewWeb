@@ -1,0 +1,38 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>求取當前Windows DPI的設定值，並計算出DPI放大倍率</h1><p>在高DPI的設定下寫傳統的Windows Forms程式，的確是一件痛苦的事情，尤其當我們需要「動態」的產生視覺化元件（例如按鈕、文字方框），對其指定相關的座標位置之程式碼，不能再使用傳統的固定像素思維來考慮，必須參考到當前的DPI放大倍率一起進入運算，方能得到一個較為正確的位置結果。如下圖就是一個很典型的例子，當你在正常的96 DPI時寫的程式碼，動態的運算出兩顆按鈕並排列整齊，當程式移到144 DPI的作業系統上面執行，馬上會遇到UI爆炸的問題，你會發現這兩顆動態產生的按鈕物件，他們重疊再一起了。</p><p><img src=https://content.slashview.com/img/2016/20160114_01.jpg alt="" /></p><p>這時候可能會有網友問說，這不對啊，按照在「<a href=/archive2016/20160113.html>解決傳統的Windows Forms在高解析度（High DPI）設定下，所引發的文字模糊問題</a>」所提及的SetProcessDPIAware();方式，應該會自動幫我解決視覺方面的物件延展性的問題啊？沒錯，這個API的確會幫你解決UI方面的問題，不過僅限於「靜態」視覺物件，也就是一開始你就部署在表單上面的元件，這些元件了不起就是顯示、不顯示而已，但他們不是「動態」經過運算產生出來的UI元件。</p><h2>求取當前Windows作業系統DPI的設定值</h2><p>要解決這個問題，首先我們必須要先能夠知道，現在使用者跑這隻程式所在的Windows系統，到底本身的基底DPI被設定為多少？因此我這邊寫了下方這隻類別，可以動態的算出現在的DPI設定值。要特別注意的是，當你在測試這隻類別的運作時，在Windows上動態的不斷設定不同的DPI，一定要遵照Windows的指示，設定完成DPI就一定要「登出再登入」，才會套用到整個Windows，所以如果你只是單純的修改DPI後馬上來跑這隻類別，那你得到的並不會是正確的DPI回傳值。</p><p>範例程式碼如下：</p><pre><code class=language-cs>public partial class Form1 : Form
+{
+  public Form1()
+  {
+    InitializeComponent();
+  }
+
+  private void Form1_Load(object sender, EventArgs e)
+  {
+    MeasureDPI oDPI = new MeasureDPI(this);
+    //Show current DPI scaled ratio
+    MessageBox.Show(oDPI.fRatio.ToString());
+  }
+}
+
+//取得當前作業系統的DPI
+public class MeasureDPI
+{
+  private float _fDPIRatio;
+  private float _fDPIBase = 96.0F;
+  public MeasureDPI(System.Windows.Forms.Form oForm)
+  {
+    System.Drawing.Graphics oGraph = oForm.CreateGraphics();
+    float fNowDPI = 96.0F;
+    try
+    { fNowDPI = oGraph.DpiX; }
+    finally
+    {
+      _fDPIRatio = fNowDPI / _fDPIBase;
+      oGraph.Dispose();
+    }
+  }
+  public float fRatio
+  {
+    get { return _fDPIRatio; }
+  }
+}
+</code></pre><h2>DPI放大倍率是什麼？</h2><p>首先你必須先K完這篇MSDN文章「<a href=https://goo.gl/8lcJQf>Writing DPI-Aware Desktop and Win32 Applications</a>」，然後我把重點的表格列在下方，供給大家參考：</p><p><img src=https://content.slashview.com/img/2016/20160114_02.jpg alt="" /></p><p>簡單的說，Windows會依照目前的DPI給你適當的像素繪製，當DPI被設定成100%時（也就是預設的96 DPI），他就會按照我們傳統印象中的方式，一點一點地去繪製Pixel，如果你對一顆Button Size Width下40 Pixel，那這顆Button的總寬度就真的是40 Pixel。但如果今天作業系統被指定為120 DPI，那就表示每一英吋（Dots Per Inch）要被塞入120個Pixel，所幸的是，你不用擔心英吋的換算，那是.NET Framework要擔心的事，但你的心中應該要預期，你的按鈕的寬度總像素會變多了，但是會不會「在視覺上變大」就很難說了，因為你的程式可能跑在一塊超高解析度但是尺寸很小的面板，這時候她每寸可塞入的像素可能超乎你的想像。</p><h2>有了DPI放大倍率後，與我們要計算的動態元件的座標有何關係？</h2><p>經過了上面的解說，我們可以動態的運算出（當前的ＤＰＩ／基礎ＤＰＩ＝ＤＰＩ放大倍率），以上面例子來說，就是120 / 96 = 1.25 (125%)，也就是你應該要將寬度放大125%，所以你應該把寬度是40 Pixel的按鈕，改成50 Pixel就對了。</p><p>有了正確的寬度，你當然就可以計算出下一顆緊鄰的按鈕，應該要距離前一顆按鈕的座標（Location）了，在這邊我就不在詳列計算的過程了，這對有經驗的程式設計師應該是小事一樁。</p><h6>WindowsCurrentDPI HighDPI Get Query Measure GenerateDynamicButton GenerateDynamicObject Size Width Height Location X Y</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

@@ -1,0 +1,63 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>三分鐘學會單元測試（使用JUnit）</h1><p>單元測試（Unit Test）在近兩年間火熱的被推行，個人推測與敏捷式開發（Agile Development）軟體方法論，不顧一切的直接式進入開發維護循環有極大的關連。今天有機會碰到一點單元測試，因此在這邊寫一篇文章記錄下來，以備不時之需。</p><p>這篇文章所有的內容是使用Java技術，因此請使用者先下載Java JRE，並且安裝好Eclipse 4.4含以上版本，這樣才可以讓你的JUnit單元測試工作可以平順的運行。</p><h2>三分鐘學會單元測試開始啦！</h2><p>Step 1. 進入Eclipse後，點選File＞New＞Java Project，開啟一個新的Java專案。</p><p><img src=https://content.slashview.com/img/2014/20140904_01.jpg alt="" /></p><p>Step 2. 專案的名稱取為「TestSample」。</p><p><img src=https://content.slashview.com/img/2014/20140904_02.jpg alt="" /></p><p>Step 3. 在src的圖示上按右鍵，新增一個名為Calculator的class，這個類別裡面只有加法跟減法兩個簡單的方法。</p><p><img src=https://content.slashview.com/img/2014/20140904_03.jpg alt="" /></p><pre><code class=language-java>public class Calculator {
+  //加法
+  public double Add(double a, double b) {
+    return a + b;
+  }
+  //減法
+  public double Sub(double a, double b) {
+    return a - b;
+  }  
+}
+</code></pre><p>Step 4. 在src的圖示上按右鍵，New＞JUnit TestCase，做出一個單元測試用的類別。</p><p><img src=https://content.slashview.com/img/2014/20140904_04.jpg alt="" /></p><p>Step 5. 只要是單元測試就是要自己寫腳本，沒有那種自己會幫你測試的事，請立即放棄這種天真的想法。圖型與程式碼如下：</p><p><img src=https://content.slashview.com/img/2014/20140904_05.jpg alt="" /></p><pre><code class=language-java>//請一定要import這個Namespace
+import junit.framework.*;
+
+//請一定要extends這個TestCase類別
+public class TestCalculator extends TestCase {
+
+  public double dInput_1, dInput_2, dResult;
+  public Calculator myCal;
+  
+  //起始單元測試時的方法
+  public void setUp() {
+    myCal = new Calculator();
+  }
+  
+  //終止單元測試時的方法
+  public void tarDown() {
+    myCal = null;
+  }
+  
+  /* JUnit會自動找你這個類別裡面，所有開頭為test的方法，並且去執行它。 */
+  
+  //測試加法一
+  public void testAdd_1() {
+    dInput_1 = 1.0;
+    dInput_2 = 2.0;
+    dResult = 3.0;
+    assertEquals(dResult, myCal.Add(dInput_1, dInput_2));
+  }
+  
+  //測試加法二
+  public void testAdd_2() {
+    dInput_1 = 1.1;
+    dInput_2 = 2.2;
+    dResult = 3.3;
+    assertEquals(dResult, myCal.Add(dInput_1, dInput_2));
+  }
+  
+  //測試減法
+  public void testSub() {
+    dInput_1 = 3.0;
+    dInput_2 = 2.0;
+    dResult = 1.0;
+    assertEquals(dResult, myCal.Sub(dInput_1, dInput_2));
+  }
+}
+</code></pre><p>Step 6. 寫完了Test Case後，你就可以開始跑自動測試了，但事實上根本不是自動跑，是你自己寫的吧！請點選Run＞Run As＞JUnit Test。</p><p><img src=https://content.slashview.com/img/2014/20140904_06.jpg alt="" /></p><p>Step 7. 如果你全部都對，那麼下圖中左上方會出現綠色，但是這張圖中出現的是紅色，這代表有問題。我們細看之下，它真的有幫我們跑完3/3個方法，Error數目也是0（如果你的程式碼有錯誤，導致編譯出錯，那麼會Error就會出現錯誤數目），所以我們觀察到引發紅色的就是Failures，它顯示有1個問題。再往下看下方的小圖示，我們可以發現testAdd_2這個方法被打X記號，表示這個跑出來跟我們預期的答案不一樣。 再往下看下方的Failure Trace的原因，我們看到它本來預期（expected）是3.3（1.1 + 2.2 = 3.3），但是Test Case跑出來的卻是3.3000000000000003，因此出錯。（至於為什麼會出現3.3000000000000003，這等一下再討論。）</p><p><img src=https://content.slashview.com/img/2014/20140904_07.jpg alt="" /></p><p>Step 8. 將assertEquals這個JUnit支援的方法，調用第三個optional的argument，稱為「誤差容忍度」，將其改為0.01，這表示誤差在0.01之下是被允許的，因此該測試方法的程式碼修正如下方程式碼，再測一次就過啦！</p><pre><code class=language-java>//測試加法二
+public void testAdd_2() {
+  dInput_1 = 1.1;
+  dInput_2 = 2.2;
+  dResult = 3.3;
+  assertEquals(dResult, myCal.Add(dInput_1, dInput_2), 0.01);
+}
+</code></pre><p><img src=https://content.slashview.com/img/2014/20140904_08.jpg alt="" /></p><h2>結論</h2><ol><li>對，所謂的單元測試（Unit Test）就是這樣而已，不要懷疑，就算有新版的做法也不脫離其精神。（聽說新版的JUnit class之處，不需要再寫extends關鍵字了）當然啦，除了assertEquals外還有許多提供測試的方法可以讓你調用，這個請自己Google吧。</li><li>單元測試裡面有一個很大的隱性問題，就是自己寫自己測，基本上這樣是找不出問題的，我覺得一定要給專案經理等級的人寫單元測試才有意義。例如「參數介面」就是一個活生生的例子，你怎麼知道今天用你的class的人，一定會傳入double型别給你？可能有人會說，這簡單，compiler會自動幫你抓出來，或許吧，但這樣的話你在某些方法裡面用到隱含轉換（Implicit conversions）編譯器也會警告你啊，那這樣是不是就不用寫這方面的單元測試了？</li><li>單元測試有一個觀念很重要，就是他是針對需求規格書去寫出來的，也就是說它甚至都可以在沒有class程式碼之前，就可以開始被撰寫，我真心的覺得這個觀念很棒。（所以我認為有實際coding能力的專案經理應該要承擔這一部份的工作，只有考個PMP就出來資訊界混的那種除外。）</li><li>單元測試需要再花費更多的人力與時間，所以請台灣中小企業裡的程式設計師，請忘了有單元測試這種東西吧！</li><li>至於「1.1 + 2.2 = 3.3000000000000003」這個問題，基本上我對於我少用的語言連Google的力氣也沒有，這個讓Java高手在下面留言解釋吧。我只能證明C#一切正常無誤。詳見下方圖片，證明C#浮點運算變數（double）相加運作一切正常。</li></ol><p><img src=https://content.slashview.com/img/2014/20140904_09.jpg alt="" /></p><p>######## UnitTest JUnit Java Eclipse JRE</p></main><footer></footer><script src=/.file/site.js></script></body></html>

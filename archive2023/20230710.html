@@ -1,0 +1,5 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>在Windows的工具列顯示時間的秒數</h1><h2>從Windows 10開始工具列的時間都被隱藏秒數</h2><p>依據微軟的說法是這個會增加計時器中斷的工作量，導致無謂的能源損耗，但其實經過網路的一些大神實測省不了多少電量，對於桌機來說更是九牛一毛，所以如果你常常有查看秒數的需求，可以透過下列方法打開。</p><h2>顯示Windows工具列時間秒數</h2><p>Step 1. 將下列的註冊機碼複製起來。</p><pre><code class=language-reg>Windows Registry Editor Version 5.00
+
+[HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced]
+"ShowSecondsInSystemClock"=dword:00000001
+</code></pre><p>Step 2. 在桌面新增一個記事本檔案，打開後將註冊機碼貼入儲存，並將檔名改成<code>ShowClockSeconds.reg</code>。</p><p>Step 3. 點擊兩下新增機碼後，重新開機就可以看到效果了。</p><p>想要取消秒數的顯示也很簡單，將上面的機碼值改為<code>dword:00000000</code>，在登錄一次機碼即可，記得重開機喔。</p><h6>Windows10 Windows11 Windows12 Taskbar Clock ShowSeconds DisplaySeconds EnabledSeconds</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

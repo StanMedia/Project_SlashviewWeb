@@ -1,0 +1,20 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>利用正規表示式，去除字串中所有的換行以及所有的空白</h1><p>沒啥技術性，就是寫完後備份以利日後快速參考，不用再開LAB測試。</p><p>我們常見的換行大概都是脫離不了這幾種組合「\r\n」、「\n\r」、「\n」、「\r」，其他的unicode怪字元不在考慮之內，這篇文章的程式碼將帶我們達成兩個效果：</p><ol><li>把字串中所有的換行都消除掉。</li><li>把字串中所有的換行與換行前後的空白都消除掉。</li></ol><p>程式碼如下：</p><pre><code class=language-cs>var cOld = "1[ 2 ]3 \r \r\n \n \r \n \r\n \n\r   456";
+Console.WriteLine($"原始字串：{cOld}");
+
+var cNewNoLinebreaks = System.Text.RegularExpressions.Regex.Replace(cOld, "[\r\n]", String.Empty);
+Console.WriteLine($"不含換行（{cNewNoLinebreaks.Length}）：{cNewNoLinebreaks}");
+
+var cNewNoLinebreaksAndSpaces = string.Join("", System.Text.RegularExpressions.Regex.Split(cOld, @"(?:[\r\n])").Select(x => x.Trim()));
+Console.WriteLine($"不含換行與空白（{cNewNoLinebreaksAndSpaces.Length}）：{cNewNoLinebreaksAndSpaces}");
+</code></pre><p>執行結果：</p><pre><code class=language-txt>原始字串：1[ 2 ]3 
+ 
+ 
+ 
+ 
+ 
+ 
+
+   456
+不含換行（20）：1[ 2 ]3          456
+不含換行與空白（10）：1[ 2 ]3456
+</code></pre><h3>延伸參考</h3><ul><li><a href=/archive2021/20211217.html>利用正規表示式，去除字串中所有的換行以及所有的空白</a></li><li><a href=/archive2018/20180421.html>利用正規表示式，去除字串中開始與結束過多的換行</a></li></ul><h6>取代 替換 RegularExpression #\r #\n #\r\n #NewLine #Replace</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

@@ -1,0 +1,24 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>LINQ筆記：使用LINQ進行可選擇化聯集條件（AND）的設計手法</h1><p>之前有發過一篇類似的文章，不過針對的是SQL Parameter的情境，時至今日轉移到LINQ的環境，用同樣的邏輯在實作一次。</p><h2>能否用一次性的語法，就把多重條件的查詢完成？</h2><p>講白一點的就是說，在查詢來源端可能多重條件的情況下，能否有一個條件式就把這個問題解決，答案是可以的，前提就是要利用一些邏輯的小技巧。</p><p>舉例來說，來源端可能給查詢的函式單一值（查詢帳號符合），也有可能給多重值（查詢帳號與密碼符合），那我我們可以用下列的LINQ程式碼來完成這種多條件的查詢。</p><pre><code class=language-cs>List&lt;User> oData = new List&lt;User>()
+{
+  new User() { cAccount = "John",  cPassword = "1234" },
+  new User() { cAccount = "Marry", cPassword = "5678" },
+  new User() { cAccount = "Tom",   cPassword = "9012" },
+  new User() { cAccount = "Adam",  cPassword = "3456" }
+};
+
+//假設這邊是由外部輸入引數，且條件不一（有些有給，有些沒給）
+string cAcc = "John";
+string cPwd = "1234";
+
+var oResult = oData
+  .Where(x =>
+    ( x.cAccount == cAcc )
+    &amp;&amp;
+    (
+      string.IsNullOrEmpty(cPwd) ||
+      x.cPassword == cPwd
+    )
+  );
+
+WriteLine(oResult.Any() ? $"找到{oResult.Count()}筆資料。" : "找不到資料。");
+</code></pre><p>稍微做一下程式碼的解說：</p><p>如果你輸入cAcc且cPwd為空值的話，那麼LINQ的語句執行只會幫你做到cAcc這個條件的搜尋而已，而cPwd因為「string.IsNullOrEmpty(cPwd)」這個條件成真，後面又是加上快速Or邏輯，在判定成true的情況下，「x.cPassword == cPwd」這個語句就被自然的跳開不執行了。</p><p>很有趣也很簡潔的一種寫法，希望對看到此篇文章的您有幫助。</p><p><a href=/archive2017/20171031.html>在使用SQL Parameter的情況下，進行可選擇化聯集條件（AND）的設計手法</a></p><h6>SQL LINQ Select Where MultiParameter OptionalParameter MultiConditions OptionalConditions AND OR AndAlso OrElse</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

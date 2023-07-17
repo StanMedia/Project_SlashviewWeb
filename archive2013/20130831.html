@@ -1,0 +1,23 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>DNS的相關設定知識</h1><p>DNS的全名是Domain Name Services，在現在網際網路中非常重要的一個協定，用來幫助人類記憶生冷的電腦IP位址，現代的DNS服務也因為接受UDP的特性，常被駭客用來當作DDOS阻斷服務式攻擊的重要手段。</p><h2>位址記錄（Address Record），簡稱A記錄</h2><p>此筆記錄主要目的是要讓管理該域名的DNS server可以經由此筆記錄得知該域名（ex:abc.com.tw）之IP位置何為。透過該記錄查詢獲得後，將該域名所對應之IP address回覆給欲查詢的DNS server或主機。這是DNS資料庫最常使用的宣告。</p><p>設定格式</p><pre><code class=language-txt>(host) IN A (IP address)  註:括號中為您必須填填入的項目
+</code></pre><ol><li>host : 通常是指主機名稱，假設您所架設為web server，您的主機名稱通常會為www.abc.com.tw，若為mail server，通常會為mail.abc.com.tw。有兩種設定方式可選擇：可只填寫 www 或 mail，也可填寫完整域名。若填寫完整域名請記得在tw後方加上一個點(.)，例如 http://www.abc.com.tw.。</li><li>IP address: 為您web server或其他伺服器的IP位址。</li></ol><p>簡易範例：假設您所申請的域名為happy.com.tw，web主機域名為www.happy.com.tw，ip位址為203.123.2.21，則設定方式應為：</p><pre><code class=language-txt>www IN A 203.123.2.21
+或
+http://www.happy.com.tw. ; IN A 192.168.1.2
+</code></pre><p>注意事項：如果您的DNS server所採用的網域名稱即為您所申請的網域名稱(happy.com.tw)，您必須設一組對應的NS及A記錄，設定方式如下:</p><ol><li>NS記錄：happy.com.tw. IN NS dns1.happy.com.tw.</li><li>A記錄：dns1.happy.com.tw. IN A 192.168.1.3</li></ol><h2>郵件交換記錄（Mail Exchanger Record）簡稱MX記錄</h2><p>此筆記錄主要目的是，假設有人要寄信給xxx@happy.com.tw，而該郵件應由負責接收此郵件的伺服器接收。此記錄可以得知負責接收該郵件的郵件伺服器的位址為何。通常負責處理接收的郵件伺服器會有兩台以上，故必須設定這兩台以上郵件伺服器的優先權順序。</p><p>設定格式</p><pre><code class=language-txt>(name) IN MX (preference) (host)  註:括號中為您必須填入的項目
+</code></pre><ol><li>name : 是指主機或網域的名稱，也就是郵件地址所寫的地方，也就是郵件地址@符號後面的部份。寫給這個名稱的郵件，會被送到 host 欄位裡指定的郵件伺服器。</li><li>preference: 與某一主機或網域有關的MX記錄可能不止一個，此欄位指定這些郵件伺服器的順序，preference數值小的伺服器先試。一般最常設的伺服器的preference是10，方便以後若有新增伺服器時可設定為較優先的5，或較後的15。preference設定時通常是一次增減5或10。</li><li>host: 通常是指主機名稱，假設您所架設為mail server，您的主機名稱通常會為mail.abc.com.tw。可只填寫 mail，也可填寫完整域名。若填寫完整域名請記得在tw後方加上一個點(.)。</li></ol><p>假設您所申請的域名為happy.com.tw，mail主機域名為mail1.happy.com.tw和mail2.happy.com.tw，其中優先權以mail1這台郵件是伺服器為先，則設定方式應為：</p><pre><code class=language-txt>@ IN MX (0) mail1
+@ IN MX (5) mail2
+註: @ = happy.com.tw.
+或者是：
+happy.com.tw. IN MX (0) mail1.happy.com.tw.
+happy.com.tw. IN MX (5) mail2.happy.com.tw.
+</code></pre><p>設完MX記錄後，必須設定其相對應的A記錄，以上述範例中的例子為例，需設定的相對應的A記錄如下:</p><pre><code class=language-txt>@ IN MX (0) mail1.happy.com.tw.
+@ IN MX (5) mail2.happy.com.tw.
+或
+mail1 IN A 203.153.5.8
+mail2 IN A 203.153.5.9
+</code></pre><h2>正規名稱記錄（Canonical Name Record）簡稱CNAME記錄</h2><p>此筆記錄主要目的是記錄設定主機正式名稱之外的別名(alias)。 CNAME的功能和Host Table中的別名用法類似，它為使用者提供另一個更方便的方式在同一IP地址上使用不同的主機名稱。</p><p>設定格式</p><pre><code class=language-txt>(nickname) IN CNAME (host)  註:括號中為您必須填入的項目
+</code></pre><ol><li>nickname: 這個主機名稱是一個別名，它的正式主機名稱設定在 host 欄位裡。nickname可以是任何有效的主機名稱。</li><li>host: 這裡是主機的正式名稱。這個主機名稱必須是正式的主機名稱，不可以是別名。若填寫完整域名請記得在tw後方加上一個點(.)。</li></ol><p>假設您所申請的域名為happy.com.tw，web主機域名為www.happy.com.tw，您於架設web server的機器上，又架設FTP server，意指兩各伺服器使用相同的IP位址，則設定方式可為：</p><pre><code class=language-txt>ftp IN CNAME www
+或
+ftp IN CNAME www.happy.com.tw.
+</code></pre><ol><li>以上述範例為例，當中的www.happy.com.tw必須建立一個A記錄，不然此CNAME將無法找到ftp.happy.com.tw的位址。</li><li>建議以A記錄來取代CNAME記錄，以免發生不可預期的錯誤。以上述的例子，可以分別設兩筆A 記錄來達到相同的效果。</li></ol><pre><code class=language-txt>www.happy.com.tw. IN A 203.153.5.8
+ftp.happy.com.tw. IN A 203.153.5.8
+</code></pre><h6>DNS DomainNameServices Setup 設定</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

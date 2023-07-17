@@ -1,0 +1,80 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>正規表示式用於解析HTML下的Javascript標籤與程式碼</h1><p>最近有一個作業，必須解析HTML下的Javascript寫法，並且進行相關的重組作業，這個直覺上就馬上想到了正規表示式（Regular Expression），將相關的資訊紀錄在此，以利日後查找方便。</p><h2>進行Javascript標籤的解析</h2><p>Javascript相關的標籤，可能會出現下列這些寫法：</p><pre><code class=language-html>&lt;script src="/js/jQuery.js">&lt;/script>
+
+&lt;script src="/js/jQuery.js" async>&lt;/script>
+
+&lt;script type="text/javascript">
+  var cTemp1 = "ABCD";
+&lt;/script>
+
+&lt;script>
+  var cTemp2 = "EFGH";
+&lt;/script>
+</code></pre><p>我們可以用下面的正規表示式來解決這個問題：</p><pre><code class=language-cs>public static void Main()
+{
+  string cSource = 
+  @"
+&lt;script src=""/js/jQuery.js"">&lt;/script>
+
+&lt;script src=""/js/jQuery.js"" async>&lt;/script>
+
+&lt;script type=""text/javascript"">
+var cTemp1 = ""ABCD"";
+&lt;/script>
+
+&lt;script>
+var cTemp2 = ""EFGH"";
+&lt;/script>
+
+這裡不是正確的寫法，這段文字會被過濾掉！
+  ";
+  string cRegExp = @"(&lt;script[\s\S]*?>)([\s\S]*?)(&lt;\/script>)";
+  foreach (System.Text.RegularExpressions.Match oItem in System.Text.RegularExpressions.Regex.Matches(cSource, cRegExp, System.Text.RegularExpressions.RegexOptions.IgnoreCase))
+  {
+    Console.WriteLine(
+      string.Format(
+        "I Found: {0} | {1} | {2}",
+        oItem.Groups[1],
+        oItem.Groups[2],
+        oItem.Groups[3]
+      )
+    );
+  }
+｝
+</code></pre><p>輸出結果：</p><pre><code class=language-txt>I Found: &lt;script src="/js/jQuery.js"> |  | &lt;/script>
+I Found: &lt;script src="/js/jQuery.js" async> |  | &lt;/script>
+I Found: &lt;script type="text/javascript"> | 
+  var cTemp1 = "ABCD";
+ | &lt;/script>
+I Found: &lt;script> | 
+  var cTemp2 = "EFGH";
+ | &lt;/script>
+</code></pre><h2>解析script內部的src路徑</h2><p>另外一個需要處理的工作就是解析script標籤裡面的src路徑，這部分的工作是想要把這些路徑字串取出後，進行某些程度的加工後再寫回，這部分同樣需要正規表示式來協助我們進行處理。</p><p>Javascript標籤內部的src，可能會出現下列這些寫法：</p><pre><code class=language-js>&lt;script src="/index.php">&lt;/script>
+&lt;script src="/index.php" async>&lt;/script>
+&lt;script src    =    "/index.php"    async>&lt;/script>
+</code></pre><p>我們可以用下面的正規表示式來解決這個問題：</p><pre><code class=language-cs>public static void Main()
+{
+  string cSource = 
+  @"
+&lt;script src=""/index.php"">&lt;/script>
+&lt;script src=""/index.php"" async>&lt;/script>
+&lt;script src    =    ""/index.php""    async>      &lt;/script>
+
+這裡不是正確的寫法！
+  ";
+  string cRegExp = @"(&lt;script[\s\S]*?)src\s*=\s*""(.*?)""([\s\S]*?>)";
+  foreach (System.Text.RegularExpressions.Match oItem in System.Text.RegularExpressions.Regex.Matches(cSource, cRegExp, System.Text.RegularExpressions.RegexOptions.IgnoreCase))
+  {
+    Console.WriteLine(
+      string.Format(
+        "I Found: {0} | {1} | {2}",
+        oItem.Groups[1],
+        oItem.Groups[2],
+        oItem.Groups[3]
+      )
+    );
+  }
+}
+</code></pre><p>輸出結果：</p><pre><code class=language-txt>I Found: &lt;script  | /index.php | >
+I Found: &lt;script  | /index.php |  async>
+I Found: &lt;script  | /index.php |     async>
+</code></pre><p>以上正規表示式之拆解方式，提供給大家參考。</p><h6>Javascript RegularExpression RegEx Script Src HTML</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

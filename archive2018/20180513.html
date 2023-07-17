@@ -1,0 +1,81 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>Json.Net輸出合約實作：將所有的null字串轉為空字串</h1><p>Newtonsoft的Json.Net迄今仍然是我序列化物件的首選，操作現代化的網站中絕對不可缺少的JSON格式的好朋友，今天要來深入討論Newtonsoft.Json.JsonSerializerSettings裡面的合約問題。</p><p><img src=https://content.slashview.com/img/2018/20180513_01.jpg alt="" /></p><p>在有些狀態下，我們會希望前端的物件屬性中，不要傳入太多的出現null的資料，原因是因為你要特別為了這些null去多寫許多Javascript的檢查與轉換，在前端與後端都是我們自己在使用的情況下，的確有一點脫褲子放屁。</p><h2>DefaultContractResolver來救贖我們了</h2><p>Newtonsoft.Json.Serialization.DefaultContractResolver可以用來客製化許多我們期望的彈性，以下是程式碼的實作。</p><pre><code class=language-cs>/// &lt;summary>
+/// 實作Newtonsoft.Json的DefaultContractResolver
+/// &lt;/summary>
+public class JsonStringNullToEmpty : Newtonsoft.Json.Serialization.DefaultContractResolver
+{
+  public JsonStringNullToEmpty() { }
+
+  protected override System.Collections.Generic.IList&lt;Newtonsoft.Json.Serialization.JsonProperty> CreateProperties(System.Type oType, Newtonsoft.Json.MemberSerialization oMS)
+  {
+    return oType.GetProperties().Select(oP =>
+    {
+      var oJP = base.CreateProperty(oP, oMS);
+      oJP.ValueProvider = new JsonStringNullToEmptyValueProvider(oP);
+      return oJP;
+    }).ToList();
+  }
+}
+
+/// &lt;summary>
+/// 實作Newtonsoft.Json的IValueProvider
+/// &lt;/summary>
+internal class JsonStringNullToEmptyValueProvider : Newtonsoft.Json.Serialization.IValueProvider
+{
+  System.Reflection.PropertyInfo _oMemberInfo;
+
+  //建構子（將成員資訊帶入成為內部變數）
+  public JsonStringNullToEmptyValueProvider(System.Reflection.PropertyInfo oMI) { _oMemberInfo = oMI; }
+
+  //實作IValueProvider介面的寫入動作
+  public void SetValue(object oTarget, object oValue) { _oMemberInfo.SetValue(oTarget, oValue); }
+
+  //實作IValueProvider介面的寫入動作
+  public object GetValue(object oTarget)
+  {
+    //設定回傳變數
+    object oResult = _oMemberInfo.GetValue(oTarget);
+    //若成員為字串型態，就處理他
+    if (_oMemberInfo.PropertyType == typeof(System.String) &amp;&amp; oResult == null) oResult = string.Empty;
+    //若成員為表格型態，就進入巡訪
+    if (_oMemberInfo.PropertyType == typeof(System.Data.DataTable))
+    {
+      System.Data.DataTable oDT = (System.Data.DataTable)oResult;
+      foreach (System.Data.DataRow oDR in oDT.Rows)
+      {
+        foreach (System.Data.DataColumn oDC in oDT.Columns)
+        {
+          if (oDC.DataType == typeof(System.String))
+          {
+            oDR[oDC.ColumnName] = oDR[oDC.ColumnName] as string ?? string.Empty;
+          }
+        }
+      }
+      oResult = oDT;
+    }
+    //回傳結果
+    return oResult;
+  }
+}
+</code></pre><p>程式碼其實也沒甚麼好說明的，大致上就是開了一個覆寫方法，來把本來JSON.NET的CreateProperties基底方法蓋掉，然後在實作一個IValueProvider方法，在CreateProperties裡面將ValueProvider委派給JsonStringNullToEmptyValueProvider，裡面就是我們自己要處理的資料邏輯了。以上面這個程式碼來說，他只處理出現在型別為string或是出現在DataTable裡面的文字型別，其他的他就不處理了。</p><h2>套用DefaultContractResolver合約</h2><p>套用方式很簡單，請參考下列的程式碼，你懂得！</p><pre><code class=language-cs>public static void Main()
+{
+  Employee oEmployee = new Employee();
+  oEmployee.cNameFirst  = "John";
+  oEmployee.cNameMiddle = "";
+  //oEmployee.cNameLast = null; //這一行無論有沒有寫，他的輸出永遠都會是「""」
+  
+  Console.WriteLine(
+    Newtonsoft.Json.JsonConvert.SerializeObject(
+      oEmployee,
+      Newtonsoft.Json.Formatting.None,
+      new Newtonsoft.Json.JsonSerializerSettings { ContractResolver = new JsonStringNullToEmpty() }
+    )
+  );    
+}
+
+class Employee
+{
+  public string cNameFirst  { get; set; }
+  public string cNameMiddle { get; set; }
+  public string cNameLast   { get; set; }
+}
+</code></pre><h6>Newtonsoft Json.Net DefaultContractResolver IValueProvider ORM POCO String Null Convert String.Empty</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

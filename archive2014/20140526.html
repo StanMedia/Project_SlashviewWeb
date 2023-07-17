@@ -1,0 +1,41 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>如何用C#移除「受保護的檢視」之檔案權限</h1><p>每次只要使用者從網路下載一個檔案（例如Word的檔案）後，在本地端電腦打開，Word總會跳出一個煩人的圖示提醒使用者，這個檔案是從網際網路下載的，可能有病毒，是否要「啟用編輯」？如果是一個還好，整批下載的話我看就有得煩了，如果老闆要求你把數千個檔案全部弄到不要出現這個訊息，那這篇就是你的救星了。</p><p>要討論這個問題前，要先講一下理論，就是在NTFS格式下，允許你儲存一種叫「替代資料流」（Alternate Data Streams, ADS）格式的資料，讓你的檔案資料大小出現見山不是山的情況。簡單的說，如果你有一個文字檔案「text.txt」是10 Bytes，透過了ADS的附加操作，例如給定一個索引指標叫「plus」，則你可以針對「text.txt:plus」進行ADS方式的資料寫入（可以是純文字或二進制皆可）例如10MB的資料，寫入後你用檔案總管去看這個「text.txt」，它依然是10Bytes。用記事本打開來，依然是10Bytes的資料，但是當你透過特別的索引鍵方式存取時，就可以得到這10MB的資料了。詳細的官方操作工具以及理論，請參考保哥的<a href=http://goo.gl/APWG0a>這篇文章</a>。</p><p><img src=https://content.slashview.com/img/2014/20140526_01.jpg alt="" /></p><p>那我們討論ADS幹嘛？原來是微軟的作業系統在你從網路下載任一檔案時，他在不能任意更改這個檔案的情況下，只好在NTFS端進行ADS式的檔案標記，來跟你講這個檔案是從網路下載下來的，有風險請小心，而他的索引鍵叫「Zone.Identifier」，裡面存放著資料《[ZoneTransfer]ZoneId=3》，包含2個換行符號共26 Bytes。只要你把這個索引資料（26 Bytes）砍掉，這個煩人的資訊就會消失了。ZoneId的列舉如下：</p><pre><code class=language-txt>Value Setting
+------------------------------
+0  My Computer
+1  Local Intranet Zone
+2  Trusted sites Zone
+3  Internet Zone
+4  Restricted Sites Zone
+</code></pre><p>程式的原始碼如下（Console Mode）：</p><pre><code class=language-cs>namespace RemoveZoneIdentifier
+{
+  class Program
+  {
+    static void Main(string[] args)
+    {
+      System.Console.WriteLine("//Remove Zone.Identifier - NTFS Alternate Data Streams");
+
+      //檢查檔案是否有被指定
+      if (args.Length == 0)
+      {
+        System.Console.WriteLine("請指定解除目標的檔案檔名，例如：RemoveZoneIdentifier.exe SAMPLE.PDF。");
+        return;
+      }
+      string cFile = args[0];
+      //載入檔案
+      System.IO.FileInfo oFI = new System.IO.FileInfo(cFile);
+      if (oFI.Exists)
+      {
+        if (DeleteFile(cFile + ":Zone.Identifier"))
+        { System.Console.Write("移除 Zone.Identifier 完成。"); }
+        else
+        { System.Console.Write("移除 Zone.Identifier 失敗，可能這個檔案已經不具備 Zone.Identifier 標記。"); }
+      }
+      else
+      { System.Console.WriteLine("找不到要解除的檔案，請檢查檔名或路徑是否有誤？"); }
+    }
+
+    [System.Runtime.InteropServices.DllImport("kernel32", CharSet = System.Runtime.InteropServices.CharSet.Unicode, SetLastError = true)]
+    [return: System.Runtime.InteropServices.MarshalAs(System.Runtime.InteropServices.UnmanagedType.Bool)]
+    private static extern bool DeleteFile(string name);
+  }
+}
+</code></pre><p>運行起來的畫面如下：</p><p><img src=https://content.slashview.com/img/2014/20140526_02.jpg alt="" /></p><p>這個程式只是個範例，如果想要寫成整個目錄下含子資料夾都要改，請自己改寫成遞迴的寫法。如果不想拿到VS上編譯（Compiled）的，我這邊有編譯好的可執行檔（Executable），可以直接套用。檔案下載請點選這裡：<a href=https://content.slashview.com/file/20140526/RemoveZoneIdentifier.zip>Download</a></p><p>如果你只是要單純的解開一個檔案的限制，那不用這麼麻煩啦！直接在檔案上按右鍵點「解除封鎖」即可。</p><p><img src=https://content.slashview.com/img/2014/20140526_03.jpg alt="" /></p><h6>Remove Disable Unblock Zone.Identifier NTFS ADS AlternateDataStreams</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

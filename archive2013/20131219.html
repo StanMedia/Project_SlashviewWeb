@@ -1,0 +1,44 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>用Windows Server架設NTP時間伺服器</h1><p>「時間」這個東西，在現代的網路應用格外的重要，無論是資料庫、Logs記錄檔、檔案儲存時間等，在封閉的伺服器群環境裡這些資料都要保持一致性，因此需要有一台時間伺服器來供給內部網路進行集體查詢是必要與必然的。</p><p>在Windows Server中，NTP被以服務的型態呈現出來，也就是說你不用透過光碟或系統的勾選安裝，就可以達到這樣的能力，關鍵在於「W32TIME」這隻服務。你可以透過操作「w32tm.exe」這隻程式來進行各式的設定，不過我想那大概是網路管理員需要寫script自動化時才會用到，一般的情況下都是透過登錄檔registry的修改來進行設定才是，必竟改過一次之後大概也不會再針對這一塊進行動作了。</p><ol><li>首先由Windows Server 2012的伺服器管理員中，點選工具＞服務，確認Windows Time服務目前的狀態是被開啟的。如果是關閉的狀態，請點擊兩下開啟，啟動類型選「自動」＞點「啟動」鈕＞「套用」＞「確定」。</li></ol><p><img src=https://content.slashview.com/img/2013/20131219_01.jpg alt="" /></p><ol start=2><li><p>利用開始＞執行＞regedit來呼叫出登錄編輯程式，並進行之後的操作。</p></li><li><p>確認這台伺服器允許哪一種時間同步方法，如果這台機器不是DC的話，理論上預設就是NTP，詳細的設定與資料意義如下所示。</p></li></ol><pre><code class=language-txt>HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Services\W32Time\Parameters
+名稱                 類型       資料
+-------------------- ---------- --------------------
+Type                 REG_SZ     NTP
+</code></pre><table class="table table-striped table-hover"><thead><tr><th>Type</th><th>Description</th></tr></thead><tbody><tr><td>NoSync</td><td>The time service does not synchronize with other sources.</td></tr><tr><td>NTP</td><td>The time service synchronizes from the servers specified in the NtpServer.</td></tr><tr><td>NT5DS</td><td>The time service synchronizes from the domain hierarchy.</td></tr><tr><td>AllSync</td><td>The time service uses all the available synchronization mechanisms.</td></tr></tbody></table><ol start=4><li>設定這台伺服器是否為一個可信賴的時間伺服器，將其設定為「5」（Hex;16進制），其實5就是0x1+0x4的意思。</li></ol><pre><code>HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Services\W32Time\Config
+名稱                 類型       資料
+-------------------- ---------- --------------------
+AnnounceFlags        REG_DWORD  5
+</code></pre><table class="table table-striped table-hover"><thead><tr><th>Type</th><th>Description</th></tr></thead><tbody><tr><td>0x00</td><td>Not a time server.</td></tr><tr><td>0x01</td><td>Always time server.</td></tr><tr><td>0x02</td><td>Automatic time server.</td></tr><tr><td>0x04</td><td>Always reliable time server.</td></tr><tr><td>0x08</td><td>Automatic reliable time server.</td></tr></tbody></table><ol start=5><li>當你要成為一台時間伺服器時，你總要確定你自己機器本身的時間是正確的吧！不然人家來詢問你的時候你一直回答錯誤的時間給別人，這也是一件很糟糕的事啊！（這樣會傷害到所有來問你時間的機器，他們全部的時間都跟你一樣錯誤。）因此，指定幾台外部的NTP伺服器是必要的。（有些特別需要高精準的情況下，甚至會自己架設GPS接收器或原子鐘，來進行基礎時間的同步，例如Google就是這樣做。）</li></ol><p>※參考下面的Registry路徑後我們可以發現，NtpServer預設資料被設定為「time.windows.com,0x9」，這代表這台伺服器預設會去跟「time.windows.com」這台機器進行時間同步，同步的模式為「0x9」。</p><pre><code class=language-txt>HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Services\W32Time\Parameters
+名稱                 類型       資料
+-------------------- ---------- --------------------
+NtpServer            REG_SZ     tock.stdtime.gov.tw,0x1 watch.stdtime.gov.tw,0x2
+
+※註：上面資料0x2的設定表示，當0x1這台tock機器設定掛了（沒有回應; fallback），才會跑watch這台機器。兩台或多台外部時間機器間，利用空白（space）分隔。
+</code></pre><p>同步模式的代表意義如下方表格所示：</p><table class="table table-striped table-hover"><thead><tr><th>Type</th><th>Description</th></tr></thead><tbody><tr><td>0x01</td><td>SpecialInterval<br />Instead of following the NTP specification, wait for the interval specified in the SpecialPollInterval entry before attempting to recontact this time source. Setting this flag decreases network usage, but it also decreases accuracy.</td></tr><tr><td>0x02</td><td>UseAsFallbackOnly<br />Use this time source only as a fallback. If all time sources that are not fallbacks have failed, then the system selects one fallback time source at random and uses it.</td></tr><tr><td>0x04</td><td>SymmetricActive<br />Set the local computer to operate in symmetric active mode in the association with this source.</td></tr><tr><td>0x08</td><td>Client<br />Set the local computer to operate in client mode in the association with this source.</td></tr></tbody></table><p>當然啦！跑到國外跟人家的時間伺服器同步實在是有點類（網路也比較慢），因此我們可以把機器指向國內的「<a href=http://www.stdtime.gov.tw>中華電信研究所時間與頻率國家標準實驗室</a>」，所提供的NTP伺服器。如下方列表（參考幾台即可）：</p><ul><li>tock.stdtime.gov.tw</li><li>watch.stdtime.gov.tw</li><li>time.stdtime.gov.tw</li><li>clock.stdtime.gov.tw</li><li>tick.stdtime.gov.tw</li></ul><h3>補充說明</h3><p>如果你想讓自己的對外查詢NTP主機不只一台，且可以自行安排NTP主機群名單，則可以去下列的註冊表路徑中編排：</p><pre><code class=language-txt>HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\DateTime\Servers
+-----
+在這邊就可以看到各式NTP主機群了，這個清單列表也將會顯示在UI介面的下拉主機群清單中。
+</code></pre><ol start=6><li>如果你已經設定好這台伺服器，要去外面的時間機器進行同步查詢，那麼你要多久跟那台機器進行一次查詢呢？預設是604800秒（Dec;10進制），也就是7天才同步一次。在這裡改成「180」（Dec;10進制）單位為秒，也就是三分鐘同步一次。</li></ol><pre><code class=language-txt>HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Services\W32Time\TimeProviders\NtpClient
+名稱                 類型       資料
+-------------------- ---------- --------------------
+SpecialPollInterval  REG_DWORD  180
+</code></pre><ol start=7><li>設定來跟這台時間伺服器詢問時間的機器，跟你的誤差時間為多少區間內是合理的，也就是說如果差距過大，你可以拒絕將正確時間傳回來跟你詢問的電腦。這就像是現在是西元2013年，但是在路上有一個人走過來問你說，請問現在是2000年嗎？你大概會覺得這個人有病，然後根本不想回應他吧！預設是54000秒（Dec;10進制），也就是差15個小時他就不想理你了。在這裡改成「ffffffff」（Hex;16進制）單位為秒，也就是往前或往後差136年還是讓你同步，夠寬了吧！</li></ol><p>※在這邊要特別注意的是，機碼區分為起與迄，即為「Neg ← 現在時間 → Pos」。</p><pre><code class=language-txt>HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Services\W32Time\Config
+名稱                  類型       資料
+--------------------- ---------- --------------------
+MaxNegPhaseCorrection REG_DWORD  ffffffff
+MaxPosPhaseCorrection REG_DWORD  ffffffff
+</code></pre><ol start=8><li>設定現在這台時間伺服器（Time Service）是否要成為NTP伺服器的提供者？當然啦，這就是我們最終要達成的功能嘛，所以就是給它Enabled下去啦！預設是0（，在這裡改成「1」（Hex;16進制）。</li></ol><pre><code class=language-txt>HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Services\W32Time\TimeProviders\NtpServer
+名稱                 類型       資料
+-------------------- ---------- --------------------
+Enabled              REG_DWORD  1
+</code></pre><ol start=9><li>依據<a href=https://www.ietf.org/rfc/rfc1305.txt>RFC1035</a>的規定，NTP服務的標準通訊埠是UDP 123。因此必須到Windows防火牆內將UDP 123設定開啟，下方連續圖片將逐步記錄防火牆設定的過程。</li></ol><ul><li><img src=https://content.slashview.com/img/2013/20131219_02.jpg alt="" /></li><li><img src=https://content.slashview.com/img/2013/20131219_03.jpg alt="" /></li><li><img src=https://content.slashview.com/img/2013/20131219_04.jpg alt="" /></li><li><img src=https://content.slashview.com/img/2013/20131219_05.jpg alt="" /></li><li><img src=https://content.slashview.com/img/2013/20131219_06.jpg alt="" /></li><li><img src=https://content.slashview.com/img/2013/20131219_07.jpg alt="" /></li><li><img src=https://content.slashview.com/img/2013/20131219_08.jpg alt="" /></li></ul><ol start=10><li>終於到最後一步動作，這個動作很簡單，就是「重新開啟」你的伺服器（重新開機）。如果你的伺服器正在執行重要的工作而無法進行重新開機的話，那麼可以開啟命令模式進行下列指令即可。</li></ol><pre><code class=language-txt>net stop w32time &amp;&amp; net start w32time
+</code></pre><h3>補充說明</h3><p>在Windows Server 2003～Windows Server 2008時期，Windows Time Services基本上你只要設定成自動，那麼它一開機後都會自動啟動才對。但是在我實驗的過程中，好像Windows Server 2008R2之後，似乎不會自動啟動了，只要每次重開機進去觀察，都是服務都是關閉的狀態（至少我在Windows Server 2012上的實驗是如此）。經過查詢後原因為「Windows Time is stopped if the computer is not domain joined」。以下為驗證（on Windows 7）：</p><pre><code class=language-txt>&lt;pre>
+C:\Users\Administrator>sc qtriggerinfo w32time
+[SC] QueryServiceConfig2 成功
+
+SERVICE_NAME: w32time
+  啟動服務
+    網域加入狀態: 1ce20aba-9851-4421-9430-1ddeb766e809 [已加入網域]
+  停止服務
+    網域加入狀態: ddaf516e-58c2-4866-9574-c3b615d42ea1 [未加入網域]
+&lt;/pre>
+</code></pre><p>也就是說，可能是在Windows 7或Windows Server 2008R2之後，微軟對W32Time服務增加了一個觸發事件，當這台電腦沒有加入DC網域時，服務會自動停止。因此我們對其更改服務觸發指令，讓網路起來服務就起來，網路卸載服務就關閉，用來進行對預設觸發事件的變更，如此一來就成功的解決問題了。</p><pre><code class=language-txt>C:\Users\Administrator>sc triggerinfo w32time start/networkon stop/networkoff
+[SC] ChangeServiceConfig2 成功
+</code></pre><h6>WindowsServer NTP Time Services Server</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

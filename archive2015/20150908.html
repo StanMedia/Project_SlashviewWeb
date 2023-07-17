@@ -1,0 +1,50 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>泛型委派（General Delegates）之變數保留寫法</h1><p>在傳統上，我們宣告了一個Function（函式），若想要持續保留這個函式運行過程中的變數（例如一個累加器），那麼我們勢必要宣告一個全域變數（或是一個類別實體）來進行存放才可以。而到了泛型委派、通用委派（General Delegates）的世界裡面，寫法可以變得更精簡，以下是程式碼的示範：</p><pre><code class=language-cs>static void Main(string[] args)
+{
+  Func&lt;int> oRun = Count();
+  oRun();
+  oRun();
+  oRun();
+  oRun();
+  int X = oRun();
+  //變數在過程中被保留，所以答案會是5
+  Console.WriteLine(X);  
+}
+
+static Func&lt;int> Count()
+{
+  int i = 0;
+  Func&lt;int> oTemp = () => { i++; return i; };
+  return oTemp;
+}
+</code></pre><p>在上述的程式碼中，Func<int>中的int其實代表的是<code>&lt;TResult></code>，並非傳入參數，因此這並不是一個類似遞迴的寫法，請不要誤會！</int></p><h2>類別型態的參數保留寫法</h2><p>上面的例子中，是使用簡單的參數來進行運作，下面的例子就更進階了，我們透過建立Calc類別，並在中間建立可存取的參數以及簡單的累加方法。我們也可以在程式碼中看到，每一次的Func<calc>呼叫，下面都會有一行new Calc()實體的建立，但事實上這一個實體只有在第一次建立，之後的委派調用，就回歸到全然的Func<calc> oFunc此行運行了。</calc></calc></p><pre><code class=language-cs>class Program
+{
+  static void Main(string[] args)
+  {
+    Func&lt;Calc> oRun = Count();
+    oRun();
+    oRun();
+    oRun();
+    oRun();
+    Calc X = oRun();
+    //輸出「計數器：5」
+    Console.WriteLine(String.Format("{0}：{1}", X.name, X.i));
+  }
+  
+  static Func&lt;Calc> Count()
+  {
+    Calc oTemp = new Calc() { name = "計數器", i = 0 };
+    Func&lt;Calc> oFunc = () => {
+      oTemp.count();
+      return oTemp;
+    };
+    return oFunc;
+  }
+}
+
+class Calc
+{
+  public string name { get; set; }
+  public int i { get; set; }
+  public void count() { i++; }
+}
+</code></pre><p>現在的我還不知道這樣的寫法除了語法精簡之外還有什麼優勢，日後如果有遇到需要全域保留的實體類別或變數，或許我會慢慢考慮改採用這樣的寫法。</p><h6>泛型委派 通用委派 GeneralDelegates 全域變數 GlobalVariable 區域變數 LocalVariable 保留 Reserved</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

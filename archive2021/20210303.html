@@ -1,0 +1,16 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>使用C# 9.0進行編譯時發生CS0518錯誤（IsExternalInit）</h1><p>當你在nuget下載Microsoft.Net.Compilers.Toolset（Microsoft.Net.Compilers），想要使用roslyn來進行C# 9.0版本語法來編譯時，你會遇到編譯器不斷的拋出一個詭異的錯誤：CS0518 未定義或匯入預先定義的類型，在撰寫這篇文章時，我的roslyn版本號是3.8.0，對應到C# 9.0 。</p><h2>CS0518 編譯錯誤資訊（IsExternalInit）</h2><p>編譯器拋出的錯誤資訊大致上如下描述：</p><pre><code class=language-txt>錯誤 CS0518 未定義或匯入預先定義的類型 'System.Runtime.CompilerServices.IsExternalInit'
+錯誤 CS0518 Predefined type 'System.Runtime.CompilerServices.IsExternalInit' is not defined or imported
+</code></pre><h2>解決方式</h2><p>看到這個錯誤直覺就是roslyn附掛的dll出問題，直接上網搜尋果然有很多人都遇到這個狀況，我自己的解決方案是撰寫一個空的靜態類別來對應，建立一個名為「System.Runtime.CompilerServices.cs」空類別，並讓程式碼如下：</p><pre><code class=language-cs>using System.ComponentModel;
+namespace System.Runtime.CompilerServices
+{
+  [EditorBrowsable(EditorBrowsableState.Never)]
+  public static class IsExternalInit
+  { }
+}
+</code></pre><p>接下來就是編譯這個類別：</p><pre><code class=language-txt>C:\slashview>csc System.Runtime.CompilerServices.cs /target:library /out:System.Runtime.CompilerServices.dll
+</code></pre><p>編譯出來的類別檔案System.Runtime.CompilerServices.dll，將其放在csc.exe所屬的目錄或者是直接丟在\bin目錄應該就解決了。</p><p>懶得編譯DLL的人，可以直接點擊這個連結下載：<a href=https://content.slashview.com/file/20210303/System.Runtime.CompilerServices.dll.zip>System.Runtime.CompilerServices.dll</a></p><h3>後記</h3><p>依據微軟官方對於這個IsExternalInit的說法（詳見下方語句），說這是C# 9.0的keyword init features所致，而官方有聲明C# 9.0只有支援.NET 5，要不就是請你SDK升級到.NET 5以上的版本，要不就去死吧。</p><pre><code class=language-txt>Q: Dev nuget Package Microsoft.Net.Compilers.Toolset v 3.8.0-1.20325.3 when using `init` feature in c# 9 raise error: Predefined type 'System.Runtime.CompilerServices.IsExternalInit' is not defined or imported
+
+A: Thanks for reporting the issue. This is not a bug in the compiler. The IsExternalInit type is a new type added to .NET in the net5 time frame which is necessary to properly emit record types and init properties. That type was added but did not make it into the .NET 5 SDK you used. Once you upgrade to a version which has the type, believe Preview 7, this will go away.
+
+Source: https://github.com/dotnet/roslyn/issues/45510
+</code></pre><h6>.NET .NetFramework .NetCore .NET5 .NET6 Roslyn C#Compiler CSharpCompiler Error IsExternalInit CS0518 VisualStudio</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

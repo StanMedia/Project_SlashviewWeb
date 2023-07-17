@@ -1,0 +1,74 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>列舉Windows作業系統下的造字檔內的所有文字（粗略版）</h1><p>這一兩天都在碰有關於Big5的使用者造字檔（EUDC；End User Defined Characters），將已經研究完成的相關知識透過一個小專案將其記錄在此，以免日後遺忘。</p><p>這隻程式碼我是用網頁的角度來寫，所以有些方法名稱如果覺得很詭異，那請自己在腦海中轉化一下吧。共計有下列重點：</p><ol><li>列舉EUDC中的BIG5編碼。（16進制；2 Bytes）</li><li>將EUDC字元以Unicode。（UTF-16；資料庫中的NVarChar）的角度來看，所代表的數值（10進制）</li><li>將EUDC字元輸出。（當然，作業系統端一定要安裝造字檔案才看的到）</li></ol><p>廢話不多說，直接上程式碼吧。</p><pre><code class=language-cs>public void Page_Load(object sender, EventArgs e)
+{
+  //Big5 EUDC範圍列表
+  string[] aryEUDC = new string[]
+  {
+    "FA40", "FEFE",
+    "8E40", "A0FE",
+    "8140", "8DFE",
+    "C6A1", "C8FE",
+  };
+
+  //定義相關變數
+  System.Text.StringBuilder oSB = new System.Text.StringBuilder();
+  //定義委派函式
+  System.Func&lt;int, int, int> funcFormula = null;
+  System.Func&lt;(int H, int L, int V), System.Func&lt;int, int, int>, int> MappingCode = (d, f) => { return f(d.H, d.L); };
+
+  for (int i = 0; i &lt; aryEUDC.Length; i += 2)
+  {
+    //定義要尋訪的造字區間
+    var oCodeStart = String2RealByte(aryEUDC[i]);
+    var oCodeEnd = String2RealByte(aryEUDC[i+1]);
+    //設定要執行的函式
+    switch (oCodeStart.iHigh.ToString("X"))
+    {
+      case "81":
+        funcFormula = (iHigh, iLow) => { return 0xEEB8 + (157 * (iHigh - 0x81)) + ((iLow &lt; 0x80) ? (iLow - 0x40) : (iLow - 0x62)); }; break;
+      case "8E":
+        funcFormula = (iHigh, iLow) => { return 0xE311 + (157 * (iHigh - 0x8e)) + ((iLow &lt; 0x80) ? (iLow - 0x40) : (iLow - 0x62)); }; break;
+      case "C6":
+        funcFormula = (iHigh, iLow) => { return 0xF672 + (157 * (iHigh - 0xc6)) + ((iLow &lt; 0x80) ? (iLow - 0x40) : (iLow - 0x62)); }; break;
+      case "FA":
+        funcFormula = (iHigh, iLow) => { return 0xE000 + (157 * (iHigh - 0xfa)) + ((iLow &lt; 0x80) ? (iLow - 0x40) : (iLow - 0x62)); }; break;
+    }
+    //列印區間標示
+    oSB.Append($"－－－{oCodeStart.iValue.ToString("X")}～{oCodeEnd.iValue.ToString("X")}－－－\r\n");
+    //依照指定的範圍尋訪
+    for (int j = oCodeStart.iValue; j &lt;= oCodeEnd.iValue; j++)
+    {
+      int iTemp = MappingCode(oCodeStart, funcFormula);
+      /* Sample: FA40    57344    ☆ */
+      oSB.Append($"{oCodeStart.iValue.ToString("X")}\t{iTemp}\t{System.Convert.ToChar(iTemp)}\r\n");
+      oCodeStart = String2RealByte((j + 1).ToString("X"));
+    }
+  }
+  //輸出字串
+  uMessage.Text = oSB.ToString();
+}
+
+//將16進制的文字，轉換成真實地Byte
+private (int iHigh, int iLow, int iValue) String2RealByte(string cTemp)
+{
+  return (
+    iHigh:  System.Int32.Parse(cTemp.Substring(0, 2), System.Globalization.NumberStyles.HexNumber),
+    iLow:   System.Int32.Parse(cTemp.Substring(2, 2), System.Globalization.NumberStyles.HexNumber),
+    iValue: System.Int32.Parse(cTemp,                 System.Globalization.NumberStyles.HexNumber)
+  );
+}
+</code></pre><p>輸出會長得像下列：</p><pre><code class=language-txt>－－－FA40～FEFE－－－
+FA40  57344  
+FA41  57345  
+FA42  57346  
+FA43  57347  
+FA44  57348  
+FA45  57349  
+...
+</code></pre><p>其實該知道的知識都寫在註解中了，所以就不再贅述。值得一提的是，這裡有運用到委派的架構，將要計算的方法踢給外函式去實作，如果有興趣的可以特別注意一下。</p><h4>知識補充</h4><p>如果仔細觀察Windows內建的造字程式，就可以發現我上面列舉的區段（例如：FA40～FEFE）中，有很多並不是連續的區塊，以推論若將FEFE減去FA40，可以得到1215個造字空間，可是BIG-5時期規範FA40～FEFE的可使用造字空間只有785個，由這個推論也可以證明區塊是有被刪減的，因此上面把FA40～FEFE整個區段丟進去迴圈幫忙跑，其實並不切實際（會跑出很多位於不合法造字區段的代碼，例如：根本沒有FA87這個造字編碼）。</p><p>雖然有上述的問題，但這依然不會造成轉換失效的問題，因為在委派funcFormula中，這個問題已經被修正掉了。以下簡單列出FA40～FEFE整個區段內合法的編碼，應該可以看出一定的規律性。</p><pre><code class=language-txt>FA40-FA7E｜63　　FAA1-FAFE｜94
+FB40-FB7E｜63　　FBA1-FBFE｜94
+FC40-FC7E｜63　　FCA1-FCFE｜94
+FD40-FD7E｜63　　FDA1-FDFE｜94
+FE40-FE7E｜63　　FEA1-FEFE｜94
+－－－－－
+合計：785個字
+</code></pre><p>因研究時當下並沒有需要詳細的考慮連續區間的非連續問題，因此不存在的造字編碼仍然有可能會被列舉出來，只是在委派時會被公式強制修正，也因此造成列舉時出現造字的重複性，日後若有需要的時候再來寫更精確的列舉版本吧。</p><h3>相關參考</h3><ul><li><a href=/archive2018/20180927.html>列舉Windows作業系統下的造字檔內的所有文字（粗略版）</a></li><li><a href=/archive2022/20221222.html>列舉Windows作業系統下的造字檔內的所有文字（精準版）</a></li><li><a href=/archive2018/20180925.html>找出字串中隱藏的Big5造字字元，並用Unicode將其取代</a></li><li><a href=/archive2017/20170127.html>如何在在Excel中找出BIG5的使用者造字字元？</a></li><li><a href=/archive2021/20211122.html>更新造字字型檔（EUDC Fonts）的批次小程式</a></li></ul><h6>BIG5 EUDC CharactersList</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

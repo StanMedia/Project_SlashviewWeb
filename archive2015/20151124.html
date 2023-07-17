@@ -1,0 +1,132 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>CNS11643中文全字庫轉換Unicode注音字碼表之實作</h1><p>因為有機會要用到中文輸入法的調用，查了半天，全部都是依存在Windows每一版本的作業系統中所提供的不同輸入法的DLL程式庫，再進行所謂的DLL Hook，因為不想自己寫的系統元件或程式，被Windows的作業系統版本綁住，所以乾脆把研究方向轉向到自己自建字碼表（在本篇以注音輸入法為例），這樣一來就可以完全的從作業系統底層解脫了。</p><p><img src=https://content.slashview.com/img/2015/20151124_01.jpg alt="" /></p><p>當然啦，我們不可能自己建立這些字碼表，因此行政院國家發展委員會的全字庫自然是我這次所有研究的重點，再繼續挖掘下去，發現全字庫已經有在政府開放資料網站上進駐，也就是說，我們可以不用辛苦的到他的網站上寫程式慢慢的crawler了。網站在這裡：<a href=http://goo.gl/mxvoq2>政府資料開放平台：CNS11643中文標準交換碼全字庫</a></p><h2>將全字庫資料轉換成Unicode實體文字，以及對照的注音字碼表</h2><p>有了全字庫的資料，再稍微地讀一下他的檔案結構，對於有程式設計基礎的人來說，轉換這些數值變成文字，應該都不是太難的事情，以下是我寫的程式碼範例。在轉換的過程中，先暫時捨棄Private Use Area-A，只保留基本多文種平面Basic Multilingual Plane以及表意文字補充平面Supplementary Ideographic Plane。</p><pre><code class=language-cs>namespace Slashview
+{
+  class Program
+  {
+    static void Main(string[] args)
+    {
+      string cBasePath = System.Environment.CurrentDirectory;
+      //OpenData CNS 主要檔案
+      string cCNS_PhoneticPath = "CNS_phonetic.txt";
+      //OpenData CNS 2 Unicode 對照檔案
+      string cCNS2UNICODE_Unicode_BMP = "CNS2UNICODE_Unicode BMP.txt";  //Basic Multilingual Plane（BMP）基本多文種平面
+      string cCNS2UNICODE_Unicode_2 = "CNS2UNICODE_Unicode 2.txt";      //Supplementary Ideographic Plane（SIP）表意文字補充平面
+      string cCNS2UNICODE_Unicode_15 = "CNS2UNICODE_Unicode 15.txt";    //Private Use Area-A（PUA-A）保留作為私人使用區（A區）
+      //檢查檔案是否存在
+      if (!System.IO.File.Exists($"{cBasePath}\\{cCNS_PhoneticPath}")) { WriteLine($"找不到檔案：{cCNS_PhoneticPath}"); return; }
+      if (!System.IO.File.Exists($"{cBasePath}\\{cCNS2UNICODE_Unicode_BMP}")) { WriteLine($"找不到檔案：{cCNS2UNICODE_Unicode_BMP}"); return; }
+      if (!System.IO.File.Exists($"{cBasePath}\\{cCNS2UNICODE_Unicode_2}")) { WriteLine($"找不到檔案：{cCNS2UNICODE_Unicode_2}"); return; }
+      if (!System.IO.File.Exists($"{cBasePath}\\{cCNS2UNICODE_Unicode_15}")) { WriteLine($"找不到檔案：{cCNS2UNICODE_Unicode_15}"); return; }
+
+      //讀取主要檔案
+      WriteLine("讀取主要檔案...");
+      System.Collections.Generic.List&lt;TableCnsPhonetic> oMain = new System.Collections.Generic.List&lt;TableCnsPhonetic>();
+      using (System.IO.StreamReader oSR = new System.IO.StreamReader($"{cBasePath}\\{cCNS_PhoneticPath}"))
+      {
+        string oLine;
+        while (!string.IsNullOrWhiteSpace(oLine = oSR.ReadLine()))
+        {
+          string[] oTemp = oLine.Split('\t');
+          oMain.Add(new TableCnsPhonetic {
+            cCNSCode = $"{oTemp[0]}-{oTemp[1]}",
+            cPhonetic = $"{oTemp[2]}"
+          });
+        }
+      }
+      //讀取字典檔
+      WriteLine("讀取字典檔案...");
+      System.Collections.Generic.List&lt;TableCnsUnicode> oDictionary = new System.Collections.Generic.List&lt;TableCnsUnicode>();
+      using (System.IO.StreamReader oSR = new System.IO.StreamReader($"{cBasePath}\\{cCNS2UNICODE_Unicode_2}"))
+      {
+        string oLine;
+        while (!string.IsNullOrWhiteSpace(oLine = oSR.ReadLine()))
+        {
+          string[] oTemp = oLine.Split('\t');
+          oDictionary.Add(new TableCnsUnicode
+          {
+            cCNSCode = $"{oTemp[0]}-{oTemp[1]}",
+            cUnicode = $"{oTemp[2]}"
+          });
+        }
+      }
+      using (System.IO.StreamReader oSR = new System.IO.StreamReader($"{cBasePath}\\{cCNS2UNICODE_Unicode_15}"))
+      {
+        string oLine;
+        while (!string.IsNullOrWhiteSpace(oLine = oSR.ReadLine()))
+        {
+          string[] oTemp = oLine.Split('\t');
+          oDictionary.Add(new TableCnsUnicode
+          {
+            cCNSCode = $"{oTemp[0]}-{oTemp[1]}",
+            cUnicode = $"{oTemp[2]}"
+          });
+        }
+      }
+      using (System.IO.StreamReader oSR = new System.IO.StreamReader($"{cBasePath}\\{cCNS2UNICODE_Unicode_BMP}"))
+      {
+        string oLine;
+        while (!string.IsNullOrWhiteSpace(oLine = oSR.ReadLine()))
+        {
+          string[] oTemp = oLine.Split('\t');
+          oDictionary.Add(new TableCnsUnicode
+          {
+            cCNSCode = $"{oTemp[0]}-{oTemp[1]}",
+            cUnicode = $"{oTemp[2]}"
+          });
+        }
+      }
+      //比對與儲存
+      WriteLine("比對主要檔案與字典檔案，並運算成資料庫...");
+      System.Collections.Generic.List&lt;TableFinalResult> oResult = new System.Collections.Generic.List&lt;TableFinalResult>();
+      int iCounter = 1;
+      foreach (var oTempS in oMain)
+      {
+        Console.CursorLeft = 0;
+        Write($"處理進度：{iCounter}/{oMain.Count}");
+        string cHexCode = "";
+        foreach (var oTempT in oDictionary) { if (oTempS.cCNSCode == oTempT.cCNSCode) { cHexCode = oTempT.cUnicode; break; }}
+        //將Unicode Private Use Area-A（PUA-A）過濾掉，因為一般使用者不可能會有這些字形檔
+        if (cHexCode.Length == 5 &amp;&amp; cHexCode.Substring(0, 1) == "F") { cHexCode = ""; }
+        //比對後儲存
+        if (cHexCode.Length != 0)
+        {
+          int iTemp = System.Convert.ToInt32(cHexCode, 16);
+          oResult.Add(new TableFinalResult()
+          { 
+            iUnicode = iTemp,
+            cUnicode = cHexCode,
+            cPhonetic = oTempS.cPhonetic,
+            cString = System.Text.Encoding.UTF32.GetString(System.BitConverter.GetBytes(iTemp))
+          });
+        }
+        iCounter++;
+      }
+      //寫成檔案
+      WriteLine("將資料庫寫成檔案...");
+      using (System.IO.StreamWriter oSW = new System.IO.StreamWriter($"{cBasePath}\\中文全字庫注音資料庫檔案.txt", false, System.Text.Encoding.UTF8))
+      {
+        foreach (var oTemp in oResult)
+        {
+          oSW.WriteLine($"{oTemp.iUnicode}\t{oTemp.cUnicode}\t{oTemp.cPhonetic}\t{oTemp.cString}");
+        }
+      }
+    }
+  }
+  public class TableCnsPhonetic
+  {
+    public string cCNSCode { get; set; }
+    public string cPhonetic { get; set; }
+  }
+  public class TableCnsUnicode
+  {
+    public string cCNSCode { get; set; }
+    public string cUnicode { get; set; }
+  }
+  public class TableFinalResult
+  {
+    public int iUnicode { get; set; }
+    public string cUnicode { get; set; }
+    public string cPhonetic { get; set; }
+    public string cString { get; set; }
+  }
+}
+</code></pre><p>經過轉換後，我們將會得到十進制（Dec）的Unicode編碼、十六進制（Hex）的Unicode編碼、注音字碼表、真實的Unicode文字，好歡樂啊！接下來就可以快樂的倒進資料庫中，快快樂樂的設計實作自己的輸入法嘍！</p><p><img src=https://content.slashview.com/img/2015/20151124_02.jpg alt="" /></p><h6>CNS11643 Unicode UTF8 UTF16 UTF32 字面 轉換 字典檔</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

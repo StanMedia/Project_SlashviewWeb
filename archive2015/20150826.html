@@ -1,0 +1,15 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>A資料表裡面多個欄位，同時關聯到B資料表之檢視表設計</h1><p>如標題，我們在A資料表中設計了兩個欄位，但這兩個欄位同時關聯到B資料表中的主要索引鍵（PK），這時候會觸發一個詭異的問題，就是你打算要用A資料表中的哪一個欄位要去等於B資料表中的PK？將可能會出現在SQL中的AND邏輯改成OR也不太對，因為這樣會一次產生很多筆資料。這時候我們需要資料表的AS（Alias）搭配LEFT OUTER JOIN來幫我們實現這樣問題的解法。首先，我們的資料表以及內容如下圖所示，分別叫做Table_A、Type_B：</p><p><img src=https://content.slashview.com/img/2015/20150826_01.jpg alt="" /></p><p>想當然爾，我們想要讓關羽以及張飛分別擁有：戶籍地電話區碼（iMap2B_Tel_Reg）、通訊地電話區碼（iMap2B_Tel_Com）這兩個欄位，對應到Type_B表中的PK，因此我們製作了下列的資料庫圖表。</p><p><img src=https://content.slashview.com/img/2015/20150826_02.jpg alt="" /></p><p>嗯，看起來一切都沒有問題，但是再仔細想想，我們要怎麼完成我們期望中的檢視表呢？我們怎麼可能同時讓iMap2B_Tel_Reg以及iMap2B_Tel_Com，同時對應到Type_B中的PK呢？還是這一切的邏輯，只能在程式碼中完成？結論是，當然不是，我們可以用AS（Alias）以及LEFT OUTER JOIN來完成我們想要的設計。SQL設計指令如下所示：</p><pre><code class=language-sql>SELECT
+  dbo.Table_A.cName,
+  Type_Reg.cArea AS cTelReg,
+  Type_Com.cArea AS cTelCom
+FROM
+  dbo.Table_A
+  LEFT OUTER JOIN
+    dbo.Type_B AS Type_Reg
+    ON 
+      dbo.Table_A.iMap2B_Tel_Reg = Type_Reg.iIndex
+  LEFT OUTER JOIN
+    dbo.Type_B AS Type_Com
+    ON
+      dbo.Table_A.iMap2B_Tel_Com = Type_Com.iIndex
+</code></pre><p>利用AS來將Type_B表虛擬成兩張，並讓Table_A中的這兩個欄位分別去對應到（LEFT OUTER JOIN）這兩張虛擬的參考表格（Type_Reg、Type_Com）。結果是，我們成功的完成我們想要的檢視表了，我們可以透過單一次的查詢，馬上知道關羽或張飛的戶籍地與通訊地之中文名稱了。檢視表設計詳見下圖：</p><p><img src=https://content.slashview.com/img/2015/20150826_03.jpg alt="" /></p><h6>SQL Database MultiRelation ViewDesign 單表多重1對多 檢視表</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

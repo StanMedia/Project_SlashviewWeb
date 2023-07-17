@@ -1,0 +1,12 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>如何偵測到jQuery的Selector選到了Null？</h1><p>jQuery的selector極度的強大，但是當你在做複雜的語法查詢時，有很多時刻都會誤踩地雷。舉例來說，你隨便下個alert($("#NonExistDIV"));指令，儘管你的網頁中根本沒有這個DIV id，但是alert還是會彈出一個「[object Object]」的空集合jQuery物件，除非你再繼續下「$("#NonExistDIV")[0]」或「$("#NonExistDIV").get(0)」進行接續的求證，不然現階段你是沒有方法得知是不是有真正的select到DOM元素的。</p><p>今天就是因為一直覺得自己有正確的選到DOM元素，小鬼打牆了一段時間，一怒之下上網找了解決方案，解決的辦法很簡單，只要使用下列判斷式即可。</p><pre><code class=language-js>if ($("#NonExistDIV").length !== 0)
+{ alert("有找到DOM元素"); }
+else
+{ alert("沒找到DOM元素"); }
+</code></pre><p>與其在那邊罵jQuery為何不把它實作成一個方法的話，或許你可以選擇自己寫一個小外掛套件。</p><pre><code class=language-js>//判斷是否selector有選到DOM元素Plug-in
+$.fn.exists = function() {
+  return this.length !== 0;
+}
+//實現方法
+alert($("#NonExistDIV").exists());  //傳回false
+alert($("#ExistDIV").exists());  //傳回true
+</code></pre><h6>jQuery Selector NullObject PlugIn</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

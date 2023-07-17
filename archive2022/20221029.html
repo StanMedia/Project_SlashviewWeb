@@ -1,0 +1,21 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>C#如何將匿名型別（AnonymousTypes）傳遞到方法中</h1><p>有時為了追求更簡潔的寫法，常常會有突發奇想的想法出現，而這次就是發生了一個想偷懶不想重新建立一個新類別，而打算採用匿名型別（Anonymous Types）將資料傳送到某方法（Method Parameters）中，讓該方法進行後續的操作行為，由於以前都沒有這樣幹過，所以一時之間也就在如何將匿名型別宣告在方法參數上卡了許久。</p><p>網路上有人建議使用泛型T來解決，但這個第一很複雜，第二又涉及到複雜的Reflection反射行為，根本事倍功半，不是一個良好的解決方案。後來才發現使用dynamic就解決了啊！特此筆記供給日後參考。</p><h2>將匿名型別傳遞到方法參數</h2><p>Step 1. 首先利用record宣告一個ORM，準備來存放原始資料。（順便透過這篇偷渡練習一下C# 9.0的record語法糖）</p><pre><code class=language-cs>public record Student(int iId, string cName);
+</code></pre><p>Step 2. 接著在main方法中，並透過參數建構子的方式來快速賦值（特別要注意的是record型別不支援Object Initializers寫法），另外這邊也特別透過Target Typed New Expressions來建立這個資料包。</p><pre><code class=language-cs>var oSource = new System.Collections.Generic.List&lt;Student>()
+{
+  new (1, "Adam"),
+  new (2, "Bryan"),
+};
+</code></pre><p>Step 3. 透過LINQ產生出新的匿名型別資料包，之後我們想要將這個匿名型別資料包傳遞到某個稱為ProcessContent方法進行後續的處理操作。（通常這會發生情境可能是前端的JSON Data想要以特定的名稱呈現，或者跟別人寫的API對接，需要轉換成另外一種律定的參數名稱。）</p><pre><code class=language-cs>var oList = oSource
+  .Select(x => new {
+    StudentID = x.iId,
+    StudentName = x.cName
+  });
+ProcessContent(oList);
+</code></pre><p>Step 4. ProcessContent方法中，透過dynamic動態型別來接資料，用來躲避compiler的檢查又兼顧語法的簡易性、可閱讀性。</p><pre><code class=language-cs>public static void ProcessContent(System.Collections.Generic.IEnumerable&lt;dynamic> oList)
+{
+  foreach (var oItem in oList)
+  { WriteLine($"{oItem.StudentID}|{oItem.StudentName}"); }
+}
+//輸出結果：
+//1|Adam
+//2|Bryan
+</code></pre><h4>相關連結</h4><ul><li><a href=/archive2015/20150729.html>利用ExpandoObject類別，在執行期動態加入和移除成員</a></li><li><a href=/archive2021/20211120.html>手動建立DataTable資料與動態生成ExpandoObject屬性</a></li><li><a href=/archive2022/20221029.html>C#如何將匿名型別（AnonymousTypes）傳遞到方法中</a></li></ul><h6>C# AnonymousTypes PassValue Method Parameter Arguments Linq</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

@@ -1,0 +1,65 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>JWT從入門到放棄（二）：完整實作JWT演算（HMAC-SHA256雜湊）</h1><p>在研究JWT（Json Web Token）的過程中，大家一定有逛過一個很好用的工具網站，叫做<a href=https://jwt.io/>JWT.io</a>，盡管網站已經很盡力的表明運算過程，但很多人對於他背後的運算過程一定還是有所疑問，這篇文章就是把這個網站運算出來的結果用C#語言從頭到尾走一次，來證明已經對於JWT的運算了然於心了。</p><p><img src=https://content.slashview.com/img/2020/20200417_01.jpg alt="" /></p><h2>JWT之C#運算程式碼</h2><p>Step 1. 先把網站快照起來（以防止日後關站），等一下我們就是要用程式碼運算出圖片中最後的JWT結果字串。</p><p><img src=https://content.slashview.com/img/2020/20200417_02.jpg alt="" /></p><p>從圖片中我們可以知道JWT字串為：</p><pre><code class=language-txt>eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c
+</code></pre><p>Step 2. 在Console模式下建立下列程式碼，這裡面包含了BASE64編碼、BASE64解碼（含等號尾綴糾錯）、HMAC-SHA256雜湊等函式，各位網友可以在中間看到一些有用的程序或方法：</p><p>JWT之BASE64編碼：</p><pre><code class=language-cs>private static string GetBase64Encode(string cTemp)
+{ //注意！下面這個正規表示式不一定可以正確的將JSON Minify（驗證用而已），若正式用途建議使用JSON套件
+  cTemp = System.Text.RegularExpressions.Regex.Replace(
+    cTemp,
+    @"\s(?=([^""]*""[^""]*"")*[^""]*$)|\r\n+|\r+|\n+",
+    string.Empty
+  );
+  //消除空白與換行，並進行編碼
+  return System.Convert.ToBase64String(
+    System.Text.Encoding.UTF8.GetBytes(cTemp)
+  )
+  .Replace("=", string.Empty)
+  .Replace("+", "-")
+  .Replace("/", "_")
+  ;
+}
+</code></pre><p>JWT之BASE64解碼：</p><pre><code class=language-cs>private static string GetBase64Decode(string cTemp)
+{ //處理可能被消失或替換掉的=、+、/等符號
+  cTemp = cTemp
+    .PadRight(cTemp.Length + ((cTemp.Length % 4 != 0) ? (4 - cTemp.Length % 4) : 0), '=')
+    .Replace("-", "+")
+    .Replace("_", "/");
+  return System.Text.Encoding.UTF8.GetString(
+    System.Convert.FromBase64String(cTemp)
+  );
+}
+</code></pre><p>HMAC-SHA256雜湊：</p><pre><code class=language-cs>private static string GetHmacSha256(string cTemp, string cKey = "your-256-bit-secret")
+{
+  using (var oHash = new System.Security.Cryptography.HMACSHA256(
+    System.Text.Encoding.UTF8.GetBytes(cKey)
+  ))
+  {
+    byte[] bytMessage = oHash.ComputeHash(System.Text.Encoding.UTF8.GetBytes(cTemp));
+    return System.Convert.ToBase64String(bytMessage)
+      .Replace("=", string.Empty)
+      .Replace("+", "-")
+      .Replace("/", "_");
+  }
+}
+</code></pre><p>主要程序：</p><pre><code class=language-cs>public static void Main()
+{
+  string cHeader =
+@"{
+""alg"": ""HS256"",
+""typ"": ""JWT""
+}";
+  string cPayload =
+@"{
+""sub"": ""1234567890"",
+""name"": ""John Doe"",
+""iat"": 1516239022
+}";
+  string cHeaderCode = GetBase64Encode(cHeader);
+  string cPayloadCode = GetBase64Encode(cPayload);
+  string cJWT = GetHmacSha256($"{cHeaderCode}.{cPayloadCode}");
+  WriteLine($"Header: {cHeaderCode}");
+  WriteLine($"Payload: {cPayloadCode}");
+  WriteLine($"JWT: {cHeaderCode}.{cPayloadCode}.{cJWT}");
+  Read();
+}
+</code></pre><p>透過以上的過程，我們可以順利的得到下列的Console結果輸出：</p><pre><code class=language-txt>Header:  eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9
+Payload: eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ
+JWT:     eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c
+</code></pre><h2>結論：</h2><p>如果你可以透過這樣的計算過程中，得到與jwt.io網站相同的結果，這意味著你一定有能力進行JWT的驗證比對。</p><p>最後再做一個小小的補充，jwt.io網站中的「secret base64 encoded」指的是給你輸入的HMACSHA256密碼框中，你輸入的如果是被BASE64編碼過的Key就要把這個選項打勾，例如原本我們的Key是「your-256-bit-secret」，而當你輸入的是BASE64過的Key「eW91ci0yNTYtYml0LXNlY3JldA==」，這時候就要把選項打勾。（無聊！）</p><h3>相關連結：</h3><ol><li>RFC7519: <a href=https://tools.ietf.org/html/rfc7519>JSON Web Token (JWT)</a></li><li>RFC4648: <a href=https://tools.ietf.org/html/rfc4648#page-8>The "URL and Filename safe" Base 64 Alphabet</a></li><li><a href=/archive2019/20190118.html>.NET Framework中使用SHA512來進行字串雜湊之程式碼</a></li><li><a href=/archive2013/20130815.html>.NET Framework中使用SHA1來進行字串雜湊之程式碼</a></li></ol><h6>JWT JsonWebToken BASE64Encode BASE64Decode BASE64UrlEncode BASE64UrlDecode SHA256 HMACSHA256 HMAC-SHA256</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

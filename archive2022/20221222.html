@@ -1,0 +1,66 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>列舉Windows作業系統下的造字檔內的所有文字（精準版）</h1><p>時隔多年又遇到造字問題，這次的問題是必須精準到把BIG-5時期的四大造字區間的每一個字精準的列舉出來，不能多也不能少共6217個字，也順便把以前寫的程式碼用新語法糖精進一下，將原本用的委派寫法拿掉。</p><h2>BIG-5編碼基礎知識複習</h2><p>在進行這篇程式碼解決方案的閱讀之前，建議先去之前我的文章中閱讀相關造字編碼的知識，不然你可能會看不懂我在寫啥，文章的參考詳見文末連結。總而言之，傳統認知上的四大造字範圍如下：</p><pre><code class=language-txt>FA40-FEFE　785
+8E40-A0FE　2983
+8140-8DFE　2041
+C6A1-C8FE　408
+－－－－－
+合計　6217  
+</code></pre><p>以第一段FA40-FEFE共785個字來說，內部範圍又被劃分如下：</p><pre><code class=language-txt>FA40-FA7E　63　　FAA1-FAFE  94
+FB40-FB7E　63　　FBA1-FBFE  94
+FC40-FC7E　63　　FCA1-FCFE  94
+FD40-FD7E　63　　FDA1-FDFE  94
+FE40-FE7E　63　　FEA1-FEFE  94
+－－－－－
+合計　785
+</code></pre><h2>建立10進制（DEC）整數與16進制（HEX）字串轉換函式</h2><p>由於運算過程中會不斷發生字串等級的16進制與數值等級的10進制的轉換動作，因此先將兩個轉換方法撰寫如下：</p><pre><code class=language-cs>private static int S2I(string x) => System.Int32.Parse(x, System.Globalization.NumberStyles.HexNumber);
+private static string I2S(int x) => x.ToString("X");
+</code></pre><h2>建立BIG-5編碼之完整精準列舉</h2><p>這次要建立的是更精準的6217個字的列舉，真實的實作0x40與0xA1的段落切分，而非先前的粗糙版本一股腦全滾動。</p><pre><code class=language-cs>private static System.Collections.Generic.List&lt;string> GenerateEudcDetailRange()
+{ //定義傳統意義上BIG-5造字區間
+  var oList = new System.Collections.Generic.List&lt;(string cRangeStart, string cRangeEnd)>()
+  {
+    ("FA40", "FEFE"),
+    ("8E40", "A0FE"),
+    ("8140", "8DFE"),
+    ("C6A1", "C8FE"),
+  };
+  //逐一計算每一個編碼是否合法
+  var oDetailList = new System.Collections.Generic.List&lt;string>();
+  foreach (var oItem in oList)
+  {
+    for (int i = S2I(oItem.cRangeStart); i &lt;= S2I(oItem.cRangeEnd); i++)
+    {
+      var cCode = I2S(i);
+      bool bIsLegal = S2I(cCode.Substring(2, 2)) switch
+      {
+        >= 0x40 and &lt;= 0x7E => true,
+        >= 0xA1 and &lt;= 0xFE => true,
+        _ => false
+      };
+      if (bIsLegal)
+      { oDetailList.Add(cCode); }
+    }
+  }
+  return oDetailList;
+}
+</code></pre><h2>計算EUDC編碼至Unicode編碼之映射</h2><p>EUDC轉換UNICODE對應編碼說明如下：</p><ol><li>FA40-FA7E：63個字　FAA1-FAFE：94個字　總計157個字</li><li>FB40-FB7E：63個字　FBA1-FBFE：94個字　總計157個字</li><li>歸納上面個事實，可發現EUDC造字區間的低位編碼要嘛0x40起跳，要嘛0xA1起跳，而時間轉換到UNICODE時代，編碼已經序列化沒有跳號問題。</li><li>因此計算方式為：<ol><li>高位編碼為區塊號次，每跳碼（FAXX > FBXX）代表跳了157個字。</li><li>低位編碼以0x80為邊際（事實上合法編碼只會到7E）<ol><li>低於此值就減去0x40（編碼第一起始值），換句話說終點值為0x7E - 0x40 = 0x3E（Dec.62），代表前面耗用0～62共63個字。</li><li>高於此值相當於0xA1（編碼第二起始值），減去前面個數位址0xA1 - 0x62 = 0x3F（Dec.63），代表接續第一段編碼之後。</li></ol></li></ol></li></ol><pre><code class=language-cs>private static int Eudc2Unicode(string cEudc)
+{
+  var oEudc = (iHigh: S2I(cEudc.Substring(0, 2)), iLow: S2I(cEudc.Substring(2, 2)));
+  return oEudc switch
+  {
+    var x when x.iHigh >= 0xFA &amp;&amp; x.iHigh &lt;= 0xFE => 0xE000 + (157 * (x.iHigh - 0xFA)) + ((x.iLow &lt; 0x80) ? (x.iLow - 0x40) : (x.iLow - 0x62)),
+    var x when x.iHigh >= 0x8E &amp;&amp; x.iHigh &lt;= 0xA0 => 0xE311 + (157 * (x.iHigh - 0x8E)) + ((x.iLow &lt; 0x80) ? (x.iLow - 0x40) : (x.iLow - 0x62)),
+    var x when x.iHigh >= 0x81 &amp;&amp; x.iHigh &lt;= 0x8D => 0xEEB8 + (157 * (x.iHigh - 0x81)) + ((x.iLow &lt; 0x80) ? (x.iLow - 0x40) : (x.iLow - 0x62)),
+    var x when x.iHigh >= 0xC6 &amp;&amp; x.iHigh &lt;= 0xC8 => 0xF672 + (157 * (x.iHigh - 0xC6)) + ((x.iLow &lt; 0x80) ? (x.iLow - 0x40) : (x.iLow - 0x62)),
+    _ => 0x0
+  };
+}
+</code></pre><h2>取得精準BIG-5 EUDC造字列表</h2><p>有了上面各函式的鋪墊，接下來精準取得BIG-5 EUDC造字列表也不是甚麼困難的事情了。</p><pre><code class=language-cs>var oEudcCodeList = GenerateEudcDetailRange();
+foreach (string cEudc in oEudcCodeList)
+{ Console.WriteLine($"{cEudc}\t{Eudc2Unicode(cEudc)}\t{System.Convert.ToChar(Eudc2Unicode(cEudc)).ToString()}"); }
+</code></pre><p>輸出長得像下列這樣，如果不相信可以轉換到檔案上，可以發現會精準列舉6217個字。</p><pre><code class=language-txt>FA40    57344   
+FA41    57345   
+FA42    57346   
+FA43    57347   
+FA44    57348   
+FA45    57349   
+... 共 6217 個字
+</code></pre><h3>相關參考</h3><ul><li><a href=/archive2018/20180927.html>列舉Windows作業系統下的造字檔內的所有文字（粗略版）</a></li><li><a href=/archive2022/20221222.html>列舉Windows作業系統下的造字檔內的所有文字（精準版）</a></li><li><a href=/archive2018/20180925.html>找出字串中隱藏的Big5造字字元，並用Unicode將其取代</a></li><li><a href=/archive2017/20170127.html>如何在在Excel中找出BIG5的使用者造字字元？</a></li><li><a href=/archive2021/20211122.html>更新造字字型檔（EUDC Fonts）的批次小程式</a></li></ul><h6>Windows BIG-5 BIG5 EUDC 使用者造字 造字 EndUserDefinedCharacters 精準 列舉 列表</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

@@ -1,0 +1,18 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>ASP.NET「出現找到的組件資訊清單定義與組件參考不符」解法</h1><p>我有一個WebForm的網站的Json.Net一直停留在5.x版，今天剛好有些狀況去nuget一下最新的版本，來測試一下新版的Newtonsoft.Json的效能，依照以前的習慣直接取出.NET 4.5版內的Newtonsoft.Json.dll後，往\bin目錄一丟並執行起來，轟的一聲炸裂了。</p><p>ASP.NET直接拋出給我這個難看的黃底紅字：</p><pre><code class=language-txt>無法載入檔案或組件 'Newtonsoft.Json, Version=4.5.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed' 或其相依性的其中之一。 找到的組件資訊清單定義與組件參考不符。 (發生例外狀況於 HRESULT: 0x80131040)
+
+Could not load file or assembly 'Newtonsoft.Json, Version=4.5.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed'
+</code></pre><p>會發生這樣的情況，就是ASP.NET網站的內部有一個隱性的設定，紀錄你目前使用的Newtonsoft.Json的版本號為何，以防止多個不一樣的版本時，有一個統一個參考標準。而就像上面的例子所示，隱性的紀錄裏面說明他想要去讀取一顆Newtonsoft.Json的4.5.0.0時，林北找不到！</p><p>那麼，要如何變更那個隱性的設定？答案就是去web.config叫他強制參考。</p><h2>檢視目前的Newtonsoft.Json正確的Assembly Version</h2><p>我在nuget下載的時候顯示Newtonsoft.Json的版本號是12.0.3，檔案右鍵的內容顯示的版本號12.0.3.23909，這些都不是真正的大版本號，真正的版本號請到VisualStudio中點擊Newtonsoft.Json.dll＞Version＞中性，接著你會看到下面這張圖：</p><p><img src=https://content.slashview.com/img/2020/20200310_01.jpg alt="" /></p><p>圖片中顯示的Assembly Version才是真正的編組譯版本號，顯示為：12.0.0.0，請把這組版本號碼記好。</p><h2>到web.config中下強制參考命令</h2><p>打開web.config，直接下指令：</p><pre><code class=language-xml>&lt;configuration>
+  &lt;runtime>
+    &lt;assemblyBinding xmlns="urn:schemas-microsoft-com:asm.v1">
+      &lt;dependentAssembly>
+        &lt;assemblyIdentity name="Newtonsoft.Json" culture="neutral" publicKeyToken="30ad4fe6b2a6aeed"/>
+        &lt;bindingRedirect oldVersion="0.0.0.0-11.0.0.0" newVersion="12.0.0.0"/>
+      &lt;/dependentAssembly>
+    &lt;/assemblyBinding>
+  &lt;/runtime>
+&lt;/configuration>
+</code></pre><p>把上列的指令在web.config中存好後，在重新執行網站應該就可以PASS了。（該顆位於\bin目錄下的Newtonsoft.Json.dll，版本號為12.0.3.23909的元件就會被自動參考到且編譯進去了。）</p><p>其實這個錯誤情況不是好發於Json.Net，而是這顆類別元件太多人使用了，這樣的解法其實可以用在很多類似類別元件更新的場合。另外從web.config的語法中我們也可以發現，其實不一定要升版，你在newVersion指定一顆舊版的類別元件（低版本號）其實也是可以的。</p><p>一旦編譯成功，這個元件的適用編號就會被記錄在隱性設定中，這意味著網站執行成功後，你把上面那段web.config移除，日後也是可以正常運作的喔！</p><p>延伸閱讀：<a href=https://jzwangblog.wordpress.com/2021/02/23/net-framework-%E7%B5%84%E4%BB%B6%E7%89%88%E6%9C%AC%E8%A1%9D%E7%AA%81%E7%9A%84%E5%95%8F%E9%A1%8C%E8%88%87%E8%A7%A3%E6%B1%BA%E6%96%B9%E6%B3%95/>.NET Framework組件版本衝突的問題與解決方法</a></p><h2>Update 20220821：更新至Newtonsoft.Json 13.0.1</h2><p>有鑑於日前（20210119）JSON.NET被揭露存在DoS（denial-of-service）阻斷服務攻擊的問題（<a href=https://alephsecurity.com/vulns/aleph-2018004>Applications that use Newtonsoft.Json might be exposed to DOS vulnerability</a>），雖然說這個和一般網站應用上沒有太大的關連性（開放前端上傳巨量階層的JSON資料，藉此灌爆CPU與記憶體），亦可透過設定MaxDepth參數來預防，不過我想還是有很多網站負責人應該還是想直接上傳一個安全的DLL來解決後患，如果有這方面的考量可以直接升級到13.0.1版本，雖然說這個版本面對這個問題，其實就是把MaxDepth參數直接設定成64而已。</p><p>針對更新至Newtonsoft.Json 13.0.1也發生System.IO.FileLoadException : Could not load file or assembly Newtonsoft.Json之類似問題，可以服用下列的設定排除：</p><pre><code class=language-xml>&lt;dependentAssembly>
+  &lt;assemblyIdentity name="Newtonsoft.Json" publicKeyToken="30ad4fe6b2a6aeed" culture="neutral" />
+  &lt;bindingRedirect oldVersion="0.0.0.0-13.0.0.0" newVersion="13.0.0.0" />
+&lt;/dependentAssembly>;
+</code></pre><h6>ASP.NET BinFolder DLL Replace Remove Update Upgrade</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

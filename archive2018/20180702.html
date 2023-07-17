@@ -1,0 +1,29 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>讓IIS的目錄中如果不存在預設文件時，可以回傳非HTTP 200的空白畫面</h1><p>一直以來覺得這並不是甚麼問題，但觸發這個問題點的關鍵是弱點掃描報告，你必須讓報告的數值降下來，所以看起來是免不了一場除蟲了。事情的原委是，在一個WebForm的環境下，當使用者去瀏覽網站，會有下列情況發生。</p><p><img src=https://content.slashview.com/img/2018/20180702_01.jpg alt="" /></p><h2>IIS瀏覽路徑狀況列表</h2><ol><li>目錄正確且路徑沒有附掛任何檔名：200（IIS）</li><li>目錄正確且路徑附掛錯誤靜態檔名：404（IIS）</li><li>目錄正確且路徑附掛正確靜態檔名：200（IIS）</li><li>目錄正確且路徑附掛錯誤動態檔名：404（ASP.NET）</li><li>目錄正確且路徑附掛正確動態檔名：200（ASP.NET）</li><li>目錄錯誤且路徑沒有附掛任何檔名：404（IIS）</li><li>目錄錯誤且路徑附掛錯誤靜態檔名：404（IIS）</li><li>目錄錯誤且路徑附掛正確靜態檔名：404（IIS）</li><li>目錄錯誤且路徑附掛錯誤動態檔名：404（ASP.NET）</li><li>目錄錯誤且路徑附掛正確動態檔名：404（ASP.NET）</li></ol><p>所有的問題發生在第一點，也就是「目錄正確且路徑沒有附掛任何檔名」，弱點掃描認為，在這個情況下，你不應該回應200 OK。我的想法是，回應內容一片空白的200 OK跟拋出內容一片空白的403，我不知道這兩者的差異在哪？我也不覺得回應HTTP 403會比較屌（或比較沒有風險）。但是，人家弱點報告都這樣說了，我們也只能乖乖照做好下班。</p><h2>弱點掃描大概會跟你講的資訊</h2><pre><code class=language-txt>Possible sensitive directories
+-----
+A possible sensitive directory has been found. This directory is not directly linked from the website.This check looks for common
+sensitive resources like backup directories, database dumps, administration pages, temporary directories. Each one of these
+directories could help an attacker to learn more about his target.
+
+Content type is not specified
+-----
+This page does not set a Content-Type header value. This value informs the browser what kind of data to expect. If this header is
+missing, the browser may incorrectly handle the data. This could lead to security problems.
+</code></pre><h2>網路上常見的錯誤作法</h2><p>這些網路的作法會叫你去改web.config，把整個目錄的服務停掉，但是這一點都不是這個題目所需要的。例如，你有個目錄叫做include，裡面可能放了一大堆css、js但就是沒有index.aspx，為了不讓外界尋訪「http://localhost/include」時出現HTTP 200，難道你要把這個include目錄封鎖了？</p><pre><code class=language-xml>&lt;configuration>
+  &lt;system.webServer>
+    &lt;security>
+      &lt;requestFiltering>
+        &lt;hiddenSegments>
+          &lt;add segment="WannaHiddenDirectory" />
+        &lt;/hiddenSegments>
+      &lt;/requestFiltering>
+    &lt;/security>
+  &lt;/system.webServer>
+&lt;/configuration>
+</code></pre><h2>引發持續推送HTTP 200狀態碼的錯誤</h2><p>真正引發這個錯誤的原因，就是「你沒有安裝」IIS角色裡面的「瀏覽目錄」功能！對，我知道你跟我想的一樣，一定認為安裝後啟不所有的目錄讓人家看光光？但我們都誤會微軟了，他的用意是你安裝了這個模組後，可以自行開關，預設是關閉的。如果沒有安裝這個模組，那麼你去存取一個實際存在的目錄，但沒有命中預設文件，你就會得到一個「預設的」HTTP 200 OK。</p><p>Step 1. 未安裝「瀏覽目錄」功能的IIS，去瀏覽一個存在的utility目錄，但該目錄下為空目錄、或者不存在任何的預設文件，就會得到HTTP 200 OK。</p><p><img src=https://content.slashview.com/img/2018/20180702_02.jpg alt="" /></p><p>Step 2. 跑去伺服器管理員，為IIS安裝「瀏覽目錄」功能。</p><p><img src=https://content.slashview.com/img/2018/20180702_03.jpg alt="" /></p><p>Step 3. 安裝後檢查同一個路徑，就會發現IIS幫你丟回HTTP 403 Forbidden嘍。（因為瀏覽目錄的功能，安裝後預設是被關閉的）</p><p><img src=https://content.slashview.com/img/2018/20180702_04.jpg alt="" /></p><p>註一：如果你真的很想開啟瀏覽目錄的功能，那麼請到IIS管理員中網站的設定裡面，找到「瀏覽目錄」的選項，進去把它啟用就好了。（請再確定一次你真的要這麼做嗎？）</p><p><img src=https://content.slashview.com/img/2018/20180702_05.jpg alt="" /></p><p>註二：如果你確定有安裝了「瀏覽目錄」的選項，但卻還是一直收到HTTP 200 OK，那可能要檢查你的程式碼中是否有下列類似的指令出現：</p><pre><code class=language-cs>HttpContext.Current.Server.ClearError();
+</code></pre><h2>更進階一點的HTTP錯誤畫面</h2><p>做完上面的步驟，如果你訪問到一個不存在的頁面，基本上IIS就是丟給你一個HTTP 404的錯誤代碼就結束了，所以瀏覽器會依照自己自訂的404來展現一個「很空白」的畫面。但如果你要得到下方這樣的詳細資訊的畫面，那麼就要加裝「HTTP 錯誤」模組，你從上方的「選取伺服器角色」的圖片中，應該可以看到這個選項才對。</p><p><img src=https://content.slashview.com/img/2018/20180702_06.jpg alt="" /></p><p>但，我相信絕大部分的人，應該都不想要上面那麼詳細（醜）的404畫面吧！這時候我們就要開始自訂這個HTTP錯誤的畫面了。答案很簡單，要不就是在IIS設定畫面中透過UI去指定檔案，要不就是直接寫在web.config嘍，下面這是指令的參考。</p><pre><code class=language-xml>&lt;system.webServer>
+  &lt;httpErrors errorMode="Custom">
+    &lt;remove statusCode="404" />
+    &lt;error statusCode="404" path="/error/404.html" responseMode="ExecuteURL" />
+   &lt;/httpErrors>
+&lt;/system.webServer>
+</code></pre><p>更多httpErrors設定，請參考這個網頁：<a href=http://benfoster.io/blog/aspnet-mvc-custom-error-pages>Custom error pages in ASP.NET MVC. Easy, right?</a></p><h6>IIS Folder Empty DefaultDocument HTTP.200 HTTP.403 HTTP.404 AddDirectoryBrowsing</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

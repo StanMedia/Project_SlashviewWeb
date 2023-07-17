@@ -1,0 +1,27 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>利用.NET Collections類別來幫你達成Group的功能</h1><p>在.NET的System.Collections類別中，有一個很特別的分支叫System.Collections.Specialized，這裡面有一個NameValueCollection可以讓你在進行Collections式的新增時，幫你把鍵值進行資料庫式的Group By，讓你列舉時不用多寫一次的歸類演算，還蠻好用的，喜歡的人請自己拿去配吧！</p><p>NameValueCollection的範例程式碼如下：</p><pre><code class=language-cs>using System;
+using System.Collections.Specialized;
+
+namespace nameCollection
+{
+  class Program
+  {
+    static void Main(string[] args)
+    {
+      NameValueCollection TEST = new NameValueCollection();
+      TEST.Add("第一組", "小明");
+      TEST.Add("第二組", "小華");
+      TEST.Add("第三組", "小英");
+      TEST.Add("第一組", "李登輝");
+      TEST.Add("第一組", "陳水扁");
+      TEST.Add("第三組", "馬英九");
+      TEST.Add("第二組", "連勝文");
+      foreach (String s in TEST.AllKeys)
+      { Console.WriteLine(TEST.Get(s)); }
+      Console.Read();
+    }
+  }
+}
+</code></pre><p>輸出結果：</p><pre><code class=language-txt>小明,李登輝,陳水扁
+小華,連勝文
+小英,馬英九
+</code></pre><p>※註：系統並不會自動幫你把第一組、第二組等Keys進行排序，取決於你先宣告什麼為準，例如你先Add的Keys是「第二組」，那麼Foreach時第二組就會是第一個被列舉出來的Key了。</p><p>相關連結：</p><p><a href=/archive2018/20181001.html>列舉NameValueCollection集合內所有的資料</a></p><h6>.NETFramework System.Collections SQL GroupBy</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

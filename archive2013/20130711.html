@@ -1,0 +1,62 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>Java初探：向上轉型（Upcasting）與向下轉型（Downcasting）</h1><p>在之前多型（Polymorphism）的範例中，我們用到的技巧其實就是向上轉型，因此這一篇我們來討論向上轉型（Upcasting）與向下轉型（Downcasting）的差異與使用方式。在討論向上或向下轉型前，我們要先確認一下「is a」、「has a」的觀念。</p><h2>「is a」的觀念</h2><pre><code class=language-java>//A.java
+public class A
+{
+  public String cName;
+}
+
+//B.java
+public class B extends A
+{
+  public String cAddress;
+}
+
+//C.java
+public class C
+{
+  public static void main(String[] args)
+  {
+    A objA = new A();
+    B objB = new B();
+    
+    if(objB instanceof A)
+      System.out.println("objB is an A.");  //會印這一行
+    else
+      System.out.println("objB is not an A.");
+      
+    if(objA instanceof B)
+      System.out.println("objA is a B.");
+    else
+      System.out.println("objA is not a B.");  //會印這一行
+  }
+}
+</code></pre><h2>「has a」的觀念</h2><pre><code class=language-java>//A.java
+public class A
+{
+  private B _objB;  //A類別裡面擁有B
+}
+
+//B.java
+public class B
+{
+  public String cAddress;
+}
+</code></pre><p>我們都知道子類別一定擁有父類別的所有公開成員，但是父類別並不會繼承子類別所有的公開成員（廢話）。因此如果在確認彼此的「is a」關係下，向上轉型（子→父）的風險永遠比向下轉型（父→子）的風險小。事實上，你根本不可能直接在程式碼中進行向下轉型的動作，除非你先把子類別向上轉型，然後再做一次向下轉型。（脫褲子放屁）</p><pre><code class=language-java>public static void main(String[] args)
+{
+  String a = new String("TEST1");
+  //Upcasting
+  Object o1 = a;
+  System.out.println(o1);
+  
+  //編譯時期就錯誤了 Downcasting ERROR!
+  //因為「Object is not a b」
+  //String b = new Object();
+  
+  //Downcasting RIGHT!
+  String b = new String("TEST2");
+  //因為「b is an Object」，因此會自動做Upcasting，要不要打(object)b都可以。
+  Object o2 = b;
+  //這裡就是真正所謂的向下轉型（Downcasting）
+  String c = (String)o2;
+  System.out.println(c);
+}
+</code></pre><p>向下轉型（Downcasting）在我的程式設計經驗中幾乎完全用不上，所以能夠避免就避免掉。且無論如何，如果要使用向上或向下轉型，勢必都要面對與承擔執行期（Runtime）出錯的風險。</p><h6>Java SCJP Upcasting Downcasting Polymorphism</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

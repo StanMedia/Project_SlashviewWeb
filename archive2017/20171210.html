@@ -1,0 +1,21 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>讓ASP.NET的Web.Config可以引入外部檔案</h1><p>今天有一個需要將Web.Config分散到外部檔案的需求，因此在網路上找了一下文件，發現不是討論的很少，就是講得很模糊。經過不斷的TryError後找到了規則，在這邊筆記一下，讓有需要的人取用。</p><p><img src=https://content.slashview.com/img/2017/20171210_01.jpg alt="" /></p><h2>Web.Config extend outher configuration files</h2><p>Step 1. 找出Web.Config中你要分離的項目，假設我們要搬離的是system.codedom這一整段。</p><pre><code class=language-xml>&lt;configuration>
+  ...
+  &lt;system.codedom>
+    &lt;compilers>
+      &lt;compiler language="c#;cs;csharp" extension=".cs" brabra... />
+    &lt;/compilers>
+  &lt;/system.codedom>
+  ...
+&lt;/configuration>
+</code></pre><p>Step 2. 將這段搬離到別的目錄，名稱為「test.config」，目錄概況如下：</p><pre><code class=language-txt>/root
+  -Web.Config
+  /extension
+    /Slashview
+      -test.config
+</code></pre><p>Step 3. 在「test.config」檔案中，存放的XML資訊如下：</p><pre><code class=language-xml>&lt;system.codedom>
+  &lt;compilers>
+    &lt;compiler language="c#;cs;csharp" extension=".cs" brabra... />
+  &lt;/compilers>
+&lt;/system.codedom>
+</code></pre><p>Step 4. 回到主要的Web.Config，把剛才搬出去的那段XML刪除，置換成下列這段，就大功告成了。</p><pre><code class=language-xml>&lt;system.codedom configSource="extension\Slashview\test.config" />
+</code></pre><p>※ 其實所有的重點在於，你搬出去以及補上延伸指令的根（system.codedom）必須一致，且必須是ASP.NET承認的XML關鍵字集合，這是所有的文章都沒有談論到的事情。</p><h6>ASP.NET Web.Config Extend Extension Split Setting Files Configuration</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

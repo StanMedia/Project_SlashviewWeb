@@ -1,0 +1,19 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>使用ASP.NET的路由環境下，讓ASPX、ASHX等WebForm技術仍然可以繼續運作</h1><p>在WebForm的環境下，我們依然可以使用MVC給予的路由技術，在One ASP.NET的理念下繼續快樂的運行。今天遇到一個問題是在複雜的路由表中，其實很難切割（禮讓）出一條正確的路由給傳統的WebForm技術來使用，這篇文章就是在教你怎麼激活這些老技術。（使用ASP.NET MVC技術的請自動略過）</p><p><img src=https://content.slashview.com/img/2018/20181217_01.jpg alt="" /></p><h2>一個傳統在ASP.NET WebForm下使用網址路由的範例</h2><p>這沒有甚麼好說的，程式碼大概會長的如下：</p><pre><code class=language-cs>//global.asax
+void Application_Start(object sender, EventArgs e)
+{ //Initial MVC URL Routing
+  RegisterRoutes(System.Web.Routing.RouteTable.Routes);
+}
+
+void RegisterRoutes(System.Web.Routing.RouteCollection oRoutes)
+{ 
+  //Url Routing with CLASS
+  oRoutes.Add("ProductDetail1", new System.Web.Routing.Route("Product/{cDetail}", new YourRouteHandlerClass()));
+  //Url Routing with Normal
+  oRoutes.MapPageRoute("ProductDetail2", "Product/{cDetail}", "~/product.aspx");
+  //Url Routing with Parameter
+  oRoutes.MapPageRoute("ProductDetail3", "Product/{cDetail}", "~/product.aspx", true, new System.Web.Routing.RouteValueDictionary { { "cDetail", "" } });
+}
+</code></pre><p>自訂類別或ASPX方法裡面取值的語句範例：</p><pre><code class=language-cs>string cDetail = System.Web.Routing.RequestContext.RouteData.Values["cDetail"];
+</code></pre><h2>路由會動了，但接下來你會遇到aspx、ashx都沒辦法運行</h2><p>原因很簡單，因為有可能程式路徑被ProductDetail這條路由規則命中了。規避方式就是在上方加入預設的忽略路由（如果你用VS MVC專案起始，這兩行就會被預設加入）：</p><pre><code class=language-cs>oRoutes.Ignore("{cResource}.ashx/{*cFullPathAndName}");
+oRoutes.Ignore("{cResource}.aspx/{*cFullPathAndName}");
+</code></pre><p>寫MVC專案的人路過也不用嗤之以鼻，維護WebForm傳統大型專案本身就有自己的苦。</p><p>ASP.NET的URL Routing本身是一種實作了IHttpModule的Module，基本上就是發生在PostResolveRequestCache與PostMapRequestHandler事件中，下面是整理過的流程示意圖。</p><p><img src=https://content.slashview.com/img/2018/20181217_02.jpg alt="" /></p><p>延伸閱讀</p><ul><li><a href=/archive2018/20180427.html>利用IHttpModule與Response.Filter，實作簡單的HTML壓縮器</a></li><li><a href=/archive2013/20131208.html>修正HTTP Response Header中的Server屬性</a></li></ul><h6>ASP.NET System.Web.Routing.RouteTable.Routes WebForm IHttpModule HttpModule</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

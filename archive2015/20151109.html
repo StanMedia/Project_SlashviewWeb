@@ -1,0 +1,352 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>利用GDI+圖形雙重緩衝（Double Buffering）來解決文字跑馬燈之繪圖閃爍問題</h1><p>這篇文章不討論Web-Based，回到傳統的Windows Form來討論，當我們嘗試著在表單上面進行System.Drawing繪圖工作時，會發現在上面進行繪圖的動作極其緩慢，如果再加上不斷的呼叫表單this.Refresh()進行全物件的刷新時，會發現緩慢加上閃爍之問題更是極其嚴重。</p><p><img src=https://content.slashview.com/img/2015/20151109_01.jpg alt="" /></p><p>這篇文章我試著套用一個跑馬燈的案例，套用上我寫好的一個叫「MarqueeString」類別，試著採用.NET Framework的System.Drawing.BufferedGraphics類別，來操控所謂的圖形雙緩衝繪圖，也就是先在背景記憶體開設一個bitmap，然後對他進行繪圖，等到畫好後再瞬間套用到前景，藉此來消除螢幕重新繪製時期的空白問題，這也就是發生閃爍的主要原因。如果你有興趣的話，可以觀察一下外面比較科技化飲料攤前面的展示螢幕，上面如果有最新消息跑馬燈的功能，大部分的文字都會出現跑幾個Pixel就閃爍的問題。</p><h2>MarqueeText文字跑馬燈類別原始程式碼</h2><p>基本上所有應該講的事情，我都已經在程式註解裏面說清楚了，所以我就不在這裏多廢話了。此外我有在這個類別裡面提供一個OnDrawing事件，如果有需要再進行重繪時觸發事件用來進行某些延伸的工作，就可以善用掛載這個事件，不需要再浪費一個Timer了。</p><p>此外，我也有透過System.Reflection反射方法，來調用Windows Forms被保護（protected）的SetStyle、UpdateStyles方法，因此你不需要再去Form建構子中，去設定啟用OptimizedDoubleBuffer。</p><pre><code class=language-cs>namespace Slashview
+{
+  /// &lt;summary>
+  /// MarqueeText事件委派器
+  /// &lt;/summary>
+  /// &lt;param name="sender">MarqueeText實例本體&lt;/param>
+  /// &lt;param name="e">參數包&lt;/param>
+  public delegate void MarqueeTextEventHandler(System.Object sender, System.EventArgs e);
+  /// &lt;summary>
+  /// MarqueeText主類別
+  /// &lt;/summary>
+  public class MarqueeText
+  {
+    //（私有變數）存放要顯示的文字內容
+    private string[] _aryContent;
+    //（私有變數）存放目前顯示文字內容陣列的第幾筆
+    private int _iNowContentPoint = 0;
+    //（私有變數）存放要顯示在哪個表單物件
+    private System.Windows.Forms.Form _oTargetForm;
+    //（私有變數）圖片顯示元件
+    private System.Windows.Forms.PictureBox _oTargetPictureBox;
+    //（私有變數）計時器物件
+    private System.Timers.Timer _oTimer;
+    //（私有變數）目前繪製文字的指標
+    private int _iDrawPoint;
+    //（私有變數）字形真實大小
+    private float _fRealFontSize;
+    /// &lt;summary>
+    /// 提供螢幕畫面重新繪製時的外部事件通知
+    /// &lt;/summary>
+    public event MarqueeTextEventHandler OnDrawing;    
+    /// &lt;summary>
+    /// 強制計數器停止之旗標
+    /// &lt;/summary>
+    public bool bForceStop { get; private set; }
+    /// &lt;summary>
+    /// 文字要畫在哪一個表單物件的繪布上
+    /// &lt;/summary>
+    public System.Windows.Forms.Form oTargetForm
+    {
+      get { return _oTargetForm; }
+      set
+      {
+        _oTargetForm = value;
+        //阻擋違法的建構參數
+        if (iWidth &lt;= 0 || iHeight &lt;= 0) { throw new System.Exception("預設畫布元件的寬度與高度的值錯誤。"); }
+        //修正圖片框高度，以符合文字大小之真實高度
+        if (iContentHeight > 0) { iHeight = iContentHeight; }
+        //動態產生PictureBox
+        if (_oTargetPictureBox == null)
+        {
+          _oTargetPictureBox = new System.Windows.Forms.PictureBox()
+          {
+            Left = iPosX,
+            Top = iPosY,
+            BorderStyle = System.Windows.Forms.BorderStyle.None,
+            Size = new System.Drawing.Size(iWidth, iHeight),
+            ClientSize = new System.Drawing.Size(iWidth, iHeight)
+          };
+          _oTargetForm.Controls.Add(_oTargetPictureBox);
+          SetDoubleBuffering(_oTargetPictureBox);
+          //強制重繪PictureBox
+          _oTargetPictureBox.Refresh();
+          //初始化文字滾動的起點
+          _iDrawPoint = _oTargetPictureBox.ClientSize.Width;
+        }
+      }
+    }
+    /// &lt;summary>
+    /// 文字要顯示在哪個X軸上
+    /// &lt;/summary>
+    public int iPosX { get; set; }
+    /// &lt;summary>
+    /// 文字要顯示在哪個Y軸上
+    /// &lt;/summary>
+    public int iPosY { get; set; }
+    /// &lt;summary>
+    /// 總滾動區間預期寬度
+    /// &lt;/summary>
+    public int iWidth { get; set; }
+    /// &lt;summary>
+    /// 總滾動區間預期高度
+    /// &lt;/summary>
+    public int iHeight { get; set; }
+    /// &lt;summary>
+    /// 文字每次要移動幾個像素
+    /// &lt;/summary>
+    public int iMovePixel { get; set; }
+    /// &lt;summary>
+    /// 文字幾千分之一秒移動一次
+    /// &lt;/summary>
+    public int iTimerInterval { get; set; }
+    /// &lt;summary>
+    /// 文字的字型格式
+    /// &lt;/summary>
+    public System.Drawing.Font oFont { get; set; }
+    /// &lt;summary>
+    /// 要顯示的文字陣列
+    /// &lt;/summary>
+    public string[] aryContent
+    {
+      get { return _aryContent; }
+      set
+      {
+        if (value == null || value.Length == 0) { throw new System.Exception("沒有指定任何要顯示的文字內容。"); }
+        foreach (string oItem in value) { if (oItem.Length == 0) { throw new System.Exception("內容陣列內，存在著沒有指定任何要顯示的文字內容。"); } }
+        _aryContent = value;
+        _iNowContentPoint = 0;
+        StringSizeEvaluation(); //先評估一下當前的文字內容長度
+      }
+    }
+    /// &lt;summary>
+    /// 文字經過繪製後的寬度
+    /// &lt;/summary>
+    public int iContentWidth { get; private set; }
+    /// &lt;summary>
+    /// 文字經過繪製後的高度
+    /// &lt;/summary>
+    public int iContentHeight { get; private set; }
+    /// &lt;summary>
+    /// 文字前景刷子（顏色）
+    /// &lt;/summary>
+    public System.Drawing.SolidBrush oBrushFront { get; set; }
+    /// &lt;summary>
+    /// 文字背景刷子（顏色）
+    /// &lt;/summary>
+    public System.Drawing.SolidBrush oBrushBack { get; set; }
+    /// &lt;summary>
+    /// 文字邊框刷子（顏色）
+    /// &lt;/summary>
+    public System.Drawing.SolidBrush oBrushBorder { get; set; }
+    /// &lt;summary>
+    /// 文字邊框的寬度
+    /// &lt;/summary>
+    public int iBrushBorderWidth { get; set; }
+    /// &lt;summary>
+    /// 跑馬燈開始
+    /// &lt;/summary>
+    public void Start()
+    {
+      if (iTimerInterval &lt;= 0) { throw new System.Exception("計數器必須被設定，或已經設定的整數值有誤。"); }
+      if (_oTimer != null) { _oTimer.Stop(); }
+      _oTimer = new System.Timers.Timer() { Interval = iTimerInterval };
+      _oTimer.Elapsed += DrawMarquee;
+      _oTimer.SynchronizingObject = _oTargetPictureBox;
+      //取消強制停止計數旗標
+      bForceStop = false;
+      _oTimer.Start();
+    }
+    /// &lt;summary>
+    /// 跑馬燈停止
+    /// &lt;/summary>
+    public void Stop()
+    {
+      if (_oTimer == null) { return; }
+      bForceStop = true;  //設定強制停止計數旗標
+      _oTimer.Stop();
+    }
+    /// &lt;summary>
+    /// 取得跑馬燈現在的運行狀態
+    /// &lt;/summary>
+    public bool bTimerRunning { get { return _oTimer.Enabled; }}
+    /// &lt;summary>
+    /// 繪製跑馬燈文字（由內部計數器觸發）
+    /// &lt;/summary>
+    /// &lt;param name="sender">&lt;/param>
+    /// &lt;param name="e">&lt;/param>
+    private void DrawMarquee(System.Object sender, System.EventArgs e)
+    {
+      //停止計數器
+      _oTimer.Stop();
+      //先看一下是否具備文字內容
+      if (_aryContent.Length &lt; 1) { throw new System.Exception("沒有指定任何要顯示的文字內容。"); }
+      //觸發外部事件（先確認外部已經有指定觸發對象函式）
+      if (OnDrawing != null) { OnDrawing(this, new MarqueeTextArgs() { iCurrentPosX = _iDrawPoint, iCurrentHeight = iContentHeight }); }
+      //開始繪圖
+      using (System.Drawing.BufferedGraphics oBuffer = System.Drawing.BufferedGraphicsManager.Current.Allocate(_oTargetPictureBox.CreateGraphics(), _oTargetPictureBox.DisplayRectangle))
+      {
+        using (System.Drawing.Graphics oGraph = oBuffer.Graphics)
+        {
+          //最佳化繪圖輸出
+          oGraph.CompositingQuality = System.Drawing.Drawing2D.CompositingQuality.HighQuality;
+          oGraph.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
+          oGraph.PixelOffsetMode = System.Drawing.Drawing2D.PixelOffsetMode.HighQuality;
+          oGraph.InterpolationMode = System.Drawing.Drawing2D.InterpolationMode.HighQualityBicubic;
+          //在目標重繪所屬表單背景色
+          oGraph.Clear(_oTargetForm.BackColor);
+          //（匿名函式）運算與繪製父表單背景圖片
+          System.Action funcDrawBackgroundImage = () => {
+            int iCorpX;             //剪裁座標X
+            int iCorpY;             //剪裁座標Y
+            int iCorpWidth;         //剪裁目標寬
+            int iCorpHeight;        //剪裁目標高
+            int iPasteTargetX = 0;  //黏貼目標座標X
+            int iPasteTargetY = 0;  //黏貼目標座標Y
+            //評估水平座標系統
+            if (_oTargetPictureBox.Left &lt; 0)
+            {
+              if ((_oTargetPictureBox.Left + _oTargetPictureBox.Width) >= 0) { iCorpX = 0; iCorpWidth = _oTargetPictureBox.Left + _oTargetPictureBox.Width; iPasteTargetX = -(_oTargetPictureBox.Left - 1); }
+              else { iCorpX = -1; iCorpWidth = -1; }
+            }
+            else if (_oTargetPictureBox.Left >= 0 &amp;&amp; _oTargetPictureBox.Left &lt; _oTargetForm.BackgroundImage.Width)
+            {
+              if ((_oTargetPictureBox.Left + _oTargetPictureBox.Width) &lt; _oTargetForm.BackgroundImage.Width) { iCorpX = _oTargetPictureBox.Left; iCorpWidth = _oTargetPictureBox.Width; iPasteTargetX = 0; }
+              else { iCorpX = _oTargetPictureBox.Left; iCorpWidth = _oTargetForm.BackgroundImage.Width - _oTargetPictureBox.Left; iPasteTargetX = 0; }
+            }
+            else  /* means oPB.Left >= this.BackgroundImage.Width */
+            {
+              iCorpX = -1; iCorpWidth = -1;
+            }
+            //評估垂直座標系統
+            if (_oTargetPictureBox.Top &lt; 0)
+            {
+              if ((_oTargetPictureBox.Top + _oTargetPictureBox.Height) >= 0) { iCorpY = 0; iCorpHeight = _oTargetPictureBox.Top + _oTargetPictureBox.Height; iPasteTargetY = -(_oTargetPictureBox.Top - 1); }
+              else { iCorpY = -1; iCorpHeight = -1; }
+            }
+            else if (_oTargetPictureBox.Top >= 0 &amp;&amp; _oTargetPictureBox.Top &lt; _oTargetForm.BackgroundImage.Height)
+            {
+              if ((_oTargetPictureBox.Top + _oTargetPictureBox.Height) &lt; _oTargetForm.BackgroundImage.Height) { iCorpY = _oTargetPictureBox.Top; iCorpHeight = _oTargetPictureBox.Height; iPasteTargetY = 0; }
+              else { iCorpY = _oTargetPictureBox.Top; iCorpHeight = _oTargetForm.BackgroundImage.Height - _oTargetPictureBox.Top; iPasteTargetY = 0; }
+            }
+            else  /* means oPB.Top >= this.BackgroundImage.Height */
+            {
+              iCorpY = -1; iCorpHeight = -1;
+            }
+            //評估需不需要填入任何背景
+            bool bNeedDrawBackgroundImage = true;
+            if (iCorpX &lt; 0 || iCorpY &lt; 0 || iCorpWidth &lt; 0 || iCorpHeight &lt; 0) { bNeedDrawBackgroundImage = false; }
+            //如果有需要填入背景，就切割背景影像，貼到應該貼上的位置
+            if (bNeedDrawBackgroundImage)
+            {
+              oGraph.DrawImage(new System.Drawing.Bitmap(
+                _oTargetForm.BackgroundImage).Clone(
+                  new System.Drawing.Rectangle(iCorpX, iCorpY, iCorpWidth, iCorpHeight),
+                  _oTargetForm.BackgroundImage.PixelFormat
+                ),
+                new System.Drawing.Point(iPasteTargetX, iPasteTargetY)
+              );
+            }
+          };
+          //如果表單有背景圖片的話，就重繪背景圖片（透明效果）
+          if (_oTargetForm.BackgroundImage != null) { funcDrawBackgroundImage(); }
+          //繪製外框文字
+          using (System.Drawing.Drawing2D.GraphicsPath oGPath = new System.Drawing.Drawing2D.GraphicsPath())
+          {
+            oGPath.AddString(_aryContent[_iNowContentPoint], oFont.FontFamily, (int)oFont.Style, _fRealFontSize, new System.Drawing.Point(_iDrawPoint, 0), new System.Drawing.StringFormat() { Alignment = System.Drawing.StringAlignment.Near, LineAlignment = System.Drawing.StringAlignment.Near });
+            oGraph.DrawPath(new System.Drawing.Pen(oBrushBorder, iBrushBorderWidth) { LineJoin = System.Drawing.Drawing2D.LineJoin.Round }, oGPath);
+            oGraph.FillPath(oBrushFront, oGPath);
+            /* For normal text drawing */
+            //oGraph.DrawString(cContent, oFont, oBrushFront, iPosX, iPosY);
+          }
+          //將緩衝丟回目標前景
+          oBuffer.Render(_oTargetPictureBox.CreateGraphics());
+        }
+      }
+      //重新評估下一階段的繪製位址與展示字串
+      if (_iDrawPoint &lt;= -iContentWidth)
+      {
+        //應該換文字了
+        if ((_iNowContentPoint + 1) >= _aryContent.Length)
+        { _iNowContentPoint = 0; }
+        else
+        { _iNowContentPoint++; StringSizeEvaluation(); }
+        //重設起始繪製點
+        _iDrawPoint = _oTargetPictureBox.ClientSize.Width;
+      }
+      else { _iDrawPoint -= iMovePixel; }
+      //如果計數器已經被外部下強制停止的指令，那就不要再啟動了
+      if (!bForceStop) { _oTimer.Start(); }
+    }
+    /// &lt;summary>
+    /// （私有方法）評估繪製後文字圖形之寬高
+    /// &lt;/summary>
+    private void StringSizeEvaluation()
+    {
+      if (string.IsNullOrWhiteSpace(_aryContent[_iNowContentPoint]) || oFont == null) { throw new System.Exception("請先設定文字內容、字型物件。"); }
+      //取得字形真實大小
+      System.Func&lt;float, float> funRealSize= (iFake) => {
+        using (System.Drawing.Graphics oGraph = System.Drawing.Graphics.FromImage(new System.Drawing.Bitmap(1, 1)))
+        {  return oGraph.DpiY * iFake / 72; }
+      };
+      //繪製路徑並取得長寬
+      using (System.Drawing.Drawing2D.GraphicsPath oGPath = new System.Drawing.Drawing2D.GraphicsPath())
+      {
+        _fRealFontSize = funRealSize(oFont.Size);
+        oGPath.AddString(_aryContent[_iNowContentPoint], oFont.FontFamily, (int)oFont.Style, _fRealFontSize, new System.Drawing.Point(0, 0), new System.Drawing.StringFormat() { Alignment = System.Drawing.StringAlignment.Near, LineAlignment = System.Drawing.StringAlignment.Near });
+        iContentWidth = (int)oGPath.GetBounds().Size.Width + iBrushBorderWidth;
+        iContentHeight = (int)funRealSize(oGPath.GetBounds().Size.Height) + iBrushBorderWidth;
+        oGPath.Reset();
+      }
+      /* For normal text drawing */
+      //System.Drawing.SizeF oStringSize = oGraph.MeasureString(_cContent, oFont);
+      //iContentWidth = (int)oStringSize.Width;
+      //iContentHeight = (int)oStringSize.Height;
+    }
+    /// &lt;summary>
+    /// 驅動繪圖目標對象使用雙圖形緩衝
+    /// &lt;/summary>
+    /// &lt;param name="oTemp">套用目標對象&lt;/param>
+    private void SetDoubleBuffering(System.Object oTemp)
+    {
+      try
+      {
+        //因為SetStyle、UpdateStyles是被設定存取屬性是protected，因此只能透過Reflection來代理
+        System.Reflection.MethodInfo oMethod_1 = oTemp.GetType().GetMethod("SetStyle", (System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance));
+        System.Reflection.MethodInfo oMethod_2 = oTemp.GetType().GetMethod("UpdateStyles", (System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance));
+        //如果兩個方法都有調用到，那就Invoke它們
+        if (oMethod_1 != null &amp;&amp; oMethod_2 != null)
+        {
+          oMethod_1.Invoke(oTemp, new object[] { System.Windows.Forms.ControlStyles.OptimizedDoubleBuffer, true });
+          oMethod_2.Invoke(oTemp, new object[] { });
+        }
+      }
+      catch { throw new System.Exception("驅動繪圖對象使用圖形雙重緩衝失敗！"); }
+    }
+  }
+  /// &lt;summary>
+  /// MarqueeText事件參數包
+  /// &lt;/summary>
+  public class MarqueeTextArgs : System.EventArgs
+  {
+    /// &lt;summary>
+    /// 準備繪製的X軸座標
+    /// &lt;/summary>
+    public int iCurrentPosX { get; set; }
+    /// &lt;summary>
+    /// 準備繪製的Y軸座標
+    /// &lt;/summary>
+    public int iCurrentHeight { get; set; }
+  }
+}
+</code></pre><h2>MarqueeString類別使用方法</h2><p>使用的方法很簡單，可能你是在Form Load事件下呼叫這個可能被設定成全域物件的oMarquee，然後你只要給他一切應該有的參數後，接著調用.Start();即可。當然，你可以選擇掛上某些額外的按鈕，讓這些按鈕來調用.Stop();方法或者是.OnDrawing()事件。</p><pre><code class=language-cs>private void Form1_Load(object sender, EventArgs e)
+{
+  oMarquee = new MarqueeText()
+  {
+    iPosX = 50,
+    iPosY = 120,
+    iWidth = 700,
+    iHeight = 10,
+    iMovePixel = 5,
+    iTimerInterval = 50,
+    iBrushBorderWidth = 10,
+    oFont = new System.Drawing.Font("微軟正黑體", 48, System.Drawing.FontStyle.Bold),
+    cContent = new string[] { "歡迎光臨 Slashview 官方網站...", "Marquee testing string..." },
+    oBrushBack = new System.Drawing.SolidBrush(System.Drawing.Color.Transparent),
+    oBrushFront = new System.Drawing.SolidBrush(System.Drawing.ColorTranslator.FromHtml("#78FFDD")),
+    oBrushBorder = new System.Drawing.SolidBrush(System.Drawing.ColorTranslator.FromHtml("#333")),
+    oTarget = this
+  };
+  oMarquee.Start();
+}
+</code></pre><p>對了，忘了說明一件事情，這個類別有支援背景圖片的透通（如果你的Form有設定背景圖片的話），不像坊間有一些範例全部都沒有考慮到文字去背的問題，一直DrawString過去後，就像被開一條純背景色的高速公路一樣，完全不能看啊。</p><ul><li>更新一：修正類別，使其可支援外框文字（Outline Text）的繪製，在具有背景圖片的表單下，比之前無外框文字更來的實用許多。</li><li>更新二：修正類別，使其使用CJK相關字形進行大型外框文字繪製時，不至於產生框線暴衝（OverFlow）等問題，測試文字可以使用「輛」這個字。</li><li>更新三：新增bTimerRunning屬性，可以讓你輕易實作marquee rolling toggle方法。</li><li>更新四：把整個類別重新改過一次，不直接在Form表單上作畫，而是改動態產生一個PictureBox來作畫，效能會相對好上非常多。</li><li>更新五：將原本單一字串版本，修正為字串陣列版本，降低執行時期控制跑馬燈起訖的複雜度。</li></ul><h6>Marquee WindowsForms Win32 C# .NetFramework String OutlineText System.Drawing.Graphics System.Drawing.BufferedGraphics System.Drawing.BufferedGraphicsManager</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

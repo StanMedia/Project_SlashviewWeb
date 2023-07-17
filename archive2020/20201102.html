@@ -1,0 +1,11 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>在ASHX中動態載入ASCX（UserControl）的方法</h1><p>在前後端分離的架構中，若我們要在後端某支程式碼輸出JSON資料，可能會先需要進行身分判斷以免所有的人都可以獲取這份資料，但有些時候這些判斷我們會寫在一個ASCX做成一個UserControl讓有需要的程式碼統一引用。這個情況如果發生在ASPX撰寫的頁面其實不是太大的問題，只要無恥的在ASPX頁面進行Register ASX設定好TagPrefix及TagName即可。反觀在泛型處理常式（ASHX）時期可就沒有這樣的直覺了。</p><p>其實這問題不太會發生，因為會選用ASHX就是為了追求效能，把那些Page等級的生命週期都拋棄才是，但...世事無絕對，總是有例外的啊！</p><h2>在ASHX中動態載入ASCX並且無須轉型（Type Casting）</h2><p>其實動態載入使用LoadControl就解完了，問題是卡在如何UserControl如何正確轉型成我們要的ASCX問題（ASCX編譯後的名稱只有ASP.NET Runtime知道），找了一些時間直接宣告放棄，乾脆用反射（System.Reflection）來處理比較快，以下是程式碼。</p><pre><code class=language-cs>//動態載入ASCX以利套用身分檢核方法
+var oLoader = new System.Web.UI.UserControl();
+var oAscx = oLoader.LoadControl(@"~/這裡要寫上ASCX之完整路徑");
+var oAscxType = oAscx.GetType();
+//假設ASCX裡面有一個公開的屬性叫做「bIsError」
+if
+(
+  (bool)oAscxType.GetProperty("bIsError").GetValue(oAscx)
+)
+{ throw new System.Exception("Error checked by ASCX UserControl."); }
+</code></pre><p>可能有人會覺得用System.Reflection這樣效能會不好，但想想，你在ASHX裡面呼叫具備Page Life Cycle的ASCX User Control還在那邊講效能？不過話說回來，如果有網友可以正確地把ASCX的轉型方式分享出來，這樣我們或許在寫程式的時期可以簡單的、正確的把方法或屬性透過Intellisense彈出來。</p><h6>ASP.NET ASPX ASHX ASCX UserControl RuntimeLoading DynamicLoading TypeCasting Cast DirectCast</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

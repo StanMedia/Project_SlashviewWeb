@@ -1,0 +1,30 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>使用XMLHttpRequest對WebForm發送POST Request的參數傳遞問題</h1><p>一直以來使用AJAX都是採用jQuery的$.ajax()封裝，倒也沒啥問題，日前突然有一個需求需要轉回來採用Javascript原生的XMLHttpRequest，才發現沒有jQuery的日子有多難熬，連最基本的POST Parameter參數傳遞語法都已經失憶，記錄在此防止未來再度記憶揮發。</p><p>傳統上使用jQuery的AJAX傳遞方式如下：</p><pre><code class=language-js>var oData = {
+  cName: "John",
+  iMoney: 9999
+};
+
+$.ajax({
+  type: "POST",
+  url: "something.aspx",
+  data: oData,
+  contentType: "application/x-www-form-urlencoded; charset=UTF-8",
+  success: function(response) {
+    data = $.parseJSON(response);
+    alert(data.cMessage);
+  }
+});
+</code></pre><p>改回使用原生XMLHttpRequest的時候，經過確認後webform如果是採用Request.Form["XXX"]的採值方式，那麼你永遠只能使用「contentType: "application/x-www-form-urlencoded"」來對應。另外我一直習慣jQuery的寫法，對於XMLHttpRequest傳遞參數的data段直覺上我就給予JSON.stringify()去轉換帶出去</p><pre><code class=language-js>var oReq = new XMLHttpRequest();
+oReq.send(JSON.stringify(oData));
+</code></pre><p>以上面的程式碼來說，WebForm端點收到會呈現像這樣的像是被UrlEncode編碼過的字串「{%7b%22cName%22%3a%22John%22%2c%22iMoney%22%3a9999%7d}」，沒想到這樣的作法不僅無效，反而誤導自己陷入在編碼除錯的環節上（足足卡了半小時），事實上問題根本不再於此，直到受不了離開座位去上個廁所，才突然想到：阿幹！Request.Form是基於System.Web.HttpValueCollection，那就是Key-Value的結構啊，我一直傳JSON序列化過去幹嗎？返回將程式碼改為下列就解決了。</p><pre><code class=language-js>var oReq = new XMLHttpRequest();
+oReq.open("POST", "something.aspx", true);
+oReq.setRequestHeader("Content-Type", "application/x-www-form-urlencoded; charset=UTF-8");
+oReq.onload = function () {
+  var oReturn = $.parseJSON(oReq.response);
+  if (oReq.status == 200) {
+    alert(oReturn.cMessage);
+  } else {
+    alert(oReturn.cMessage);
+  }
+};
+oReq.send($.param(oData));
+</code></pre><p>將oData參數包解回Key-Value的方式我還是採用jQuery的函式方法，因為我自己懶得寫，反正不要使用jQuery的AJAX送出POST就好了。</p><h6>ASP.NET WebForm POST parameter non-jQuery AJAX XMLHttpRequest JavascriptAnonymousObject Serialize</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

@@ -1,0 +1,31 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>LINQ筆記：使用LINQ ANY達成NOT IN的效果（黑名單）</h1><p>今天遇到一個LINQ的應用，需要使用到SQL的Where NOT IN某個清單的效果，稍微想了一下把程式碼寫出並記錄在此供回憶。</p><p><img src=https://content.slashview.com/img/2020/20201112_01.jpg alt="" /></p><h2>利用LINQ ANY()達成SQL的NOT IN效果</h2><p>假設我們有一個oUsers清單，另外有一張oBlocks黑名單，想要將oUsers NOT IN oBlocks，挑選成為一個oAlllows可登入系統清單，程式碼如下：</p><pre><code class=language-cs>public static void Main()
+{ //使用者清單
+  var oUsers = new System.Collections.Generic.List&lt;string>() { "aaa", "bbb", "ccc", "ddd", "eee", "fff" };
+  //黑名單
+  var oBlocks = new System.Collections.Generic.List&lt;string>() { "bbb", "ddd", "eee" };
+  //可登入系統清單
+  var oAllows = oUsers.Where(x => !oBlocks.Any(y => y.Contains(x)));
+  //輸出
+  WriteLine(string.Join("、", oAllows));
+  Read();
+}
+</code></pre><p>經過這樣的程式碼後，我們就可以將oBlocks清單裡面的成員排除掉了，另外建議若是比對資料量很大的情況下，建議用<a href=/archive2022/20220210.html>Except()</a>，輸出的結果如下：</p><pre><code class=language-txt>aaa、ccc、fff
+</code></pre><h2>補充說明：LINQ ALL()</h2><p>ANY()的運算是「只要有一筆符合」即可（或；OR），反過來的指令ALL()是「所有的資料都要符合」才可（及；AND）。以下用一個簡單的例子來展示補充說明：</p><pre><code class=language-cs>public class People
+{
+  public string cName { get; set; }
+  public List oAccountBalance { get; set; }
+}
+public static void Main()
+{
+  var oUsers = new System.Collections.Generic.List() {
+    new People { cName = "王小明", oAccountBalance = new List() { 123, 456 }},
+    new People { cName = "王大頭", oAccountBalance = new List() { 789, 999 }},
+    new People { cName = "李小華", oAccountBalance = new List() { 444, 666 }},
+  };
+  //找出姓名是王開頭且銀行帳戶餘額都超過500
+  var oResult = oUsers.Where(x => x.cName.StartsWith("王") &amp;&amp; x.oAccountBalance.All(y => y > 500)).Select(x => x.cName);
+  //輸出
+  WriteLine(string.Join("、", oResult));
+  Read();
+}
+</code></pre><p>以上面的程式碼為例，最終只有「王大頭」會被挑出，因為他的帳戶餘額789、999都超過500元。如果把條件改成「y > 100」則結果會變成「王小明、王大頭」。</p><p>ALL()條件會被誤用通常發生在子集合資料裡面出現字串的時候，例如我們把銀行帳號（數值格式）改成電話號碼（字串格式），我們想要找出姓王且電話中有１２３４門號的資料，這時候應該要使用ANY()。如果剛好當下頭昏腦脹誤用ALL()並錯誤解釋行為，那可能會讓輸出結果錯亂。（除非某人有兩隻一模一樣的電話號碼，但這在現實中不可能且應該被檢查資料重複性）</p><h3>相關參考</h3><ul><li><a href=/archive2021/20210927.html>LINQ筆記：解決HTTP參數污染（HTTP Parameter Pollution）問題</a></li><li><a href=/archive2022/20220210.html>LINQ筆記：利用Except()進行快速資料差集比對</a></li></ul><h6>CSharp LINQ SQL WhereNotIn BlockList BlackList</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

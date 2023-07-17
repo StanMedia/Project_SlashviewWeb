@@ -1,0 +1,44 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>修正HTTP Response Header中的Server屬性</h1><p>當我們自己架設一個Web網站時，其實總是不經意的在Http Header中透漏許多訊息，例如可以到<a href=http://web-sniffer.net/>這個網站</a>中，查詢到一些我們根本不想透漏的訊息，包括「X-Powered-By」、「Server」等資訊都是很機敏的資料。例如下方就是一個很典型的Http Header Response:</p><pre><code class=language-txt>Status: HTTP/1.1 200 OK
+Date: Mon, 09 Dec 2013 09:34:05 GMT  
+Server: Microsoft-IIS/6.0  
+Content-Length: 40013  
+Content-Type: text/html (BOM UTF-8)  
+Content-Location: http://xxx.xxx.xxx.xxx  
+Last-Modified: Wed, 04 Dec 2013 17:02:34 GMT  
+Accept-Ranges: bytes  
+ETag: "03137a012f1ce1:d3ed"  
+MicrosoftOfficeWebServer: 5.0\_Pub  
+X-Powered-By: ASP.NET
+Connection: close
+</code></pre><p>很多的IIS管理者都是程式設計師出身的，可能不會注意到比較偏網管或資安這一塊，但是其實這些資訊的透漏可以讓很多駭客少掉很多時間，應該要好好的隱藏起來。在IIS 6的時代，這樣的資訊隱藏有點複雜（還是可以改），但是到IIS 7或IIS 7.5以後，這樣的情況得以獲得改善。</p><ol><li>如果你只是要單純的消除掉X-Powered-By，其實可以進入到Internet Information Services Manager中，點選「HTTP回應標頭」（HTTP Response Headers），把這個參數刪除即可。但因為每次.NET Framework更新後，都會把參數加回來，實務上建議直接在web.config中動刀。</li></ol><pre><code class=language-xml>&lt;system.webServer>
+  &lt;httpProtocol>
+    &lt;customHeaders>
+      &lt;clear /> &lt;!--全部清除就對了-->
+      &lt;remove name="X-Powered-By" /> &lt;!--如果不想全部清除，那麼可以考慮用單行的寫法-->
+    &lt;/customHeaders>
+  &lt;/httpProtocol>
+&lt;/system.webServer>
+</code></pre><ol start=2><li>如果也想要順便把Server的變數也改掉的話，就要花一些功夫了！</li></ol><p>2.1 開啟web.config檔案，加入：</p><pre><code class=language-xml>&lt;system.webServer>
+  &lt;modules runAllManagedModulesForAllRequests="true">
+    &lt;add name="ChangeHttpResponseHeader" type="XXX.ChangeHttpResponseHeader"/>
+  &lt;/modules>
+  &lt;-- put it beyond handlers(if had) -->
+&lt;/system.webServer>
+</code></pre><p>2.2 開啟app_code目錄，加入自訂class實作IHttpModule，攔截PreSendRequestHeaders事件中覆寫相關變數：</p><pre><code class=language-cs>namespace XXX
+{
+  public class ChangeHttpResponseHeader : System.Web.IHttpModule
+  {
+    public void Init(System.Web.HttpApplication context)
+    {  context.PreSendRequestHeaders += OnPreSendRequestHeaders; }
+    private void OnPreSendRequestHeaders(object sender, System.EventArgs e)
+    {
+      System.Web.HttpContext.Current.Response.Headers.Set("Server", "Nothing Server");
+      System.Web.HttpContext.Current.Response.Headers.Remove("X-AspNet-Version");
+    }
+    public void Dispose()  {  }
+  }
+}
+</code></pre><p>在上面的例子裡面，有出現一個也是很煩人的Header參數，名為「X-AspNet-Version」，這個要移除掉除了用上面的方法之外，還有一個比較簡便的方式，就是在Web.config中加入一個enableVersionHeader參數即可。範例如下：</p><pre><code class=language-xml>&lt;system.web>
+  &lt;httpRuntime enableVersionHeader="false" />
+&lt;/system.web>
+</code></pre><h3>延伸閱讀</h3><ul><li><a href=/archive2018/20180427.html>利用IHttpModule與Response.Filter，實作簡單的HTML壓縮器</a></li><li><a href=/archive2018/20181217.html>使用ASP.NET的路由環境下，讓ASPX、ASHX等WebForm技術仍然可以繼續運作</a></li></ul><h6>ASP.NET IIS PreSendRequestHeaders HTTPHeadersPesponse Server IHttpModule HttpModule</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

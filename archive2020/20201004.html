@@ -1,0 +1,18 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>SQL筆記：將某資料表SELECT INTO到另一張資料表，並賦予一個不存在的欄位數值</h1><p>純粹自己做SQL語法的筆記，沒甚麼有營養價值的內容。</p><p>SQL的需求動作為因為某些需求，需要從資料表Ａ中挑選特定的資料集合，並將這些集合寫入到既有的資料表Ｂ中，並且資料表Ｂ中必須具備一個必要的欄位值，但該值不存在於資料表Ａ中（新增加的欄位）。</p><h2>將某資料表中的資料挑選出插入另一張資料表中，並賦予一個不存在的欄位數值</h2><p>Step 1. 資料表Ａ是我們的備份對象資料表，其中可以看到有三個目標欄位。這次我們要備份的是大於1000元的商品。</p><p><img src=https://content.slashview.com/img/2020/20201004_01.jpg alt="" /></p><p>Step 2. 資料表Ｂ是我們要插入的備份資料表，我們可以觀察到除了資料表Ａ的三個欄位之外，另外有一個不存在於資料表Ａ的欄位，稱為dBackup（備份當下日期）。</p><p><img src=https://content.slashview.com/img/2020/20201004_02.jpg alt="" /></p><p>Step 3. 使用下列INSERT INTO之SQL指令：</p><pre><code class=language-sql>INSERT INTO
+  Product_Backup
+  (
+    cProduct,
+    dSale,
+    iAmount,
+    dBackup
+  ) 
+SELECT
+  cProduct,
+  dSale,
+  iAmount,
+  GETDATE() AS dBackup 
+FROM
+  Product_Sale 
+WHERE
+  iAmount > 1000
+</code></pre><p>Step 4. 執行指令後可以發現，超過1000元的商品都被備份到資料表Ｂ中，且dBackup備份日期也被自動產生了。關鍵在於SELECT時期（VALUES區段）就要把資料準備好，而非寫在INSERT INTO的「欄位區段」，這部分我查了一陣子的資料才理解。</p><p><img src=https://content.slashview.com/img/2020/20201004_03.jpg alt="" /></p><p>以上範例。</p><h6>SQL InsertInfo FromAnotherTables ExtensionColumns ExtraColumns</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

@@ -1,0 +1,8 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>SQL筆記：連接到SQL Server的時候出現「與伺服器的連接已成功建立，但在登入程序時發生錯誤」</h1><p>今天利用SSMS在連線一台古老的SQL Server 2005時彈出錯誤訊息，內容讓人有一點摸不著頭緒，大致上的訊息如下：（詭異的是，在其他的電腦連線卻是正常的）</p><pre><code class=language-txt>測試已註冊的伺服器失敗。請確認伺服器名稱、登入認證及資料庫，然後再按一下 [測試]。
+－－－－－
+與伺服器的連接已成功建立，但在登入程序時發生錯誤。 (provider: SSL Provider, error: 0 - 遠端主機已強制關閉一個現存的連線。) (Microsoft SQL Server, 錯誤: 10054)
+－－－－－
+遠端主機已強制關閉一個現存的連線。
+－－－－－
+A connection was successfully established with the server, but then an error occurred during the login process. (provider: SSL Provider, error: 0 - An existing connection was forcibly closed by the remote host.)
+</code></pre><p>錯誤畫面如下：</p><p><img src=https://content.slashview.com/img/2021/20210910_01.jpg alt="" /></p><p>經過一番清查發現可能是TLS密碼套件（TLS Cipher Suite）的問題，因此利用<a href=https://www.nartac.com/Products/IISCrypto/Download>IIS Crypto</a>套件把可能遺失的TLS Cipher Suite找回來，經過交叉測試後發現是這個「TLS_RSA_WITH_3DES_EDE_CBC_SHA」套件遺失了。</p><p><img src=https://content.slashview.com/img/2021/20210910_02.jpg alt="" /></p><p>勾選後重新開機，就可以正確連上Microsoft SQL Server 2005版本了，開心。</p><h2>備註</h2><p>TLS_RSA_WITH_3DES_EDE_CBC_SHA（RSA 2048）這個密碼套件的加密強度是不足的。</p><h6>SSMS SqlServerManagementStudio Connection Connect Error SslProvider TlsCipherSuite</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

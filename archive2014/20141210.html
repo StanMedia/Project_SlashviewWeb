@@ -1,0 +1,59 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>System.Drawing.Imaging裡面的GetEncoder在哪？</h1><p>當你要用.NET Framework對JPEG進行壓縮率的最佳化時，你會大量的使用到System.Drawing.Imaging這個命名空間裡面的各式類別，但是當你網路爬文爬到MSDN裡面的文章<a href=http://goo.gl/A7yynd>How to: Set JPEG Compression Level</a>時，你會發現他的Sample Code裡面有一個很詭異的函式（或者是方法），他的名字叫GetEncoder()。</p><p>說是眼盲也好，說是命名空間惹的禍也好，總之在找資料的當下，很多程式設計師沒有辦法在當下得知GetEncoder()表達的意思是什麼，答案其實就寫在MSDN該頁面的下方。</p><h2>原程式碼段落如下：</h2><pre><code class=language-cs>private void VaryQualityLevel()
+{
+  // Get a bitmap.
+  Bitmap bmp1 = new Bitmap(@"c:\\TestPhoto.jpg");
+  ImageCodecInfo jgpEncoder = GetEncoder(ImageFormat.Jpeg);
+
+  // Create an Encoder object based on the GUID 
+  // for the Quality parameter category.
+  System.Drawing.Imaging.Encoder myEncoder = System.Drawing.Imaging.Encoder.Quality;
+
+  // Create an EncoderParameters object. 
+  // An EncoderParameters object has an array of EncoderParameter 
+  // objects. In this case, there is only one 
+  // EncoderParameter object in the array.
+  EncoderParameters myEncoderParameters = new EncoderParameters(1);
+
+  EncoderParameter myEncoderParameter = new EncoderParameter(myEncoder, 50L);
+  myEncoderParameters.Param[0] = myEncoderParameter;
+  bmp1.Save(@"c:\\TestPhotoQualityFifty.jpg", jgpEncoder, myEncoderParameters);
+
+  myEncoderParameter = new EncoderParameter(myEncoder, 100L);
+  myEncoderParameters.Param[0] = myEncoderParameter;
+  bmp1.Save(@"c:\\TestPhotoQualityHundred.jpg", jgpEncoder, myEncoderParameters);
+
+  // Save the bitmap as a JPG file with zero quality level compression.
+  myEncoderParameter = new EncoderParameter(myEncoder, 0L);
+  myEncoderParameters.Param[0] = myEncoderParameter;
+  bmp1.Save(@"c:\\TestPhotoQualityZero.jpg", jgpEncoder, myEncoderParameters);
+}
+</code></pre><h2>傳說中的GetEncoder其實就寫在該頁下方</h2><pre><code class=language-cs>private ImageCodecInfo GetEncoder(ImageFormat format)
+{
+  ImageCodecInfo[] codecs = ImageCodecInfo.GetImageDecoders();
+  foreach (ImageCodecInfo codec in codecs)
+  {
+    if (codec.FormatID == format.Guid)
+    {
+      return codec;
+    }
+  }
+  return null;
+}
+</code></pre><h3>事後發現我寫的其實與MSDN雷同</h3><p>下面這些程式碼是我自己之前眼盲沒有看到，翻了很多網路文章才去推測出來的寫法。只不過MSDN的寫法是用物件ID比對，我寫的寫法是用字串比對。這對於不會用ImageFormat.Jpeg比對的人來說，下面這段程式碼或者多有幫助。</p><pre><code class=language-cs>/// &lt;summary>
+/// 尋訪編碼器
+/// &lt;/summary>
+/// &lt;param name="cTemp">編碼器字串&lt;/param>
+/// &lt;returns>回傳編碼器（Codec）&lt;/returns>
+private System.Drawing.Imaging.ImageCodecInfo getEncoder(string cTemp)
+{
+  System.Drawing.Imaging.ImageCodecInfo[] oCoders = System.Drawing.Imaging.ImageCodecInfo.GetImageEncoders();
+  foreach (var oCoder in oCoders)
+  {
+    //如果有找到Codec的話，就直接將編碼器傳回
+    if (oCoder.MimeType.ToLower() == cTemp.ToLower())
+    { return oCoder; }
+  }
+  //如果沒有找到任何的Codec的話，就傳回null
+  return null;
+}
+</code></pre><p>結論：下次看MSDN要捲到最下面，一定要確定人家下面已經沒有Sample Code了，這樣可以省下自己大量的時間。與透過網路找到我這篇文章的人共勉之。</p><h6>System.Drawing.Imaging GetEncoder Encoder JPEGCompressionLevel</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

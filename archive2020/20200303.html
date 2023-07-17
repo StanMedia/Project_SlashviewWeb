@@ -1,0 +1,42 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>利用Attribute為ORM型別的屬性添增屬性別名</h1><p>前陣子有朋友說看了我之前的<a href=/archive2014/20140422.html>C#中的Attribute屬性（特性）用法</a>後，對用法還是不甚了解，本篇文章就以常見的ORM為例子，稍微介紹一下Attribute的用法。這個例子將為ORM型別添加一個別名機制（Property Alias Name），在資料處理的末期別名機制確實有其必要性，例如客戶就是不喜歡叫做ID，偏要以身分證等字眼出現，這時候別名機制就很需要嘍！</p><p><img src=https://content.slashview.com/img/2020/20200303_01.jpg alt="" /></p><h2>一、先建立起一個自訂的Attribute型別</h2><p>.NET規範Attribute型別名稱最好以Attribute為結尾，但其實不寫也無妨。</p><pre><code class=language-cs>public class AliasAttribute : System.Attribute
+{
+  private string _cAliasName = string.Empty;
+
+  public AliasAttribute(string cTemp)
+  { _cAliasName = cTemp; }
+
+  public string cAliasName { get { return _cAliasName; } }
+}
+</code></pre><p>從上面的例子可以看出這個型別的名稱為Alias，且在建構子時期就擁有可以變更_cAliasName欄位的能力，另外提供一個可取用欄位的屬性，名為cAliasName。</p><h2>二、建立起一個範例用的ORM型別</h2><p>如果你採用的是.NET EF（Entity Framework），那麼ORM型別你應該用很大，我們自定義一個簡單的ORM如下，並賦予給cName、iMoney兩個屬性各自的AliasAttribute，而bSex不賦予的原因是因為等一下要拿來對照測試。</p><pre><code class=language-cs>public class ORM
+{
+  [Alias("姓名")]
+  public string cName { get; set; }
+  [Alias("金額")]
+  public int iMoney { get; set; }
+  public bool bSex { get; set; }
+}
+</code></pre><h2>三、寫程式提取</h2><p>首先記得要引用using System.Reflection;、using System.Linq;喔！不然程式碼會動不了。</p><pre><code class=language-cs>ORM oTemp = new ORM()
+{
+  cName = "王小明",
+  iMoney = 9999,
+  bSex = true
+};
+
+var oList = oTemp.GetType().GetProperties().Select(prop => {
+  //判斷是否存在AliasAttribute
+  if (prop.IsDefined(typeof(AliasAttribute), true))
+  { return $"{prop.Name}：{prop.GetValue(oTemp)} / 別名：{prop.GetCustomAttribute&lt;AliasAttribute>().cAliasName}"; }
+  else
+  { return $"{prop.Name}：{prop.GetValue(oTemp)} / 別名：沒有指定"; }
+});
+
+foreach (var oItem in oList)
+{ 
+  WriteLine(oItem);        
+}
+</code></pre><p>如此一來，我們就可以輕易的拿到這個ORM的相關資訊啦！</p><pre><code class=language-txt>輸出
+－－－－－
+cName：王小明 / 別名：姓名
+iMoney：9999 / 別名：金額
+bSex：True / 別名：沒有指定
+</code></pre><h2>補充相關型別</h2><p>如果因為環境的限制不能自己添加型別，或自己不想要寫這個AliasAttribute，其實可以去.NET提供的內建System.ComponentModel名稱空間裡面找找，例如DescriptionAttribute或是CategoryAttribute等型別，都是一個可以被拿來快速套用自己想要設定屬性的類別，不需要真的自己實作。</p><h3>相關連結：</h3><ul><li><a href=/archive2015/20150727.html>列舉未知類別裡面所有的成員：欄位、屬性、方法</a></li><li><a href=/archive2014/20140422.html>C#中的Attribute屬性（特性）用法</a></li><li><a href=/archive2019/20190509.html>利用Attribute Type打造一個類MVC的驗證</a></li></ul><h6>ORM System.Reflection ObjectRelationalMapping PropertyAliasName EntityFramework PCOC PlainOldCLRObject PropertyName 屬性名稱 PropertyAttribute 屬性特性 PropertyValue 屬性值</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

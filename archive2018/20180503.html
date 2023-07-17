@@ -1,0 +1,36 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>LINQ筆記：利用Linq撈取具有兩個階層的匿名型別（AnonymousType）資料</h1><p>簡單的說，就是有一個匿名函式包裝的資料，裡面的資料維度是兩個維度（若用資料庫的資料表來看，就是兩張資料表Join），因為不太常使用Linq，所以遇到這類的資料頓時無法下手（以往都是操控一個維度的資料），也是折騰了很久才有了一點答案，將用法筆記在此以供日後回憶好用。</p><p><img src=https://content.slashview.com/img/2018/20180503_01.jpg alt="" /></p><p>Step 1. 有一個匿名函式資料包如下：（就是因為匿名函式，所以在撈取資料的思考上更痛苦）</p><pre><code class=language-cs>var oData = new[]
+{
+  new
+  {
+    cUser = "John",
+    oComm = new[]
+    {
+      new { cDevice = "Tele",   cNumber = "02-12345678" },
+      new { cDevice = "Mobile", cNumber = "0911-111111" }
+    }
+    },
+    new
+    {
+    cUser = "Marry",
+    oComm = new[]
+    {
+      new { cDevice = "Tele",   cNumber = "09-87654321" },
+      new { cDevice = "Mobile", cNumber = "0922-222222" }
+    }
+  }
+};
+</code></pre><p>當我們想要查詢「某個人」的「某個裝置」的電話號碼時，要怎麼使用LINQ語句呢？LINQ總共分成兩種寫法，分別為編程式（Imperative；Lambda）以及宣告式（Declarative；LINQ），以下就兩種寫法來說明：</p><h2>LINQ query expression</h2><p>這種寫法比接接近SQL思維，但其實查詢出來的效果不盡人意，不僅無法單獨直接得到想要查詢的字串，在效能上也會較慢一些。</p><pre><code class=language-cs>var oResultA = from x in oData
+               where (x.cUser == "John")
+               select x.oComm.Where(y => y.cDevice == "Tele").FirstOrDefault()?.cNumber;
+
+Console.WriteLine($"{oResultA.Count()} / {oResultA.ToArray()[0]}");
+</code></pre><p>這樣的寫法思路上是沒有問題的，但有下列的狀況需要注意：</p><ol><li>oResultA仍然是一個集合，所以你必須轉陣列取值。</li><li>當cUser:John不存在時，Count自然是0，而你不可以對一個空集合ToArray()後去取Index[0]，會得到System.IndexOutOfRangeException。</li><li>當cUserJohn存在但指定的cDevice:Skype不存在時，Count會為1（有找到John），但是根本沒有cDevice:Skype因此取不到cNumber，而透過?運算子的保護，也算是沒有吐出System.NullReferenceException。</li><li>基於第三點，最終{oResultA.ToArray()[0]}拿出的值是一個null，這其實在資料輸出時期還是算一種風險，至少要再花一個步驟判斷一下轉成空字串丟出。</li></ol><h2>Lambda query expression</h2><p>這個寫法速度比較快，但在思維上就要稍微花一下時間，才能明白原來是先進行一次子查詢，再把結果集網外拋（此時維度降回一階），接著我們再好好的去查詢這個結果集即可。</p><pre><code class=language-cs>string oResultB = 
+  oData.SelectMany(
+      m => m.oComm.Select(x => new { m.cUser, x.cDevice, x.cNumber })
+    )
+    .Where(m => m.cUser == "Marry" &amp;&amp; m.cDevice == "Mobile")
+    .Select(m => m.cNumber)
+    .FirstOrDefault();
+
+Console.WriteLine($"{oResultB}");
+</code></pre><p>可以從上面的程式碼發現：</p><ol><li>oResultB已經直接是字串型別了，有利後續的應用，避免例如ToArray()這種非必要的程式碼運算。</li><li>cUser或cDevice找不到，程式碼只會傳回FirstOrDefault()，當然就是null，所以依然不會出錯。</li><li>字串型別本來就可以承受null，因此實務上並不會出錯，簡直實在太妙了。</li></ol><h3>相關連結</h3><ul><li><a href=/archive2018/20180503.html>LINQ筆記：利用Linq撈取具有兩個階層的匿名型別（AnonymousType）資料</a></li><li><a href=/archive2018/20181001.html>列舉NameValueCollection集合內所有的資料</a></li><li><a href=/archive2022/20220208.html>LINQ筆記：SelectMany的使用方式</a></li></ul><h6>.NET LINQ AnonymousType TwoLevels TwoTables TwoDimensions TwoLayers C#6.0 NullConditionalOperator</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

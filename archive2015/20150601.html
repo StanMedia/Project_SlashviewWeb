@@ -1,0 +1,23 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>利用PowerShell來刪除IIS的過期Log檔案</h1><p>Windows下的PowerShell對於我來說，使用到的機會並不多，今天剛好有一個狀況是要利用它來進行IIS的過期Log檔案的刪除，因此將過程記錄下來，給有需要用到這方面的網友可以參考用。</p><p>Step 1. 以UTF-8模式開啟一個純文字檔案，開始輸入相關的PowerShell指令碼，指令碼我已經把註解都寫在上面了，大家應該都看的懂才對。檔名就估且取名為「DeleteExpriedLogFiles.ps1」吧！</p><pre><code class=language-ps1># 設定過期的時間量（180天）
+$iExpired = -180
+
+# 計算過期的時間
+$dExpiredDay = (Get-Date).AddDays($iExpired)
+
+# 取得資料夾下面*.log的所有檔案
+$oLogItems = Get-ChildItem "D:\WWW Logs" -Include "*.log" -Recurse
+
+# 取得過期的檔案列舉
+$oLogItemsExpired = $oLogItems | Where-Object {$_.LastWriteTime -lt $dExpiredDay}
+
+# 砍掉這些列舉的檔案
+$oLogItemsExpired | Remove-Item
+</code></pre><p>Step 2. 設定Powershell的執行權（execution policy），請確定自己是用Administrator的身分跑cmd，並且在之中輸入powsershell，並依下列方式進行操作。</p><pre><code class=language-txt>Microsoft Windows [版本 6.1.7601]
+Copyright (c) 2009 Microsoft Corporation.  All rights reserved.
+
+C:\Users\Administrator>powershell
+Windows PowerShell
+Copyright (C) 2009 Microsoft Corporation. All rights reserved.
+
+PS C:\Users\Administrator> Set-ExecutionPolicy RemoteSigned
+</code></pre><p>Set-ExecutionPolicy中的各policy意義列舉如下，以本例來說，RemoteSigned已經夠用。</p><ol><li><strong>Restricted</strong><br /> Scripts won't run. Period.（預設值）</li><li><strong>RemoteSigned</strong><br /> Locally-created scripts will run. Scripts that were created on another machine will not run unless they are signed by a trusted publisher.</li><li><strong>AllSigned</strong><br /> Scripts will only run if signed by a trusted publisher (including locally-created scripts).</li><li><strong>Unrestricted</strong><br /> All scripts will run regardless of who created them and whether or not they are signed.</li></ol><p>Step 3. 到「系統管理工具」中運行「工作排程器」，新增一個用Administrator執行的排程，並注意你的「*.ps1」檔案的路徑，一定是要絕對路徑，才可以正常工作。</p><p><img src=https://content.slashview.com/img/2015/20150601_01.jpg alt="" /></p><h6>PowerShell IIS Logs Delete Expired ScheduledTask</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

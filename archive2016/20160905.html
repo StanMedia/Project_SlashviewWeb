@@ -1,0 +1,16 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>網址末端出現句號（.、Period、Dot）引發HTTP 500錯誤</h1><p>在Microsoft Windows Server - IIS中無論是ASP.NET WebForms還是ASP.NET MVC，只要在網址的最末端（最後面、結尾）出現英文的句號（.、Period、Dot），就會觸發500 Internal Server Error，錯誤訊息如下所列：</p><pre><code class=language-txt>'/' 應用程式中發生伺服器錯誤。
+執行階段錯誤
+描述: 處理您的要求時發生例外狀況。此外，執行第一個例外狀況的自訂錯誤頁面時發生另一個例外狀況。要求已終止。
+
+Server Error in '/' Application.
+Runtime Error
+Description: An exception occurred while processing your request. Additionally, another exception occurred while executing the custom error page for the first exception. The request has been terminated.
+</code></pre><h2>設定錯誤網頁（Error Page）是沒用的</h2><p>一般來說，我們不太可能會在網址的最末端出現句號，但也難保說不會發生，例如下列查詢縮寫的例子：</p><pre><code class=language-txt>http://127.0.0.1/Query/Crop.
+http://127.0.0.1/Query.aspx?Words=Crop.
+</code></pre><p>真的要解決這個詭異的問題，其實去設定IIS的錯誤網頁（Error Page）是沒有用的，最終他還是會吐出HTTP 500的錯誤，例如下圖：</p><p><img src=https://content.slashview.com/img/2016/20160905_01.jpg alt="" /></p><h3>正確做法，設定Web.Config中的relaxedUrlToFileSystemMapping</h3><p>介面式的作法 - 1：進入IIS，點選左邊樹狀網站根目錄，點選「設定編輯器」。</p><p><img src=https://content.slashview.com/img/2016/20160905_02.jpg alt="" /></p><p>介面式的作法 - 2：下拉區段至System.Web/httpRuntime，找到relaxedUrlToFileSystemMapping將其設定為True。</p><p><img src=https://content.slashview.com/img/2016/20160905_03.jpg alt="" /></p><p>直接開啟Web.Config的作法</p><p>這種做法我想不用多說了，直接看XML即可。</p><pre><code class=language-xml>&lt;?xml version="1.0" encoding="UTF-8"?>
+&lt;configuration>
+  &lt;system.web>
+    &lt;httpRuntime relaxedUrlToFileSystemMapping="true" />
+  &lt;/system.web>
+&lt;/configuration>
+</code></pre><h2>發生錯誤的原因</h2><p>微軟家大業大，只要一做不好、一出現漏洞就會被網路公幹，例如BSOD（blue screen of death）我可能超過10年沒看過了，但仍然每次都會被人家拿來嘲諷，好像一副MacOS、Linux都不會當機一樣，我只能說我笑了。算了，這不是這篇文章要討論的重點。</p><p>微軟檢查這個，是因為IIS對應的Windows作業系統中的檔案目錄層級，而Windows中並不允許空白的附檔名，所以relaxedUrlToFileSystemMapping預設值當然就是false（也就是要嚴格檢查是否有對應檔案系統）。</p><h6>PeriodAtTheEndOfURL DotAtTheEndOfURL</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

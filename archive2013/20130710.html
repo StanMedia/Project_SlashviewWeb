@@ -1,0 +1,49 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>Java初探：多型（Polymorphism）之簡單示範</h1><p>在介紹了Java的介面（Interface）與抽象（Abstract）寫法之後，我們馬上來實驗一下物件導向中很重要的多型之觀念與寫法。</p><p>剛學介面的的人，一定覺得介面很無聊，如果你要規範某個類別一定要實作某些方法或欄位的話，那麼文件規範也辦的到。這樣的說法並沒有錯，但是沒有抽象（Abstract）、介面（Interface） 的實作，那麼你一定無法使用多型這個在物件導向設計中，非常重要的撰寫模型。話不多說，直接看下面的程式碼。</p><p>宣告一個遙控器的介面，並且規範之後實作（Implements）的類別，一定要具備turnOn()與turnOff()方法。</p><pre><code class=language-java>//RemoteControl.java
+public interface RemoteControl
+{
+  public String getName();
+  public String turnOn();
+  public String turnOff();
+}
+</code></pre><p>創造一個冷氣遙控器類別，介面的部分是實作RemoteControl。</p><pre><code class=language-java>//AirConditioner.java
+public class AirConditioner implements RemoteControl
+{
+  private String name;
+  public AirConditioner(String cTemp) { this.name = cTemp; }
+  public String getName() { return this.name; }
+  public String turnOn()  { return "AirConditioner ON"; }
+  public String turnOff() { return "AirConditioner OFF"; }
+}
+</code></pre><p>創造一個電動門遙控器類別，介面的部分是實作RemoteControl。</p><pre><code class=language-java>//ElectronicDoor.java
+public class ElectronicDoor implements RemoteControl
+{
+  private String name;
+  public ElectronicDoor(String cTemp) { this.name = cTemp; }
+  public String getName() { return this.name; }
+  public String turnOn()  { return "ElectronicDoor ON"; }
+  public String turnOff() { return "ElectronicDoor OFF"; }
+}
+</code></pre><p>一切就緒，開始進行多型的調用，這就是多型的寫法，用遙控器來比喻是不是很感覺呢？</p><pre><code class=language-java>public class Test
+{
+  public static void main(String[] args)
+  {
+    Operater(new AirConditioner("Pansonic"));
+    Operater(new ElectronicDoor("National"));
+  }
+  
+  //Super Remote Controller
+  public static void Operater(RemoteControl oRC)
+  {
+    System.out.println("RemoteName: " + oRC.getName());
+    System.out.println(oRC.turnOn());
+    System.out.println(oRC.turnOff());
+  }
+}
+</code></pre><p>輸出結果如下：</p><pre><code class=language-txt>C:\Java>java Test
+RemoteName: Pansonic
+AirConditioner ON
+AirConditioner OFF
+RemoteName: National
+ElectronicDoor ON
+ElectronicDoor OFF
+</code></pre><h6>Java SCJP 多型 多形 Polymorphism Abstract Interface</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

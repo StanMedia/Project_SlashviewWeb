@@ -1,0 +1,8 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>字串與陣列間的分割與收合</h1><p>在字串轉陣列時，我們大家都知道使用split來進行分割，但是卻很少人討論到回轉的語法，大部份的人都是自己寫一個迴圈轉回來，這邊就記錄一下怎麼依靠強大的.NET Framework來幫我們完成這個鳥事吧！從今天開始不要再小看System.String了！</p><h2>String.Split</h2><p>使用方式如下，這無需多說吧！</p><pre><code class=language-cs>string[] aryTemp = "Hello,World".split(',');
+</code></pre><h2>String.Join</h2><p>懂得上車就要懂得下車，這裡是下車的範例。</p><pre><code class=language-cs>string cTemp = string.Join(",", aryTemp);
+//cTemp會被灌入Hello,World
+</code></pre><h2>同場加映String.TrimEnd</h2><p>我們常用迴圈來組建字串，在有逗號分隔（comma）的情況時，常會留下一個爛尾，這時候你可能又要寫幾行SubString或IndexOf來把它消除，從今天開始不要再幹這樣的傻事了！</p><pre><code class=language-cs>string cTemp = "1,2,3,4,5,".TrimEnd(',');
+//cTemp會傳回1,2,3,4,5
+</code></pre><h2>同場再加映String.Format</h2><p>這應該有很多人都在用，在此備註一下，讓沒看過的人，從此不要在用+運算子來做字串相加了，這種寫法稱為字串插補（字串插值；String Interpolation），是C# 6.0之後提供的語法糖！</p><pre><code class=language-cs>string cTemp = string.Format("Hello {0}", "John");
+//cTemp會傳回Hello John 
+</code></pre><p>對String.Format有興趣的人，可以再參考這一篇：<a href=/archive2014/20140509.html>有關ToString、String.Format的相關資料</a></p><h6>System.String String.Split String.Join String.TrimEnd String.Format StringComma</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

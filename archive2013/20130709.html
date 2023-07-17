@@ -1,0 +1,70 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>Java初探：抽象（Abstract）之簡單示範</h1><p>抽象（Abstract）與介面的地位差不多，都是將一件事物的本質、行為抽取出來定義，並試圖將事物專屬的輪廓排除，我知道這樣說起來很難懂，但這本來就是抽象讓人家很難理解之處，試問，每個人都看得懂抽象派的畫作嗎？抽象對比介面，最大的差異點就是它可以在方法中定義相關的程序（程式碼）。</p><h2>抽象之基本說明</h2><ol><li>抽象類別與介面一樣，不可以被實例化（instance）。</li><li>抽象類別比介面更慘的是，連被實作（implements）都不行。</li><li>抽象類別可以繼承（extends）多個抽象類別。</li><li>抽象類別可以有建構子。</li><li>抽象類別不一定要有抽象方法，但一個類別中如果存在著抽象方法，那它一定要被宣告成抽象類別。</li></ol><p>以下將抽象（Abstract）與介面（Interface）混用，用遊戲來當作例子（舉例不是很好，但是重點在觀念與撰寫方式），程式碼如下：</p><p>先創造出一個會員抽象類別，其中的getMember()方法，因為我們不知道在每一個extends的類別要怎麼表示這些會員，因此我們在這邊把它定義成抽象方法，其餘的資料成員以及方法，都不是抽象方法，也因為不是抽象，所以可以擁有自己的程式碼（body）。此外，抽象類別是允許有建構子的，因此我們可以看到有一個空建構子，叫做Member()。程式碼如下：</p><pre><code class=language-java>public abstract class Member
+{
+  public java.util.ArrayList&lt;String> oList;
+  //建構子
+  public Member()
+  {
+    oList = new java.util.ArrayList&lt;String>();
+  }
+  //新增遊戲成員
+  public void add(String cName)
+  {
+    oList.add(cName);
+  }
+  //抽象方法（取出所有成員）
+  public abstract void getMember();
+}
+</code></pre><p>再創造一個名為Game的介面，由於遊戲有很多種，但規矩主要都是遊戲開始、遊戲中、遊戲結束，因此我們將程式碼撰寫如下：</p><pre><code class=language-java>public interface Game
+{
+  //所有介面的資料成員，一定是常數，這個常數可以再實作時期直接引用，或進行複寫（Overriding）。
+  public String cGameName = "Undefined";
+  //定義遊戲應該要具備的方法
+  public void Start();
+  public void Process();
+  public void End();
+}
+</code></pre><p>在主控程式這邊，GameConsole繼承了Member並實作了Game，把相關應該複寫的方法或資料寫好後，就可以開開心心的操作這些物件啦！</p><pre><code class=language-java>public class GameConsole extends Member implements Game
+{
+  //Extends Member.java
+  public void getMember()  //繼承getMember並將其複寫（Overriding）
+  {
+    for(String cTemp : oList)
+    {
+      System.out.println("Game Member: " + cTemp);
+    }
+  }
+  
+  //Implement Game.java
+  public String cGameName;  //複寫（Overriding）cGameName
+  public void Start()
+  {
+    System.out.println(cGameName + " START");
+  }
+  public void Process()
+  { 
+    getMember();
+    System.out.println(cGameName + " Gaming...");
+  }
+  public void End()
+  {
+    System.out.println(cGameName + " End");
+  }
+
+  public static void main(String[] args)
+  {
+    GameConsole oTemp = new GameConsole();
+    oTemp.cGameName = "OOXX";
+    oTemp.add("John");
+    oTemp.add("Mary");
+    oTemp.Start();
+    oTemp.Process();
+    oTemp.End();
+  }
+}
+</code></pre><p>輸出結果如下：</p><pre><code class=language-txt>C:\Java>java GameConsole
+OOXX START
+Game Member: John
+Game Member: Mary
+OOXX Gaming...
+OOXX End
+</code></pre><h6>Java SCJP Abstract Interface Extends Implements</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

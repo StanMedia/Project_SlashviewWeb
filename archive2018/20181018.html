@@ -1,0 +1,9 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>利用HttpWebRequest夾帶Cookies，將要求送到另一個網站</h1><p>今天剛好有需要處理一些跨網域驗證的問題，以前用HttpWebRequest都是停留在將POST等級的資料送過去對方主機，剛好有需要動用到Cookies的資料遞送，因此就將心得記錄在此。</p><p><img src=https://content.slashview.com/img/2018/20181018_01.jpg alt="" /></p><h2>HttpWebRequest來傳送自定義的Cookies資料</h2><p>一般來說網路上都只叫你產生一個CookieContainer，然後再把它指向去HttpWebRequest即可，我是不太明瞭這樣的程式碼（如下方）到底想要代表甚麼，但這肯定不符合我的需要，我需要的是自己自訂一個Cookie Key，然後寫入Cookie Value。</p><pre><code class=language-cs>CookieContainer oCC = new CookieContainer();
+oRequest.CookieContainer = oCC;
+
+自訂Cookie Key與Value的寫法大概長的如下：
+
+System.Net.HttpWebRequest oRequest = (System.Net.HttpWebRequest)System.Net.WebRequest.Create(cUrl);
+oRequest.CookieContainer = new System.Net.CookieContainer();
+oRequest.CookieContainer.Add(new System.Net.Cookie("YourKey", YourValue, YourCookiePath, (new System.Uri(cUrl)).Host));
+</code></pre><p>如此一來就可以快速地把你的Cookies送過去對方主機嘍！</p><h6>HttpWebRequest HttpWebResponse Cookies Sessions</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

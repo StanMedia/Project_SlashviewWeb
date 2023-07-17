@@ -1,0 +1,93 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>基於Windows Form架構下，電容式觸控螢幕的視覺回饋解決方案</h1><p>如果你是採用Win32來進行環境的開發，那麼Windows Form架構還是現在業界的主流程式設計架構，盡管Windows Presentation Foundation（WPF）已經被微軟大力的推行多年了，但是相信坊間還是有很多需要維護的架構，無法在這個環境中被徹底的重構改寫。這篇文章不是要解決重構改寫的問題，而是要解決舊有的Win32架構套用在新式的電容式觸控螢幕介面下，可以被觸發OnMouseDown的模擬。</p><p><img src=https://content.slashview.com/img/2015/20151211_01.jpg alt="" /></p><p>因應扁平化的設計範本，微軟對Windows Form的Button提供了System.Windows.Forms.FlatStyle.Flat來讓你的按鈕在視覺上可以貼合作業系統的設計風格，另外也提供FlatAppearance.MouseDownBackColor來讓你點擊這顆按鈕時，可以產生對應的背景著色。現在的問題是，無論是原來的OnMouseDown事件，或者是MouseDownBackColor屬性，都只有適用於滑鼠、電阻式螢幕的點擊事件觸發，對於電容螢幕完全無法捕捉事件，電容螢幕的觸發點只會觸發Click事件（發生在OnMouseUp），要測試這個按鈕真正的事件是否有被觸發，你可以把執行檔丟到Microsoft Surface上面，用手點選按鈕試看看就知道了，我可以直接跟你說：「看不到點擊按鈕的事件」。</p><h2>解決方案</h2><p>一開始我思考錯方向，因此一直在Windows Touch Gestures所提供的API間繞轉，問題是Gestures API是在處理Action的問題，繞了很久後才發現微軟明明就已經載明Tap / Double Tap根本不由Gestures支援，詳見下方圖表的第一列，因此開始把方向轉回Window Message Handlers。</p><p><img src=https://content.slashview.com/img/2015/20151211_02.jpg alt="" /></p><h2>Window Message Handlers</h2><p>看來是得回到大家都很不願意再面對的MFC世界，Window Message Handlers相關的知識請自行搜尋MFC、C++關鍵字，在這邊我就不多說了。網路上用C#處理的相關範例往往都繞了一大圈，用全域的方式在監聽WindowMessage，然後再去觸發想做的事情，這類的做法我也不能說它錯啦，只是，這樣處理方式效能真的吃得很重，程式碼其實也會被複雜化。我的做法是反過來，先產生一個自我定義的按鈕（TouchButton），去繼承System.Windows.Forms.Button，如此一來我就可以改寫WndProc來完成我想要的System.Windows.Forms.Message監聽，之後表單上所有的按鈕都自TouchButton生出實例（Instances），如此一來程式碼與效能都被最佳化了。</p><p>TouchButton.cs</p><pre><code class=language-cs>namespace SimplyWinform
+{
+  public class TouchButton : System.Windows.Forms.Button
+  {
+    private System.Drawing.Color oBackgroundColor = System.Drawing.Color.FromArgb(51, 51, 51);
+    private System.Drawing.Color oClickDownColor = System.Drawing.Color.FromArgb(0, 186, 196);
+    public TouchButton()
+    {
+      //在建構時期，先處理按鈕的通用外在
+      this.Font = new System.Drawing.Font("微軟正黑體", 20F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point);
+      this.ForeColor = System.Drawing.Color.WhiteSmoke;
+      this.BackColor = oBackgroundColor;
+      this.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
+      this.FlatAppearance.BorderSize = 0;
+      this.FlatAppearance.MouseDownBackColor = oClickDownColor;
+    }
+
+    protected override void WndProc(ref System.Windows.Forms.Message msg)
+    {
+      const int WM_POINTERDOWN = 0x0246;
+      const int WM_POINTERUP = 0x247;
+      switch (msg.Msg)
+      {
+        case WM_POINTERDOWN:
+          this.BackColor = oClickDownColor;
+          break;
+        case WM_POINTERUP:
+          this.BackColor = oBackgroundColor;
+          break;
+      }
+      base.WndProc(ref msg);
+    }
+  }
+}
+</code></pre><p>Form1.Designer.cs</p><pre><code class=language-cs>namespace SimplyWinform
+{
+  partial class Form1
+  {
+    /// &lt;summary>
+    /// 設計工具所需的變數。
+    /// &lt;/summary>
+    private System.ComponentModel.IContainer components = null;
+
+    /// &lt;summary>
+    /// 清除任何使用中的資源。
+    /// &lt;/summary>
+    /// &lt;param name="disposing">如果應該處置 Managed 資源則為 true，否則為 false。&lt;/param>
+    protected override void Dispose(bool disposing)
+    {
+      if (disposing &amp;&amp; (components != null))
+      {
+        components.Dispose();
+      }
+      base.Dispose(disposing);
+    }
+
+    #region Windows Form 設計工具產生的程式碼
+
+    /// &lt;summary>
+    /// 此為設計工具支援所需的方法 - 請勿使用程式碼編輯器修改
+    /// 這個方法的內容。
+    /// &lt;/summary>
+    private void InitializeComponent()
+    {
+      this.touchButton1 = new SimplyWinform.TouchButton();
+      this.SuspendLayout();
+      // 
+      // touchButton1
+      // 
+      this.touchButton1.Location = new System.Drawing.Point(12, 12);
+      this.touchButton1.Name = "touchButton1";
+      this.touchButton1.Size = new System.Drawing.Size(294, 169);
+      this.touchButton1.TabIndex = 0;
+      this.touchButton1.Text = "Touch Click";
+      this.touchButton1.UseVisualStyleBackColor = true;
+      // 
+      // Form1
+      // 
+      this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 12F);
+      this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
+      this.ClientSize = new System.Drawing.Size(318, 193);
+      this.Controls.Add(this.touchButton1);
+      this.Name = "Form1";
+      this.Text = "Touch Screen Events Test";
+      this.ResumeLayout(false);
+    }
+
+    #endregion
+
+    private TouchButton touchButton1;
+  }
+}
+</code></pre><h2>總結</h2><p>要捕捉傳統Windows Form（Win32）於電容式觸控螢幕上的OnMouseDown事件，就是這麼的麻煩，你可以看到在VisualStudio 2015 / .NET Framework 4.6+的時代，微軟幾乎已經不在維護System.Windows.Forms的相關類別了，所以要嘛就採用Universal Windows Platform（UWP）來全面改寫你的專案，要嘛只好鼻子摸摸去寫底層了，這也是令人挺無奈的事情啊！</p><p><a href=https://content.slashview.com/file/20151211/TouchScreenEventsTest.zip>Touch Screen Events Test Demo EXE Download</a></p><h6>WinForm WindowsForm Win32 TouchScreen OnMouseDown OnMouseUp OnClick UAP</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

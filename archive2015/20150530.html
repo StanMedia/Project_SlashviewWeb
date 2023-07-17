@@ -1,0 +1,20 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>擴充方法的正確調用方式：以ZipArchiveEntry為例</h1><p>這幾天在寫一個壓縮／解壓縮的程式，從.NET Framewrok 1.1時代就習慣外掛「ICSharpCode.SharpZipLib.dll」來解決這方面的問題，而慢慢的覺得或許該回歸.NET Framework 2.0後陸續逐漸完備的壓縮程式庫，因此開始進行「System.IO.Compression」的學習之旅。一研究才發現，Microsoft對於System.IO.Compression的方法提供，越來越精緻，到.NET Framework 4.5版以後甚至下一行指令就可以直抽出某個壓縮檔裡面的一個檔案，真的是太方便了。不過就在我不斷的翻閱MSDN2的情況下，找到了ZipFileExtension類別，也慢慢的開始踩到擴充方法（Extensions）中我所不知的地雷。</p><p><img src=https://content.slashview.com/img/2015/20150530_01.jpg alt="" /></p><p>由上圖所示，這樣的排列方式真的很讓人容易誤會，畢竟這不是Java，微軟的.NET Framework是用扁平化的方式來排列.NET提供的類別，這樣階層結構方式真的很容易讓人家誤會！事實上，System.IO.Compression.dll與System.IO.Compression.FileSystem.dll根本就是被分離成兩個獨立存在的檔案啊！但是你真的再往ZipFileExtensions Class點下去，它又回到扁平化的思維，也就是ZipFileExtensions Class被拉到第一階層級了...以上是小小的抱怨。</p><p><a href=https://goo.gl/hOqCzP>ZipFileExtensions Methods</a></p><p>問題的發生是基於下面兩個我的運行環境（習慣）：</p><ol><li>我個人喜歡在寫程式的時候，辛苦一點的把類別的namespace全部寫在程式碼裡面，這樣一來使用CP大法時，可以很容易的將程式碼丟到某個新方案下。也就是說，我討厭使用using namespace;宣告。</li><li>我個人討厭在web.config內加入一堆你根本也看不懂的參考（應該是說我覺得public key=""機制很無聊，並讓我感到不安），所以我的Reference解決方案都是將dll放到bin裡面直接參考。</li></ol><p>一直以來這樣的設定／設計也都相安無事，因此這次我也很自然的將System.IO.Compression.dll與System.IO.Compression.FileSystem.dll丟到bin目錄下，但是怪事開始一直發生了！請見下圖：</p><p><img src=https://content.slashview.com/img/2015/20150530_02.jpg alt="" /></p><p>從上圖發生的事件，簡單的說，就是我明明參考了System.IO.Compression.FileSystem.dll，但是VisualStudio確沒有辦法找到ZipArchiveEntry應該擁有的擴充方法（ExtractToFile），導致於被畫紅色底線。當下我的心裡想說，是不是將dll放到bin參考的這個招式有誤？但是看一下圖中的第47行及第49行程式碼，人家「System.IO.Compression.ZipArchive」、「System.IO.Compression.ZipFile」、「System.IO.Compression.ZipArchiveEntry」不是都活的好好的嗎？這表示真的有參考到這個dll啊！那為何就是找不到ExtractToFile呢？</p><h2>擴充方法記得使用using namespace;</h2><p>翻閱MSDN對於擴充方法的描述：</p><pre><code class=language-txt>擴充方法會定義為靜態方法，但透過執行個體方法語法呼叫。 擴充方法的第一個參數會指定方法作業所在的類型，而且參數前面會加上 this 修飾詞。 您必須使用 using 指示詞將命名空間明確匯入至原始程式碼，擴充方法才會進入範圍中。
+
+一般而言，您呼叫擴充方法的頻率將遠高於實作自己的擴充方法。因為擴充方法是使用執行個體方法語法進行呼叫，所以不需要任何特殊知識就可以從用戶端程式碼使用它們。 若要啟用特定類型的擴充方法，只要針對定義這些方法所在的命名空間加入 using 指示詞即可。 例如，若要使用標準查詢運算子，請 using 指示詞加入至程式碼。
+</code></pre><p>如果您要實作所指定類型的擴充方法，請記住下列幾點：</p><ol><li>如果擴充方法的簽章與類型中定義的方法相同，則絕不會呼叫擴充方法。</li><li>擴充方法是帶入命名空間層級的範圍。 例如，如果有多個靜態類別在名為 Extensions 的單一命名空間中包含擴充方法，則 using Extensions; 指示詞會將這些擴充方法全都帶入範圍中。</li></ol><p>光找這個Bug讓我處理了快一小時，最後發現是自己白癡怨不得別人。所以擴充方法本身並無法透過指定namespace就知道它本身歸屬於哪一個類別下，也就是說，如果你今天寫了一個擴充方法，你也參考了，但是你沒有在本頁（你現在運行的類別）中去using它，最終在編譯時期，編譯器它根本就不會知道（因為找不到）ExtractToFile是啥？在哪裡？因為這些擴充方法的撰寫方式，是動態的使用this將目前的實體再代入運算的，請見下列範例就可心神領會：</p><pre><code class=language-cs>//main()
+using ExtensionMethods;
+string s = "Hello Extension Methods";
+int i = s.WordCount();
+
+//extension class
+namespace ExtensionMethods
+{
+    public static class MyExtensions
+    {
+        public static int WordCount(this String str)
+        {
+            return str.Split(new char[] { ' ', '.', '?' }, StringSplitOptions.RemoveEmptyEntries).Length;
+        }
+    }   
+}
+</code></pre><p>最後引述MSDN對於擴充方法的警告，來做為本文的Ending。</p><ol><li>一般而言，建議您應謹慎地實作擴充方法，而且只有在必要時才實作。</li><li>當用戶端程式碼必須擴充現有的類型時，應該盡可能以建立衍生自現有類型的新類型來達成此目的。</li><li>使用擴充方法來擴充無法變更其原始程式碼的類型時，會有類型實作的變更導致擴充方法中斷的風險。</li></ol><h6>C# ClassExtensions System.IO.Compression System.IO.Compression.FileSystem ExtractToFile CreateEntryFromFile</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

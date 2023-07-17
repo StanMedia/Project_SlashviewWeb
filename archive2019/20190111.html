@@ -1,0 +1,159 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>新舊委派的撰寫與呼叫方式：以購物車折扣為例</h1><p>日前有一位朋友再次問到委派（delegate）的觀念問題（他要設計網站購物車與優惠折扣方面的物件），是否能舉一個更實際的例子，來進行新舊委派的寫法。當然，我不可能真的跳下去幫他寫真實的類別元件，我只能夠藉由一些其實毫無作用的程式碼來演繹一下委派的寫法，意思到就好了啦！</p><p><img src=https://content.slashview.com/img/2019/20190111_01.jpg alt="" /></p><p>我們的任務如下：</p><pre><code class=language-txt>產品類別：
+  產品名稱
+  產品價格
+購物車類別：
+  產品集合屬性
+  計算總金額方法
+主控台：
+  將挑選好的產品傳入，請購物車類別幫忙計算金額
+</code></pre><p>有了上面的初步規劃後，我們還要知道一件事情，就是購物車類別的計算總金額方法中，千萬不可以把「折扣優惠判斷式」寫在購物車類別裡面，因為老闆會常常改促銷優惠條件，那你的購物車類別就得常常更迭了，所以不如拉到外面去做吧！</p><h2>傳統委派的寫法</h2><p>觀察的重點可以擺在Cart類別中的public delegate int Formula(int iSum)，這一行就是很經典的委派簽名。另外一個觀察的點就是Calculator(Formula oFormula)這個方法的引數掛上了Formula委派簽名，讓方法內的程式碼可以開始引用這個委派，其他的寫法直接看程式碼吧！</p><pre><code class=language-cs>class Program
+{
+  static void Main(string[] args)
+  { //新增購物車，並把商品放入
+    Cart oCart = new Cart()
+    {
+      oProducts = new List&lt;Product>
+      {
+        new Product() {cName="AAA", iPrice= 200},
+        new Product() {cName="BBB", iPrice= 500},
+        new Product() {cName="CCC", iPrice= 800},
+        new Product() {cName="DDD", iPrice= 900}
+      }
+    };
+    //將促銷公式，指派給Discount
+    int iResult = oCart.Calculator(Discount);
+    //輸出金額
+    WriteLine($"總金額：{iResult}");
+    ReadKey();
+  }
+
+  //促銷公式
+  public static int Discount(int iSum)
+  { //超過一千元，單純減價100元
+    if (iSum > 1000)
+    { return iSum - 100; }
+    else
+    { return iSum; }
+  }
+}
+
+//產品類別
+public class Product
+{
+  public string cName { get; set; }
+  public int iPrice { get; set; }
+}
+
+//購物車類別
+public class Cart
+{
+  public System.Collections.Generic.List&lt;Product> oProducts;
+
+  //（委派簽名）優惠促銷公式一定會常改，因此委派出去
+  public delegate int Formula(int iSum);
+
+  public int Calculator(Formula oFormula)
+  { //計算總金額（或者這邊應該實作檢查庫存）
+    int iSum = oProducts.Sum(x => x.iPrice);
+    //委派給外部公式後，返回折扣後金額
+    return oFormula(iSum);
+  }
+}
+</code></pre><p>最後執行的結果，本來的總金額是2400元，但是因為超過了1000元所以優惠100元，變成2300元。執行結果有正確的繞出去委派交付運行。</p><h2>新式委派的寫法</h2><p>新式委派說穿了，就是捨棄掉傳統的delegate寫法，改採用微軟預先做好的Func委派簽名（匿名委派），然後調用端的方式拋棄傳統的具名委派方法實作，改採用潮到出水匿名方法來運作，其他的就直接看程式碼吧。</p><pre><code class=language-cs>class Program
+{
+  static void Main(string[] args)
+  { //新增購物車，並把商品放入
+    Cart oCart = new Cart()
+    {
+      oProducts = new List&lt;Product>
+      {
+        new Product() {cName="AAA", iPrice= 200},
+        new Product() {cName="BBB", iPrice= 500},
+        new Product() {cName="CCC", iPrice= 800},
+        new Product() {cName="DDD", iPrice= 900}
+      }
+    };
+    //將促銷公式委派給匿名型別
+    int iResult = oCart.Calculator((oProducts) =>
+    { //自己計算總金額
+      int iSum = oProducts.Sum(x => x.iPrice);
+      //自己計算促銷公式
+      if (iSum > 1000)
+      { return iSum - 100; }
+      else
+      { return iSum; }
+    });
+    //輸出金額
+    WriteLine($"總金額：{iResult}");
+    ReadKey();
+  }
+}
+
+//產品類別
+public class Product
+{
+  public string cName { get; set; }
+  public int iPrice { get; set; }
+}
+
+//購物車類別
+public class Cart
+{
+  public System.Collections.Generic.List&lt;Product> oProducts;
+  
+  //這個方法基本上只剩下出一支嘴的能力，因為把所有的東西都丟給外面的委派方法了
+  public int Calculator(System.Func&lt;System.Collections.Generic.List&lt;Product>, int> oFormula)
+  { //這邊能做的事情大概類似檢查資料庫庫存，並把已經沒貨的商品從清單拿掉，然後拋回去給呼叫者自己計算
+    //委派給外部公式後，返回折扣後金額
+    return oFormula(oProducts);
+  }
+}
+</code></pre><p>計算結果金額依然為2300元，只是採用新式委派的寫法後，程式碼變得更精簡。委派在大型專案中類別的切割有其優點，但從上面的程式碼中大家也可以看到一些詭異的點，就是有些類別基本上已經完全不做事了。類別的分工切割本身是一門藝術，如何讓類別方法保持單一責任（Single Responsibility Principle，SRP）這就依賴大家的智慧嘍。</p><h2>新式委派的寫法：預設委派方法</h2><p>這個作法更貼近收銀機的實作，也就是有極大的時間我們只是單純的需要一個購物車的總金額加總，除非有遇到特別的活動，例如周年慶滿千送百之類的，這時候我們就需要預設委派，這時可能寫法就會改成如下：</p><pre><code class=language-cs>class Program
+{
+  static void Main(string[] args)
+  { //新增購物車，並把商品放入
+    var oCart = new Cart()
+    {
+      oProducts = new List&lt;Product>
+      {
+        new Product() {cName="AAA", iPrice= 200},
+        new Product() {cName="BBB", iPrice= 500},
+        new Product() {cName="CCC", iPrice= 800},
+        new Product() {cName="DDD", iPrice= 900}
+      }
+    };
+    //空委派
+    WriteLine($@"購物原價：{oCart.Calculator()}");
+    //自定義委派
+    WriteLine($@"周年慶滿千送百折扣後價格：{oCart.Calculator(x => {
+      int iSum = x.Sum(y => y.iPrice);
+      int iCoupon = iSum / 1000;  //滿千送百優惠券張數
+      return iSum - (iCoupon * 100);
+    })}");
+    ReadKey();
+  }
+}
+
+//產品類別
+public class Product
+{
+  public string cName { get; set; }
+  public int iPrice { get; set; }
+}
+
+//購物車類別
+public class Cart
+{
+  public System.Collections.Generic.List&lt;Product> oProducts;
+
+  //這個方法基本上只剩下出一支嘴的能力，因為把所有的東西都丟給外面的委派方法了
+  public int Calculator(System.Func&lt;System.Collections.Generic.List&lt;Product>, int> oFormula = null)
+  { //如果沒有外部委派，那就自建一個委派方法，單純把金額總數回傳
+    if (oFormula == null)
+    { oFormula = x => x.Sum(y => y.iPrice); }
+    return oFormula(oProducts);
+  }
+}
+</code></pre><p>如此一來輸出會變成：</p><pre><code class=language-txt>購物原價：2400
+周年慶滿千送百折扣後價格：2200
+</code></pre><p>相關連結：</p><ul><li><a href=/archive2014/20140514.html>C#之委派之演進史與匿名函式之應用</a></li><li><a href=/archive2014/20141117.html>泛型委派（General Delegates）之研究</a></li><li><a href=/archive2014/20141201.html>利用Predicate泛型委派，進行類別方法委派之實作</a></li><li><a href=/archive2021/20210111.html>利用委派讓List(T)可以使用Lambda運算式寫法</a></li></ul><h6>C# delegate Func(T) AnonymousFunction Lambda SingleResponsibilityPrinciple S.O.L.I.D</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

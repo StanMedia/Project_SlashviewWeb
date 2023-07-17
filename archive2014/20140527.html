@@ -1,0 +1,75 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>有關於Javascript在JSON資料方面的實作</h1><p>JSON是現代Open Data精神下，得以流通在HTTP協定下的產物，他強調資料的單純傳輸的概念下，讓宣告繁複的XML產生了極大的衝擊，有鑑於人老了每次要宣告比較複雜的JSON Object都會忘記的情況下，把一些資料整理在這邊日後好回憶。</p><p>利用Javascript宣告一個物件，並操作之：</p><pre><code class=language-js>//定義
+var myCar = {
+  "Name": "BMW",
+  "Number": "GY-5978",
+  "Specification": [{
+      "model" : "A",
+      "length": 100,
+      "weight": 200
+    },{
+      "model" : "B",
+      "length": 300,
+      "weight": 400
+    }
+  ]
+};
+
+//操作
+myCar.name = "Mercedes Benz";
+myCar.Specification[0].weight = 250;
+myCar.Specification[1].length = 350;
+</code></pre><p>操作完當然是用AJAX把他給POST出去了，如果你在jQuery中要AJAX直接把這個myCar物件帶進去POST，那麼jQuery會自動幫你轉成name=Mercedes%20Benz&amp;Number=GY-5978...等資訊丟出去，這通常不會是我們要的，因此你需要調用<a href=http://goo.gl/hNcAaU>JSON.stringify()</a>來進行轉換嘍！這個動作在現代的程式語言中通常稱為「序列化」。</p><pre><code class=language-javascript>$(document).ready(function(){
+  
+  $("#btnSubmit").click(function(){
+    $.ajax({
+      url: "http://your.url/",
+      type: "post",
+      contentType: "application/json", //注意！單靠這一行是不會幫你自動轉換JSON的
+      dataType: "json",                //注意！單靠這一行也是不會幫你自動轉換JSON的
+      data: JSON.stringify(myCar),     //注意！這一行直接帶myCar是不會幫你自動轉換JSON的
+      timeout: 3000, //等候3秒逾時
+      beforeSend: function () {
+        //送出前
+      },
+      success: function (oDataResponse) {
+        //成功
+        if (oDataResponse.length != 0) {
+          $(oDataResponse).each(function (i, v) {
+            //處理
+          });
+        }
+      },
+      error: function (xmlhttprequest, textstatus, message) {
+        //失敗
+        if (textstatus == "timeout") {
+          //逾時
+        } else {
+          //其他錯誤
+        }
+      }
+    });
+  });
+  
+});
+</code></pre><p>值得一提的是，在success後傳回的data，如果你是使用jQuery的情況下，可以直接使用像data.success之類的方式來調用回傳資訊。如果你是屬於比較小心一點的使用者，那麼可以考慮使用<a href=http://goo.gl/g5dve9>JSON.parse()</a>來驗證一下嘍！</p><p>下方式宣告一個單一陣列型的物件，經過JSON.parse()無誤後，開始使用的範例。</p><pre><code class=language-js>var pets = '[{"name":"jack"}, {"name":"john"}, {"name":"joe"}]';
+var arr = JSON.parse(pets);
+alert(arr[0].name);
+</code></pre><h2>那麼，在伺服器端如何取出，並將JSON字串轉回物件呢？</h2><p>很簡單，先直接串流把資料讀進來後，請我們的好朋友JSON.NET來幫忙即可（在這裡沒有另外建立ORM，而是採用匿名型別來餵給JSON.NET）。</p><pre><code class=language-cs>var oData = new {
+  Name = "",
+  Number = "",
+  Specification = new[] { new { model = "", length = -1, weight = -1 } }
+};
+try
+{
+  using (System.IO.StreamReader oSR = new System.IO.StreamReader(Request.InputStream))
+  {
+    string cTemp = oSR.ReadToEnd();
+    Newtonsoft.Json.Linq.JObject.Parse(cTemp);  //如果JSON驗證沒通過，會丟Exception錯誤
+    oData = Newtonsoft.Json.JsonConvert.DeserializeAnonymousType(cTemp, oData);
+  }
+}
+catch
+{
+  //DoSomething...
+}
+</code></pre><h6>JavaScript JSON Array ObjectAccess JSON.stringify JSON.parse jQuery</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

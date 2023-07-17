@@ -1,0 +1,24 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>UWP及.NET Framework 4 Client Profile適用的HttpClient()</h1><p>如果你正在使用.NET Framework 4 Client Profile，或者是使用UWP（Universal Windows Platform）來進行程式設計，那麼你一定會發現再也無法使用System.Web下的所有組件（DLL）的參考，這時候要不就是切換到全版本的.NET Framework（目前尚未確定UWP是否可切換，但理論上不行），不然就是乖乖地使用比較新的System.Net、System.Net.Http方式來進行編碼啦！</p><p>因為自己在「非重要的場合」中，慣於使用System.Net.WebClient()來進行實作，這一點在新的UWP架構中也是被拿掉的，要不你就是改採用傳統的System.Net.HttpWebRequest()及System.Net.HttpWebResponse()來實作，要不就是認命一點，使用System.Net.Http.HttpClient()的非同步來實作。本篇文章即為使用System.Net.Http.HttpClient()方式，記載於此供日後快速參考，但HttpClient在使用上有雷，請注意最下方的相關參考之連結。</p><h2>利用System.Net.Http.HttpClient()來取得網站網頁資訊</h2><pre><code class=language-cs>private async void Button_Click(object sender, RoutedEventArgs e)
+{
+  uResult.Text = await DownloadPageAsync();
+}
+
+static async System.Threading.Tasks.Task&lt;string> DownloadPageAsync()
+{
+  string cURL = "https://www.google.com/";
+  using (HttpClient oHC = new HttpClient())
+  {
+    using (HttpResponseMessage oHR = await oHC.GetAsync(cURL))
+    { 
+      using (HttpContent oCT = oHR.Content)
+      {
+        string cResult = await oCT.ReadAsStringAsync();
+        if (cResult.Length > 1000)
+          return cResult.Substring(0, 1000);
+        else
+          return cResult;
+      }
+    }
+  }
+}
+</code></pre><p>相關參考：</p><ul><li><a href=https://aspnetmonsters.com/2016/08/2016-08-27-httpclientwrong/>延伸參考：YOU'RE USING HTTPCLIENT WRONG AND IT IS DESTABILIZING YOUR SOFTWARE；HttpClient因IDisposable反而引發連線資源耗盡（TIME_WAIT）問題</a></li><li><a href=/archive2018/20181212.html>HttpClient所引爆的Sockets Port耗盡問題</a></li></ul><h6>System.Net System.Net.Http HttpClient() async await</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

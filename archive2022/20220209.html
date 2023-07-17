@@ -1,0 +1,37 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>LINQ筆記：IEnumerable(T)的排序性（排列性）</h1><p>一直以來都是把IEnumerable<t>當作是一個資料的集合去看待與操控，而這樣的撰寫假設在一般的用途下也不太會出現問題，因此並沒有去深究LINQ關於IEnumerable<t>這一塊領域的細節，直到前陣子在處理數十萬筆超大量資料的時候，發現經過認知中明確（但是繁雜）的處理數據後，怎麼統計都不對，加上LINQ的延遲執行（Deferred Execution）的特性，讓整個除錯過程非常的艱苦與漫長，最後才發現意識到這個議題。</t></t></p><h2>我們可以相信IEnumerable的排序性嗎？</h2><p>這問題更簡單的說，就是如果有某一個IEnumerable<t>的集合Ａ裡面共一百萬筆資料，我們針對Ａ進行foreach、Skip、Take等方法進行資料的汲取數萬次，那麼我們可以保證每一次拿到的資料（或是資料序列）都是相同的嗎？</t></p><p>這個議題在網路上討論的不算多，在Stackoverflow的一篇<a href=https://stackoverflow.com/questions/10409893/>IEnumerable and order</a>文章中，討論的方向指出IEnumerable<t>並無法保證資料的排序性（Ordering），但我想在這邊草率的定下一個結論，經過我撰寫實驗程式碼跑百萬筆資料的結果，我能保證在「觀念正確」的情況下使用IEnumerable<t>，你幾乎可以100%肯定剛才提出的議題並不會有錯誤，也就是說，你可以直觀的認為IEnumerable<t>的排序性是可信賴的。</t></t></t></p><p>接下來文章討論的方向必須轉向成：所謂的觀念正確是指，請確定你正在處理的是「一組資料」還是「一段查詢」？</p><h3>且慢，但有時IEnumerable好像拿出來的資料都不太一樣？</h3><p>請看下面這一個範例程式：</p><pre><code class=language-cs>class Program
+{
+  static void Main(string[] args)
+  {
+    var oList = new System.Collections.Generic.List&lt;string>();
+    //填充列舉（A0000、A0001...）
+    for (int i = 0; i &lt; 10000; i++)
+    { oList.Add($"A{i.ToString("D4")}"); }
+    
+    var oMyList = oList.Randomize();
+
+    Console.WriteLine($"取第一次：{oMyList.Skip(1234).Take(10).FirstOrDefault()}");
+    Console.WriteLine($"取第二次：{oMyList.Skip(1234).Take(10).FirstOrDefault()}");
+    Console.WriteLine($"取第三次：{oMyList.Skip(1234).Take(10).FirstOrDefault()}");
+  }
+}
+
+//這裡實作了一個擴充方法，來模擬打亂集合
+public static class ObjectExtension
+{
+  public static System.Collections.Generic.IEnumerable&lt;T> Randomize&lt;T>(this System.Collections.Generic.IEnumerable&lt;T> oTemp)
+  { return oTemp.OrderBy(x => System.Guid.NewGuid()); }
+}
+</code></pre><h2>輸出結果</h2><p>除非你「很幸運」，否則上面的程式碼運行的每次結果應該每次抽取同樣的位置，得到的結果都會不一樣：</p><pre><code class=language-txt>//程式執行第１次
+取第一次：A8559
+取第二次：A6771
+取第三次：A5033
+
+//程式執行第２次
+取第一次：A8356
+取第二次：A8875
+取第三次：A8455
+</code></pre><p>為何打亂一個集合後，跳過1234筆數→拿10筆→拿出第1筆出來看，而每次看到的都會不一樣？薛丁格貓嗎？</p><p>在這種小數量集合裡面，我們可以輕易地透過上面簡單的程式碼來還原與重現這個過程（看起來也可以很輕易地就找到問題點）。而在我之前遇到的案例裡面，該集合裡面有數十萬筆資料且已經層層疊疊複雜的運算，要發現打亂了一個集合，並在之後透過迴圈循序的汲取每一個段落的資料（例如每次拿100筆資料），要發現其實有可能在這個集合拿到「已經拿過了」的錯誤，其實非常的耗時磨人。</p><h2>因為你正在處理的是「一段查詢」</h2><p>基於LINQ的延遲執行（Deferred Execution）的特性，oMyList這行程式碼運行後，並不是一個「確切已知」的集合而是一段「查詢指令」，所以每次一進行FirstOrDefault()這種實值型態的結果返回時，他都會「重新做一次查詢」，也就是每次都重新做一次打亂集合，當然每次查詢就會不一樣了。要修正這個問題也很簡單，只要簡單的將其實值化，把結果先執行起來存放就好。</p><pre><code class=language-cs>var oMyList = oList.Randomize().ToList();
+</code></pre><h2>何時執行Deferred Execution</h2><p>這裡摘錄Stackoverflow的一篇<a href=https://stackoverflow.com/questions/3894490/>Linq - What is the quickest way to find out deferred execution or not?</a>貼文，來作為結論。</p><pre><code class=language-txt>So, methods like Where, Select, Take, Skip, GroupBy and OrderBy use deferred execution because they can, while methods like First, Single, ToList and ToArray don't because they can't.
+
+There are also two types of deferred execution. For example the Select method will only get one item at a time when it's asked to produce an item, while the OrderBy method will have to consume the entire source when asked to return the first item. So, if you chain an OrderBy after a Select, the execution will be deferred until you get the first item, but then the OrderBy will ask the Select for all the items.
+</code></pre><p>謹以此文獻給我失去的一小時，也希望有幫助到正在看此文章的你。</p><h6>LINQ IEnumerable(T) Order Ordering OrderBy Sort Sorted Sequence DeferredExecution LazyLoad</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

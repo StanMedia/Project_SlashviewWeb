@@ -1,0 +1,52 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>C# System.ValueTuple使用大全</h1><p>在C# 7.0版本之前，一直在使用的是System.Tuple的語法，大都用來進行方法的多值回傳用途，雖然比ref或out好用很多，但是一直在那邊識別Item1、Item2屬性名稱，還是免不了心裡犯嘀咕，事實上這種寫法過不了半年當程式碼出問題再回來看的時候，程式碼的可讀性可理解性一定非常差。C# 7.0版本之後出現了System.ValueTuple（元組類型），印象中當時看到C#預覽版資訊時簡直驚為天人，屬性名稱不僅好識別、效能也比System.Tuple高（ClassType VS Structure），當下微軟也還沒有把System.ValueTuple納入.NET Framework之中，需要自己從nuget幹過來，後來到.NET Framework 4.7 正式發行才發現已內建。</p><p>在這麼多年後再度回來寫這篇ValueTuple的文章，實因每次在不同需求的場合要用一些ValueTuple的花式寫法，都要再三回憶很浪費時間，故筆記在此供給日後參考。</p><p>Ａ：使用建構子產生</p><pre><code class=language-cs>var oVP1 = new System.ValueTuple&lt;int, string>(1, "John");
+//《輸出》1|John
+WriteLine($"{oVP1.Item1}|{oVP1.Item2}");
+</code></pre><p>Ｂ：使用Create()靜態方法產生</p><pre><code class=language-cs>var oVP2 = System.ValueTuple.Create(2, "John");
+//《輸出》2|John
+WriteLine($"{oVP2.Item1}|{oVP2.Item2}");
+</code></pre><p>Ｃ：使用Target Typed New Expressions方式產生（限定C# 9.0之後）</p><pre><code class=language-cs>System.ValueTuple&lt;int, string> oVP3 = new() { Item1 = 3, Item2 = "John" };
+//《輸出》3|John
+WriteLine($"{oVP3.Item1}|{oVP3.Item2}");
+</code></pre><p>Ｄ：元組類型正式寫法（這裡開始可以看到C#友善語法糖，可以自定義屬性名稱，但其實底層還是Item1, Item2...）</p><pre><code class=language-cs>var oVP4 = (iNumber: 4, cName: "John");
+//《輸出》4|John
+WriteLine($"{oVP4.iNumber}|{oVP4.cName}");
+</code></pre><p>Ｅ：元組類型正式寫法（在前方預定義型別與屬性名稱）</p><pre><code class=language-cs> (int iNumber, string cName) oVP5 = (5, "John");
+//《輸出》5|John
+WriteLine($"{oVP5.iNumber}|{oVP5.cName}");
+</code></pre><p>Ｆ：跟method之間的拋轉寫法</p><pre><code class=language-cs>var oVP6 = myFun1(6, "John");
+//《輸出》6|John
+WriteLine($"{oVP6.iNumber}|{oVP6.cName}");
+
+public static (int iNumber, string cName) myFun1(int iNumber, string cName)
+{ return (iNumber, cName); }
+</code></pre><p>Ｇ：跟method之間的拋轉寫法（更複雜一些）</p><pre><code class=language-cs>var oVP7 = (iNumber: -1, cName: string.Empty);
+try
+{
+  oVP7 = myFun2();
+  //《輸出》錯誤前：7|Success
+  WriteLine($"錯誤前：{oVP7.iNumber}|{oVP7.cName}");
+  throw new System.Exception("Error");
+}
+catch (Exception oEx)
+{
+  oVP7 = (8, oEx.Message);
+  //《輸出》拋錯後：8|Error
+  WriteLine($"拋錯後：{oVP7.iNumber}|{oVP7.cName}");
+}
+
+public static (int, string) myFun2()
+{ return (7, "Success"); }
+</code></pre><p>Ｈ：基於上例oVP7最終狀態，將其套用到SwitchExpression進行模式比對的寫法</p><pre><code class=language-cs>Write("ValueTuple模式比對 >> ");
+WriteLine(oVP7 switch {
+  (7, _) => $"正常：{oVP7.cName}",
+  (8, _) => $"出錯：{oVP7.iNumber}|{oVP7.cName}",
+  (_, _) => "未定義",
+});
+//《輸出》ValueTuple模式比對 >> 出錯：8|Error
+</code></pre><p>Ｉ：將ValueTuple進行序列化後的結果，可以發現友善的屬性名稱被打回原形（Item1, Item2...），所以不太適合被直接丟到WebAPI之類的回傳值。</p><pre><code class=language-cs>WriteLine(Newtonsoft.Json.JsonConvert.SerializeObject(oVP7));
+//《輸出》{"Item1":8,"Item2":"Error"}
+</code></pre><p>Ｊ：反序列化回將ValueTuple的結果也是可行的，但是一般來說不太可能這樣實作，畢竟不太可能傳入的屬性名稱叫做Item1, Item2...。</p><pre><code class=language-cs>(int iNumber, string cName) oVP8;
+oVP8 = Newtonsoft.Json.JsonConvert.DeserializeObject&lt;(int, string)>("{\"Item1\": 9, \"Item2\":\"Deserialize\"}");
+WriteLine($"反序列化：{oVP8.iNumber}|{oVP8.cName}");
+//《輸出》反序列化：9|Deserialize
+</code></pre><h3>相關參考</h3><ul><li><a href=/archive2018/20181225.html>C# out與ref的回憶</a></li><li><a href=/archive2022/20221023.html>System.ValueTuple使用大全</a></li><li><a href=/archive2018/20180508.html>System.Collections的快速賦值方式</a></li></ul><h6>System.ValueTuple System.Tuple CSharp Syntax Declare 語法 寫法</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

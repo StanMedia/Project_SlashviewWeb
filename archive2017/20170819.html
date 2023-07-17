@@ -1,0 +1,17 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>Windows 10安裝到錯誤的ISO檔案（零售版、大量授權版），如何強制切換？</h1><p>在Windows 10時代，官方的ISO已經可以輕易製作，且網路也可唾手而得，因此有許多人可能會拿到錯誤的ISO，好不容易安裝完成後，才發現自己根本裝錯ISO檔案。</p><p>舉個例子來說，在一個大量授權的環境中，卻裝到一個零售版本的ISO，導致KMS無法啟動驗證程序。亦或者在一台市售的組裝電腦中，裝到大量授權版的ISO，導致於你要輸入零售版的序號會驗證失敗。若你有下列的困擾的話，拜託，不需要再浪費時間重新下載正確的ISO檔案與重新安裝，只要改一下序號就好了。</p><p>在應該使用大量授權的環境，但不小心裝到零售版本，會出現類似下列的訊息：</p><p>Windows KMS認證失敗，在執行 Microsoft Windows(非核心)版本的電腦上，執行'slui.exe 0x2a 0x803F7001'以顯示錯誤文字。錯誤: 0x803F7001</p><h2>如何知道自己現在安裝到哪種Windows版本的ISO檔案</h2><p>請在cmd中輸入下列指令：</p><pre><code class=language-txt>slmgr /dlv
+</code></pre><p>應該會出現如下的圖示，請見紅色框框處：</p><p><img src=https://content.slashview.com/img/2017/20170819_01.jpg alt="" /></p><p>紅色框框中可能的字眼與代表的意義：</p><pre><code class=language-txt>Retail：零售版
+OEM：製造商版（不太可能會遇到，因為其產品金鑰已經放入UEFI中）
+Volume：大量授權版（公司行號或學校用量最多）
+</code></pre><h2>Windows 10在大量授權版本與零售版本之間的切換序號</h2><p>當你身處大量授權環境中，卻不小心安裝到零售版的ISO檔案，進而造成KMS無法認證，請服用下列序號進行轉換：</p><pre><code class=language-txt>Windows 10 Professional         W269N-WFGWX-YVC9B-4J6C9-T83GX
+Windows 10 Professional N       MH37W-N47XK-V7XM9-C7227-GCQG9
+Windows 10 Enterprise           NPPR9-FWDCX-D2C8J-H872K-2YT43
+Windows 10 Enterprise N         DPH2V-TTNVB-4X9Q3-TJR4H-KHJW4
+Windows 10 Education            NW6C2-QMPVW-D7KKK-3GKT6-VCFB2
+Windows 10 Education N          2WH4N-8QGBV-H22JP-CT43Q-MDWWJ
+Windows 10 Enterprise 2015 LTSB WNMTR-4C88C-JK8YV-HQ7T2-76DF9
+Windows 10 Enterprise 2015 LTSB 2F77B-TNFGY-69QQF-B8YKP-D69TJ
+</code></pre><p>當你身處零售版環境中，卻不小心安裝到大量授權版的ISO檔案，進而造成Windows永遠無法啟用，請服用下列序號進行轉換：</p><pre><code class=language-txt>Generic Windows 10 Home                 TX9XD-98N7V-6WMQ6-BX7FG-H8Q99
+Generic Windows 10 Home Single Language 7HNRX-D7KGG-3K4RQ-4WPJ4-YTDFH
+Generic WIndows 10 Pro                  VK7JG-NPHTM-C97JM-9MPGT-3V66T
+Generic Windows 10 Enterprise           NPPR9-FWDCX-D2C8J-H872K-2YT43
+</code></pre><h3>附註</h3><ol><li>若您要進行Windows Vista、Windows 7、Windows 8、Windows 8.1, Windows Server 2008, Windows Server 2008 R2, Windows Server 2012, Windows Server 2012 R2等版本的作業系統之大量授權轉換，請參考相關連結：<a href="https://technet.microsoft.com/zh-tw/library/jj612867.aspx?f=255%C2%A0MSPPError=-2147217396">微軟官網KMS用戶端安裝識別碼</a></li><li>在20211014於Windows 11環境中實測，這些切換授權版本的金鑰在Windows 11正式版仍然是有用的。</li></ol><h6>Windows10 Windows11 WindowsLicenseType WindowsLicenseConvert RetailChannel OEMChannel VolumeChannel ProductKey</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

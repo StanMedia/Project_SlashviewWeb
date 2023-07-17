@@ -1,0 +1,18 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>ASP.NET Response.Redirect時期的Session Cookies的傳遞問題</h1><p>最近實作Web API方面的系統，與第三方金流在那邊Callback來Redirect去的，發現有一個自己從來沒有意識到的問題產生，那就是在那邊HTTP GET來去之間，自己的網站本來已經LOGIN的權限突然不見了，仔細一查才發現是Session消失。</p><h2>為何Response.Redirect會引發Session的消失？</h2><p>這個有WEB實務經驗的人應該可以馬上秒答，答案只有兩點：</p><ol><li>使用者瀏覽器對於第三方Cookie的鎖定，你本來原生頁面的Cookie根本帶不過去到外部網頁。</li><li>就算第三方Cookie被開啟，或是你實作有如天書般的P3P規範（Platform for Privacy Preferences），人家對方的API最後Callback的時期也未必會把你打過去的東西再打回來給你。（不會鳥你的機率幾乎近於１００％！）</li></ol><h2>如何在Response.Redirect後繼續保留Cookie？</h2><p>這個問題或許表達得不太好，題目應該改成：如何在別人透過HTTP GET調用你網站的頁面當下，把你的Session找回來？</p><p>這個做法可能每個人都有不同的想法與方式，我的作法是想辦法把自己的SessionID以時間性加密的方式放入到對方回呼給我的QueryString Parameter中，我的頁面收到後自己驗證無誤，再進行Response.Redirect時期賦予Cookie，使Session重生。</p><h2>Response.Redirect要如何賦予Cookie？</h2><p>這也是一個自己從來沒有遇過的問題，我們都知道Response.Redirect會拋出一個HTTP 302 Moved Temporarily暫時性轉址的要求，然後瀏覽器會試著去Http Header裡面翻找一個叫做Location的屬性，進而自己去HTTP GET該網址。我去翻閱一些文件後發現早期的瀏覽器就真的只有實作到這樣子，因此你有外帶一些Cookie的資訊他一律丟棄。所幸晚期的瀏覽器已經沒有這些問題了，因此大致上可以放心地使用。程式碼大致上長的如下：</p><pre><code class=language-cs>//這裡展示的是類別端的寫法，ASPX的寫法請自行轉換
+System.Web.HttpContext.Current.Response.Cookies["YourAspNetSessionKey"].Value = "YourSessionSerialsNumber";
+//如果有些人想要律定Cookie的過期（Expires）時間，也可以寫在這裡
+System.Web.HttpContext.Current.Response.Redirect("YourNewUrl", false);
+System.Web.HttpContext.Current.ApplicationInstance.CompleteRequest();
+</code></pre><p>※ 要特別注意的是，有某些瀏覽器版本並不會鳥你的cookie直接幫你跳轉過去另外一頁，另外一種情況就是localhost不會鳥你，其他的情況（127.0.0.1、OtherDomainName...）才會幫你帶cookie轉過去。</p><h2>有趣的補充：Response.Redirect放棄GET改用POST</h2><p>網路上總會有許多人給予不一樣的思路，例如是否能夠讓Response.Redirect改走POST。答案當然是不可能，但你可以自己實作一個概念的架構，例如下列的程式碼來造成FormPost，也是很美妙啊！</p><pre><code class=language-cs>...
+StringBuilder sb = new StringBuilder();
+sb.Append("&lt;html>");
+sb.AppendFormat(@"&lt;body onload='document.forms[""form""].submit()'>");
+sb.AppendFormat("&lt;form name='form' action='{0}' method='post'>",postbackUrl);
+sb.AppendFormat("&lt;input type='hidden' name='id' value='{0}'>", id);
+// Other params go here
+sb.Append("&lt;/form>");
+sb.Append("&lt;/body>");
+sb.Append("&lt;/html>");
+Response.Write(sb.ToString());
+...
+</code></pre><h3>相關連結：</h3><p><a href=/archive2013/20131117.html>使用Response.Redirect會跳出ThreadAbortException，請點選這裡看說明。</a></p><h6>ASP.NET Response.Redirect HttpGET Cookie Dismiss Remove Gone Hidden Session GetSession SetSession</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

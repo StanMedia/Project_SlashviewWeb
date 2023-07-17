@@ -1,0 +1,63 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>ExecuteScalar拿不到Update後的影響筆數？ExecuteNonQuery與ExecuteScalar的使用探討</h1><p>是否有發生過ExecuteScalar()拿不到Insert、Delete、Update之影響筆數的困擾？那為何可以拿到Select的回傳值？ExecuteNonQuery為何明明是NonQuery卻拿的到Insert、Delete、Update執行後的影響筆數？ 這篇文章逐一的來實驗一下，ExecuteNonQuery與ExecuteScalar那些指令下可以拿到回傳值，而哪些又不行。</p><p><img src=https://content.slashview.com/img/2017/20170512_01.jpg alt="" /></p><h2>先建立基本心法，以免被下面的實驗搞混亂了</h2><p>ExecuteNonQuery();<br /> 專門用來執行非查詢式的SQL語法，所以NonQuery的意思即是指用於「非查詢」的語法，也就是INSERT、UPDATE與DELETE。</p><p>ExecuteScalar();<br /> 最方便用來查詢回傳單一值的語法，例如：SELECT count(*)。</p><h2>實驗環境程式碼</h2><ol><li>資料庫名稱：TEST</li><li>欄位一：iAutoIndex int 自動增量索引</li><li>欄位二：cName NVarChar(50)</li></ol><p>以下這邊把ADO.NET的經典SQL語法框架列出，讓想要自己實驗的人可以方便的複製貼上。</p><pre><code class=language-cs>using (System.Data.SqlClient.SqlConnection oConn = new System.Data.SqlClient.SqlConnection("YourDB"))
+{
+  using (System.Data.SqlClient.SqlCommand oCmd = new System.Data.SqlClient.SqlCommand())
+  {
+    oCmd.Connection = oConn;
+    oConn.Open();
+    oCmd.CommandText = "";
+    oCmd.Parameters.Add("@iAutoIndex", System.Data.SqlDbType.Int).Value = 1;
+    oCmd.Parameters.Add("@cName", System.Data.SqlDbType.NVarChar, 50).Value = "";
+    
+    object oTemp = oCmd.ExecuteScalar();
+    int iTemp = System.Convert.ToInt32(oTemp);
+
+    //可以縮寫成下方程式碼，比較精簡
+    //int iTemp = System.Convert.ToInt32(oCmd.ExecuteNonQuery());
+    //int iTemp = System.Convert.ToInt32(oCmd.ExecuteScalar());
+  }
+}
+</code></pre><h2>實驗：SQL Insert</h2><pre><code class=language-sql>INSERT INTO TEST (cName) VALUES (@cName)
+</code></pre><pre><code class=language-cs>//很OK，回傳插入筆數
+int iTemp = System.Convert.ToInt32(oCmd.ExecuteNonQuery());
+</code></pre><pre><code class=language-cs>//不OK。回傳型別恆等於null
+int iTemp = System.Convert.ToInt32(oCmd.ExecuteScalar());
+</code></pre><p>這邊要特別提醒一下，oCmd.ExecuteScalar()沒有回傳值的時候，是回傳「null」而不是「System.DBNull」，千萬不要拿DBNull去判斷，不然就中坑了。而null經過System.Convert.ToInt32轉換後恆為「0」。</p><h3>實驗：SQL Insert（插入後馬上取回Index、IDENTITY）</h3><pre><code class=language-sql>INSERT INTO TEST (cName) VALUES (@cName); SELECT SCOPE_IDENTITY();
+</code></pre><pre><code class=language-cs>//不OK。依然取到插入筆數
+int iTemp = System.Convert.ToInt32(oCmd.ExecuteNonQuery());
+</code></pre><pre><code class=language-cs>//很OK。取得到最後的索引值編號
+int iTemp = System.Convert.ToInt32(oCmd.ExecuteScalar());
+</code></pre><h2>實驗：SQL Delete</h2><pre><code class=language-sql>DELETE FROM TEST WHERE iAutoIndex in (3, 4, 5)
+</code></pre><pre><code class=language-cs>//很OK，回傳刪除筆數
+int iTemp = System.Convert.ToInt32(oCmd.ExecuteNonQuery());
+</code></pre><pre><code class=language-cs>//不OK。回傳型別恆等於null
+int iTemp = System.Convert.ToInt32(oCmd.ExecuteScalar());
+</code></pre><h2>實驗：SQL Update</h2><pre><code class=language-sql>Update TEST SET cName=@cName WHERE iAutoIndex in (9, 10)
+</code></pre><pre><code class=language-cs>//很OK，回傳更新筆數
+int iTemp = System.Convert.ToInt32(oCmd.ExecuteNonQuery());
+</code></pre><pre><code class=language-cs>//不OK。回傳型別恆等於null
+int iTemp = System.Convert.ToInt32(oCmd.ExecuteScalar());
+</code></pre><h2>實驗：SQL Select</h2><pre><code class=language-sql>Select * From TEST WHERE iAutoIndex in (9, 10)
+</code></pre><pre><code class=language-cs>//不OK。回傳值永遠恆等於「-1」
+int iTemp = System.Convert.ToInt32(oCmd.ExecuteNonQuery());
+</code></pre><pre><code class=language-cs>//很OK，回傳第一列（First Row）第一欄（First Column）的資料
+int iTemp = System.Convert.ToInt32(oCmd.ExecuteScalar());
+</code></pre><p>之前實驗中無往不利的ExecuteNonQuery()，終於在SELECT指令中敗陣下來，簡單的記憶方法就是，不要把NonQuery的指令拿去Query（SELECT），這樣在有時頭腦寫CODE寫到混亂時，這個口訣還蠻好用的。</p><p>註：ExecuteScalar中的Scalar代表的意思就是「數量、純量」的意思。</p><h2>實驗：SQL Select（使用聚合函數count();）</h2><pre><code class=language-sql>Select count(*) From TEST WHERE iAutoIndex in (9, 10)
+</code></pre><pre><code class=language-cs>//不OK。回傳值永遠恆等於「-1」
+int iTemp = System.Convert.ToInt32(oCmd.ExecuteNonQuery());
+</code></pre><pre><code class=language-cs>//很OK，回傳count找到的加總筆數
+int iTemp = System.Convert.ToInt32(oCmd.ExecuteScalar());
+</code></pre><p>使用聚合函數方式的SELECT自然是一樣的結果了。</p><h2>使用SQL OUTPUT子句，讓ExecuteScalar()也有能力拿到資料</h2><p>如果在某些應用場合，限定只能使用用ExecuteScalar()來執行，那麼如果資料庫是Microsoft SQL SERVER 2005（含以上）的版本的話，是可以使用<a href=https://msdn.microsoft.com/zh-tw/library/ms177564.aspx>OUTPUT 子句 (Transact-SQL)</a>（OUTPUT Clause），來讓ExecuteScalar();也能讓拿到INSERT、DELETE、UPDATE的返回資料，具體的使用方式如下：</p><h2>實驗：SQL OUTPUT for Insert</h2><pre><code class=language-sql>INSERT INTO TEST (cName) OUTPUT INSERTED.cName VALUES (@cName)
+</code></pre><pre><code class=language-cs>//很OK，回傳插入的cName字串值
+string cTemp = System.Convert.ToString(oCmd.ExecuteScalar());
+</code></pre><p>不知道大家看到這邊是否有發現，若不想使用SELECT SCOPE_IDENTITY();來取回當下資料庫賦予的自動索引值的話，其實可以使用「INSERTED.iAutoIndex」這個方式去拿也可以喔！</p><h2>實驗：SQL OUTPUT for Update</h2><pre><code class=language-sql>UPDATE TEST SET cName=@cName OUTPUT INSERTED.iAutoIndex WHERE iAutoIndex in (13, 14)
+</code></pre><pre><code class=language-cs>//很OK，回傳插入的第一列（First Row）的iAutoIndex欄的資料，也就是「13」
+int iTemp = System.Convert.ToInt32(oCmd.ExecuteScalar());
+</code></pre><h2>實驗：SQL OUTPUT for Delete</h2><pre><code class=language-sql>DELETE FROM TEST OUTPUT DELETED.iAutoIndex WHERE iAutoIndex in (13, 14)
+</code></pre><pre><code class=language-cs>//很OK，回傳刪除的第一列（First Row）的iAutoIndex欄的資料，也就是「13」
+int iTemp = System.Convert.ToInt32(oCmd.ExecuteScalar());
+</code></pre><h2>如何把SQL OUTPUT子句的資料列舉取出</h2><p>要知道，OUTPUT子句所回傳的資料可不是單一行單一欄位而已，如果真的有需要把所有的資料跑一次取出來，那麼ExecuteReader();會是你的好朋友。以下是簡單的程式範例：</p><pre><code class=language-cs>var oReader = oCmd.ExecuteReader();
+while(oReader.Read()) 
+{
+  cTemp += oReader.GetValue(0).ToString();
+}
+</code></pre><p>以上是ExecuteNonQuery與ExecuteScalar的使用實驗過程，另外也介紹了SQL OUTPUT子句的使用方式，希望對大家有所理解與幫助。</p><h6>ExecuteNonQuery() ExecuteScalar() ExecuteReader() SCOPE_IDENTITY() OutputClause ExecuteScalar INSERTED DELETED</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

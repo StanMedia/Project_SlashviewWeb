@@ -1,0 +1,14 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>SQL筆記：查詢交易紀錄檔使用的空間、比例並進行排序</h1><p>但凡使用資料庫而沒有做好週期性備份工作者，一定會遇到交易紀錄爆炸的問題，這篇文章要教大家利用DBCC SQLPERF(LOGSPACE)指令把交易紀錄檔相關資訊找出來並排序，以利各位進行後續的防範未然之操作啦！</p><h2>交易紀錄檔使用的空間、比例並進行排序</h2><p>完整的T-SQL如下：</p><pre><code class=language-sql>--不回傳影響筆數
+SET NOCOUNT ON
+--宣告暫存表
+DECLARE @交易紀錄統計表 TABLE (cName nvarchar(128), fSizeMB float, fUsedPercent float, iStatus int)
+--執行DBCC查詢並插入暫存表
+INSERT INTO @交易紀錄統計表 EXECUTE ('DBCC SQLPERF(LOGSPACE)')
+-- 依據交易記錄檔的大小，由高到低的進行排序
+SELECT
+  cName, fSizeMB, fUsedPercent
+FROM
+  @交易紀錄統計表
+ORDER BY
+  fUsedPercent DESC
+</code></pre><p>執行結果請參考下圖，不僅宣告的暫存資料表會在指令執行完畢後自行刪除，我們希望的交易紀錄檔排序也如實的顯示了，下圖範例中排名前三的資料桶（Catalog）很顯然地已經快爆炸了！</p><p><img src=https://content.slashview.com/img/2021/20211124_01.jpg alt="" /></p><p>不過就算是到達99%也不能代表有立即的危險，因為異動紀錄檔是可以自動動態擴增的，只要是磁碟空間夠多半可以一直增量下去（例如10%），只是，增加後就很難收回來了。</p><h3>相關參考</h3><p><a href=/archive2016/20160607.html>SQL筆記：資料庫交易紀錄的備份、壓縮與刪除</a></p><h6>SQL TransactionLog Select SelectAsTable Rename GetCatalogName Sort ASC DESC</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

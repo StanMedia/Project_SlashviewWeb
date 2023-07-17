@@ -1,0 +1,9 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>調整Linux GRUB開機選單的倒數秒數</h1><p>CentOS Linux GRUB（GRand Unified Bootloader）開機引導程式的選單倒數秒數預設為5秒，如果不想浪費這5秒的話是可以將其歸零的，請跟著下列步驟就可完成。</p><p>Step 1. vi /etc/default/grub</p><p>Step 2. 找到「GRUB_TIMEOUT=5」，將其改為「GRUB_TIMEOUT=0」後存檔。</p><p>Step 3. 設定好後，記得去Make一下GRUB2 config檔案。</p><pre><code class=language-txt>grub2-mkconfig -o /boot/grub2/grub.cfg
+-----
+Generating grub configuration file ...
+Found linux image: /boot/vmlinuz-3.10.0-957.el7.x86_64
+Found initrd image: /boot/initramfs-3.10.0-957.el7.x86_64.img
+Found linux image: /boot/vmlinuz-0-rescue-08a8ec5b8f9743eebf7bbddc1f2968b1
+Found initrd image: /boot/initramfs-0-rescue-08a8ec5b8f9743eebf7bbddc1f2968b1.img
+done
+</code></pre><p>Step 4. 重開機就知道效果。</p><h6>Linux CentOS GRUB GRUB2 Menu Timeout 5 Seconds Change Modify</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

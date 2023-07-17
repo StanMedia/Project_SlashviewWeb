@@ -1,0 +1,398 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>SQL筆記：關於子查詢（SubQuery）的語法整理</h1><p>沒甚麼營養，單純地把SQL子查詢常用的一些語法，透過案例來實作一番，供給有需要的人查閱。案例中所有的資料都是以能快速明白的瞭解為目的，請不要太在意正規化議題，真實的用途上資料表會切割得更細，不可能像案例如此粗糙。</p><h2>當前持有的資料表</h2><ol><li>TABLE_員工：描述員工的相關細節</li></ol><pre><code class=language-txt>員工編號  員工姓名  員工性別
+－－－－  －－－－  －－－－
+E001  王小明  男
+E002  李小華  男
+E003  孫小美  女
+E004  陳小玲  女
+</code></pre><ol start=2><li>TABLE_產品：描述產品的相關細節</li></ol><pre><code class=language-txt>產品編號  產品分類  產品名稱  產品價格
+－－－－  －－－－  －－－－  －－－－
+P001  CPU  i3處理器  3000
+P002  CPU  i5處理器  5000
+P003  CPU  i7處理器  7000
+P004  SSD  128GB  2000
+P005  SSD  256GB  4000
+P006  Screen  22吋顯示器  5000
+P007  Screen  28吋顯示器  8000
+</code></pre><ol start=3><li>TABLE_銷售：描述銷售的相關細節（沒什麼營養不必太較真細節）</li></ol><pre><code class=language-txt>iAutoIndex  銷售年分  銷售產品編號  銷售員工編號
+－－－－－  －－－－  －－－－－－  －－－－－－
+1  2019  P001  E001
+2  2019  P003  E001
+...
+9  2020  P002  E001
+10  2020  P004  E001
+...
+17  2021  P001  E001
+18  2021  P003  E001
+...
+25  2022  P002  E001
+26  2022  P004  E001
+...
+</code></pre><h2>總銷售表：進行JOIN</h2><p>假設我們要做出一個總表來檢視每一年度、每一個人員、銷售每一樣產品的細節，通常我們會採用存成檢視表的方便後續應用，這邊先把SQL列出如下（為了方便示範故不討論NULL的議題，因此一律採用INNER JOIN）：</p><p><img src=https://content.slashview.com/img/2022/20221109_01.jpg alt="" /></p><pre><code class=language-sql>SELECT 
+  dbo.TABLE_銷售.銷售年分, 
+  dbo.TABLE_產品.產品分類, 
+  dbo.TABLE_產品.產品名稱, 
+  dbo.TABLE_產品.產品價格, 
+  dbo.TABLE_員工.員工姓名, 
+  dbo.TABLE_員工.員工性別 
+FROM 
+  dbo.TABLE_銷售 
+  INNER JOIN dbo.TABLE_產品 ON dbo.TABLE_銷售.銷售產品編號 = dbo.TABLE_產品.產品編號 
+  INNER JOIN dbo.TABLE_員工 ON dbo.TABLE_銷售.銷售員工編號 = dbo.TABLE_員工.員工編號
+</code></pre><h2>年度產品銷售分析</h2><p>假設我們要列舉出每一年的銷售額度，我們可以依據銷售總表的語法再繼續寫出下列語句，其中的SELECT FROM another SELECT語法，我們稱為相關子查詢（Correlated SubQuery）：</p><pre><code class=language-sql>SELECT 
+  銷售總表.銷售年分, 
+  SUM(產品價格) AS 年度銷售金額 
+FROM 
+  (
+    SELECT 
+      dbo.TABLE_銷售.銷售年分, 
+      dbo.TABLE_產品.產品分類, 
+      dbo.TABLE_產品.產品名稱, 
+      dbo.TABLE_產品.產品價格, 
+      dbo.TABLE_員工.員工姓名, 
+      dbo.TABLE_員工.員工性別 
+    FROM 
+      dbo.TABLE_銷售 
+      INNER JOIN dbo.TABLE_產品 ON dbo.TABLE_銷售.銷售產品編號 = dbo.TABLE_產品.產品編號 
+      INNER JOIN dbo.TABLE_員工 ON dbo.TABLE_銷售.銷售員工編號 = dbo.TABLE_員工.員工編號
+  ) AS 銷售總表 
+GROUP BY
+  銷售總表.銷售年分
+</code></pre><p>執行後會得到下列結果：</p><pre><code class=language-txt>銷售年分  年度銷售金額
+－－－－  －－－－－－
+2019  52000
+2020  39000
+2021  49000
+2022  55000
+</code></pre><p>⭐想要看更詳細的「年度／產品」銷售額度也是更改一下GROUP BY的問題而已：</p><pre><code class=language-sql>SELECT 
+  銷售總表.銷售年分,
+  銷售總表.產品分類,
+  SUM(產品價格) AS 年度銷售金額 
+FROM 
+  (
+    SELECT 
+      dbo.TABLE_銷售.銷售年分, 
+      dbo.TABLE_產品.產品分類, 
+      dbo.TABLE_產品.產品名稱, 
+      dbo.TABLE_產品.產品價格, 
+      dbo.TABLE_員工.員工姓名, 
+      dbo.TABLE_員工.員工性別 
+    FROM 
+      dbo.TABLE_銷售 
+      INNER JOIN dbo.TABLE_產品 ON dbo.TABLE_銷售.銷售產品編號 = dbo.TABLE_產品.產品編號 
+      INNER JOIN dbo.TABLE_員工 ON dbo.TABLE_銷售.銷售員工編號 = dbo.TABLE_員工.員工編號
+  ) AS 銷售總表 
+GROUP BY
+  銷售總表.銷售年分,
+  銷售總表.產品分類
+ORDER BY
+  銷售總表.銷售年分,
+  銷售總表.產品分類
+</code></pre><p>執行後會得到下列結果：</p><pre><code class=language-txt>銷售年分  產品分類  年度銷售金額
+－－－－  －－－－  －－－－－－
+2019  CPU  33000
+2019  Screen  13000
+2019  SSD  6000
+2020  CPU  20000
+2020  Screen  13000
+2020  SSD  6000
+2021  CPU  25000
+2021  Screen  18000
+2021  SSD  6000
+2022  CPU  20000
+2022  Screen  29000
+2022  SSD  6000
+</code></pre><p>⭐想要看更詳細的「年度／業務人員」銷售額度也是更改一下GROUP BY的問題而已：</p><pre><code class=language-sql>SELECT 
+  銷售總表.銷售年分,
+  銷售總表.員工姓名,
+  SUM(產品價格) AS 年度銷售金額
+FROM 
+  (
+    SELECT 
+      dbo.TABLE_銷售.銷售年分, 
+      dbo.TABLE_產品.產品分類, 
+      dbo.TABLE_產品.產品名稱, 
+      dbo.TABLE_產品.產品價格, 
+      dbo.TABLE_員工.員工姓名, 
+      dbo.TABLE_員工.員工性別 
+    FROM 
+      dbo.TABLE_銷售 
+      INNER JOIN dbo.TABLE_產品 ON dbo.TABLE_銷售.銷售產品編號 = dbo.TABLE_產品.產品編號 
+      INNER JOIN dbo.TABLE_員工 ON dbo.TABLE_銷售.銷售員工編號 = dbo.TABLE_員工.員工編號
+  ) AS 銷售總表 
+GROUP BY
+  銷售總表.銷售年分,
+  銷售總表.員工姓名
+ORDER BY
+  銷售總表.銷售年分,
+  銷售總表.員工姓名
+</code></pre><p>執行後會得到下列結果：</p><pre><code class=language-txt>銷售年分  員工姓名  年度銷售金額
+－－－－  －－－－  －－－－－－
+2019  王小明  20000
+2019  李小華  12000
+2019  孫小美  12000
+2019  陳小玲   8000
+2020  王小明   7000
+2020  李小華   8000
+2020  孫小美  11000
+2020  陳小玲  13000
+2021  王小明  10000
+2021  李小華  12000
+2021  孫小美  14000
+2021  陳小玲  13000
+2022  王小明   7000
+2022  李小華   8000
+2022  孫小美  19000
+2022  陳小玲  21000
+</code></pre><h2>年度銷售人員貢獻度</h2><p>講到錢就傷感情，通常會接著想要看每一年的每一位銷售人員，哪一個人對於該年度的銷售績效貢獻度最高，在這個需求下，我們會需要先統計出「當年度的總銷售金額」才能計算百分比，現在是時候引入子查詢（Sub Query）的觀念了：</p><pre><code class=language-sql>SELECT 
+  銷售總表.銷售年分, 
+  銷售總表.員工姓名, 
+  SUM(產品價格) AS 年度銷售金額, 
+  (
+    SELECT 
+      SUM(產品價格)
+    FROM 
+      (
+        SELECT 
+          dbo.TABLE_銷售.銷售年分, 
+          dbo.TABLE_產品.產品價格 
+        FROM 
+          dbo.TABLE_銷售 
+          INNER JOIN dbo.TABLE_產品 ON dbo.TABLE_銷售.銷售產品編號 = dbo.TABLE_產品.產品編號 
+          INNER JOIN dbo.TABLE_員工 ON dbo.TABLE_銷售.銷售員工編號 = dbo.TABLE_員工.員工編號
+      ) AS 銷售價格表 
+    WHERE 
+      銷售價格表.銷售年分 = 銷售總表.銷售年分
+  ) AS 該年銷售總金額
+FROM 
+  (
+    SELECT 
+      dbo.TABLE_銷售.銷售年分, 
+      dbo.TABLE_產品.產品分類, 
+      dbo.TABLE_產品.產品名稱, 
+      dbo.TABLE_產品.產品價格, 
+      dbo.TABLE_員工.員工姓名, 
+      dbo.TABLE_員工.員工性別 
+    FROM 
+      dbo.TABLE_銷售 
+      INNER JOIN dbo.TABLE_產品 ON dbo.TABLE_銷售.銷售產品編號 = dbo.TABLE_產品.產品編號 
+      INNER JOIN dbo.TABLE_員工 ON dbo.TABLE_銷售.銷售員工編號 = dbo.TABLE_員工.員工編號
+  ) AS 銷售總表 
+GROUP BY 
+  銷售總表.銷售年分, 
+  銷售總表.員工姓名 
+ORDER BY 
+  銷售總表.銷售年分, 
+  銷售總表.員工姓名
+</code></pre><p>看到這邊應該可以看到SQL指令已經越來越瘋狂了，子查詢語法的重點在SELECT處的那一行「銷售價格表.銷售年分 = 銷售總表.銷售年分」，也就是可憐的SQL求出結果後，還要依據當下的給予的「銷售總表.銷售年分」，一筆一筆地透過子查詢去對應「銷售價格表.銷售年分」查詢出結果，最後再整併最終結果拋出。</p><pre><code class=language-txt>銷售年分  員工姓名  年度銷售金額  該年銷售總金額
+－－－－  －－－－  －－－－－－  －－－－－－
+2019  王小明  20000  52000
+2019  李小華  12000  52000
+2019  孫小美  12000  52000
+2019  陳小玲   8000  52000
+2020  王小明   7000  39000
+2020  李小華   8000  39000
+2020  孫小美  11000  39000
+2020  陳小玲  13000  39000
+2021  王小明  10000  49000
+2021  李小華  12000  49000
+2021  孫小美  14000  49000
+2021  陳小玲  13000  49000
+2022  王小明   7000  55000
+2022  李小華   8000  55000
+2022  孫小美  19000  55000
+2022  陳小玲  21000  55000
+</code></pre><p>有了各年度銷售總金額（分母）與每個人的年度銷售金額（分子）後將結果丟給老闆，結果老闆說我不會用Excel請給我最終結果就好，接著只能夠硬著頭皮再度呼叫相關子查詢（Correlated SubQuery）來幫忙了。</p><pre><code class=language-sql>SELECT 
+  銷售年分, 
+  員工姓名, 
+  年度銷售金額, 
+  Cast(
+    Cast(
+      (
+        (年度銷售金額 + 0.0) / 該年銷售總金額 * 100
+      ) AS DECIMAL(38, 2)
+    ) AS VARCHAR
+  ) + '%' AS 年度銷售貢獻占比 
+FROM 
+  (
+    SELECT 
+      銷售總表.銷售年分, 
+      銷售總表.員工姓名, 
+      SUM(產品價格) AS 年度銷售金額, 
+      (
+        SELECT 
+          SUM(產品價格) 
+        FROM 
+          (
+            SELECT 
+              dbo.TABLE_銷售.銷售年分, 
+              dbo.TABLE_產品.產品價格 
+            FROM 
+              dbo.TABLE_銷售 
+              INNER JOIN dbo.TABLE_產品 ON dbo.TABLE_銷售.銷售產品編號 = dbo.TABLE_產品.產品編號 
+              INNER JOIN dbo.TABLE_員工 ON dbo.TABLE_銷售.銷售員工編號 = dbo.TABLE_員工.員工編號
+          ) AS 銷售價格表 
+        WHERE 
+          銷售價格表.銷售年分 = 銷售總表.銷售年分
+      ) AS 該年銷售總金額 
+    FROM 
+      (
+        SELECT 
+          dbo.TABLE_銷售.銷售年分, 
+          dbo.TABLE_產品.產品分類, 
+          dbo.TABLE_產品.產品名稱, 
+          dbo.TABLE_產品.產品價格, 
+          dbo.TABLE_員工.員工姓名, 
+          dbo.TABLE_員工.員工性別 
+        FROM 
+          dbo.TABLE_銷售 
+          INNER JOIN dbo.TABLE_產品 ON dbo.TABLE_銷售.銷售產品編號 = dbo.TABLE_產品.產品編號 
+          INNER JOIN dbo.TABLE_員工 ON dbo.TABLE_銷售.銷售員工編號 = dbo.TABLE_員工.員工編號
+      ) AS 銷售總表 
+    GROUP BY 
+      銷售總表.銷售年分, 
+      銷售總表.員工姓名
+  ) AS 銷售貢獻統計 
+ORDER BY 
+  銷售年分, 
+  員工姓名
+</code></pre><p>最終輸出結果如下：</p><pre><code class=language-txt>銷售年分  員工姓名  年度銷售金額  年度銷售貢獻占比
+－－－－  －－－－  －－－－－－  －－－－－－－－
+2019  王小明  20000  38.46%
+2019  李小華  12000  23.08%
+2019  孫小美  12000  23.08%
+2019  陳小玲   8000  15.38%
+2020  王小明   7000  17.95%
+2020  李小華   8000  20.51%
+2020  孫小美  11000  28.21%
+2020  陳小玲  13000  33.33%
+2021  王小明  10000  20.41%
+2021  李小華  12000  24.49%
+2021  孫小美  14000  28.57%
+2021  陳小玲  13000  26.53%
+2022  王小明   7000  12.73%
+2022  李小華   8000  14.55%
+2022  孫小美  19000  34.55%
+2022  陳小玲  21000  38.18%
+</code></pre><h2>女性銷售人員歷年貢獻度</h2><p>如果老闆想要知道公司「女性」業務人員，歷年來（每一年）為公司貢獻了多少金額，占公司歷年營業額的多少比例？因此們可能先進行基礎資料表的運算建立：</p><pre><code class=language-sql>SELECT 
+  銷售年分, 
+  銷售員工編號,
+  產品價格,
+  SUM(產品價格) OVER() AS 歷年銷售總額
+FROM 
+  dbo.TABLE_銷售
+  INNER JOIN dbo.TABLE_產品 ON dbo.TABLE_銷售.銷售產品編號 = dbo.TABLE_產品.產品編號 
+</code></pre><p>其中這個歷年銷售總額透過OVER()運算後，結果為這間公司所有年間（2019-2022）的營業銷售總金額，執行後得出這樣的回傳，：</p><pre><code class=language-txt>銷售年分  銷售員工編號  產品價格  歷年銷售總額
+－－－－  －－－－－－  －－－－  －－－－－－
+2019  E001  3000  195000
+2019  E004  3000  195000
+2020  E002  3000  195000
+2019  E003  5000  195000
+2020  E001  5000  195000
+2020  E004  5000  195000
+2021  E003  5000  195000
+...
+</code></pre><p>接著我們就必須透過巢狀查詢（Nested Query）來撈出「身為女性」的員工，因此添加語法到WHERE段落：</p><pre><code class=language-sql>SELECT 
+  銷售年分, 
+  銷售員工編號, 
+  產品價格, 
+  SUM(產品價格) OVER() AS 歷年銷售總額 
+FROM 
+  dbo.TABLE_銷售 
+  INNER JOIN dbo.TABLE_產品 ON dbo.TABLE_銷售.銷售產品編號 = dbo.TABLE_產品.產品編號 
+WHERE 
+  銷售員工編號 IN (
+    SELECT 
+      員工編號 
+    FROM 
+      dbo.TABLE_員工 
+    WHERE 
+      員工性別 = '女'
+  )
+</code></pre><p>不意外的話我們可以得出只有E003、E004這兩位女性的結果，另外要注意的是歷年銷售總額的意義也隨之被賦予了女性性別的限制，從「男女：195000元→女：111000」，其實從這個數據就已經可得知總平均上來看，女性的業績稍微比男性好。</p><pre><code class=language-txt>銷售年分  銷售員工編號  產品價格  歷年銷售總額
+－－－－  －－－－－－  －－－－  －－－－－－
+2019  E004  3000  111000
+2021  E004  3000  111000
+2019  E003  5000  111000
+2020  E004  5000  111000
+2021  E003  5000  111000
+...
+</code></pre><p>但是我們要看的是女性歷年來為公司貢獻了多少金額，因此必須接著下指令運算：</p><pre><code class=language-sql>SELECT 
+  銷售年分, 
+  SUM(產品價格) AS 年度女性總銷售額, 
+  歷年銷售總額 AS 公司女性歷年總銷售額 
+FROM 
+  (
+    SELECT 
+      銷售年分, 
+      銷售員工編號, 
+      產品價格, 
+      SUM(產品價格) OVER() AS 歷年銷售總額 
+    FROM 
+      dbo.TABLE_銷售 
+      INNER JOIN dbo.TABLE_產品 ON dbo.TABLE_銷售.銷售產品編號 = dbo.TABLE_產品.產品編號 
+    WHERE 
+      銷售員工編號 IN (
+        SELECT 
+          員工編號 
+        FROM 
+          dbo.TABLE_員工 
+        WHERE 
+          員工性別 = '女'
+      )
+  ) AS 年度女性銷售清單 
+GROUP BY 
+  銷售年分, 
+  歷年銷售總額
+</code></pre><p>得到下列結果：</p><pre><code class=language-txt>銷售年分  年度女性總銷售額  公司女性歷年總銷售額
+－－－－  －－－－－－－－  －－－－－－－－－－
+2019  20000  111000
+2020  24000  111000
+2021  27000  111000
+2022  40000  111000
+</code></pre><p>有了這些資料，要統計出女性歷年貢獻度也不是什麼問題了，所以接著再套一層SELECT下最終的指令：</p><pre><code class=language-sql>SELECT 
+  銷售年分, 
+  年度女性總銷售額, 
+  Cast(
+    Cast(
+      (
+        (年度女性總銷售額 + 0.0) / 公司女性歷年總銷售額 * 100
+      ) AS DECIMAL(38, 2)
+    ) AS VARCHAR
+  ) + '%' AS 該年占歷年銷售額比例 
+FROM 
+  (
+    SELECT 
+      銷售年分, 
+      SUM(產品價格) AS 年度女性總銷售額, 
+      歷年銷售總額 AS 公司女性歷年總銷售額 
+    FROM 
+      (
+        SELECT 
+          銷售年分, 
+          銷售員工編號, 
+          產品價格, 
+          SUM(產品價格) OVER() AS 歷年銷售總額 
+        FROM 
+          dbo.TABLE_銷售 
+          INNER JOIN dbo.TABLE_產品 ON dbo.TABLE_銷售.銷售產品編號 = dbo.TABLE_產品.產品編號 
+        WHERE 
+          銷售員工編號 IN (
+            SELECT 
+              員工編號 
+            FROM 
+              dbo.TABLE_員工 
+            WHERE 
+              員工性別 = '女'
+          )
+      ) AS 年度女性銷售清單 
+    GROUP BY 
+      銷售年分, 
+      歷年銷售總額
+  ) AS 女性歷年銷售佔比
+</code></pre><p>執行後得到下列結果：</p><pre><code class=language-txt>銷售年分  年度女性總銷售額  該年占歷年銷售額比例
+－－－－  －－－－－－－－  －－－－－－－－－－
+2019  20000  18.02%
+2020  24000  21.62%
+2021  27000  24.32%
+2022  40000  36.04%
+</code></pre><h2>感想</h2><p>每次看到這種落落長又精美的SQL就很想吐... 難道為各階段建立一個VIEW表或<a href=/archive2022/20221110.html>暫存表</a>很難嗎？但無奈的是這種寫法充斥在業界各式系統之中，無論是在AP端或是SQL的預存程序端，寫的時候爽快（也沒有多爽）看的時候流淚，最終簡直是一場笑話。但總之我認為這已經是一種業界的常態文化，大家能夠多學就多學一些吧。</p><h3>相關參考</h3><ul><li><a href=/archive2017/20170515.html>SQL筆記：利用SQL相關子查詢，來產生多張資料表間的統計檢視表</a></li><li><a href=/archive2022/20221109.html>SQL筆記：關於子查詢（SubQuery）的語法整理</a></li><li><a href=/archive2022/20221110.html>SQL筆記：關於SQL暫存表語法整理</a></li></ul><h6>SQL Command Statement 子查詢 SubQuery SubSelect 相關子查詢 CorrelatedSubQuery 巢狀查詢 NestedQuery</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

@@ -1,0 +1,44 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>C#的NULL運算演化：?.、??、??=、以及模式比對增強功能</h1><p>有關於C#的NULL運算子演化過程，很久之前就要整理成一篇資訊，拖到現在剛好有一點小時間，忙裡偷閒整理一下，有需要的就參考看看嘍。</p><h2>首先建立一個模擬查詢資料庫的NotSureQuery()方法</h2><p>這個方法會亂數回傳各種不確定的資料包，有時是NULL，有時是空集合（內部沒有任何元素），有時是正常集合（有正常的資料）。</p><pre><code class=language-cs>//此方法可能回傳 1.null、2. 空集合、3. 正常集合
+private static System.Collections.Generic.List&lt;string>? NotSureQuery()
+{
+  var oRnd = new System.Random(System.Guid.NewGuid().GetHashCode());
+  //創造不確定性：如果亂數小於4就回傳null
+  if (oRnd.Next(1, 10) &lt; 4)
+  { return null; }
+  //如果不是的話就繼續運作並回傳
+  var oResult = new System.Collections.Generic.List&lt;string>();
+  for (int i = 0; i &lt; oRnd.Next(0, 3); i++) //i為零將會回傳空集合
+  { oResult.Add($"使用者{i + 1}"); }
+  return oResult;
+}
+</code></pre><h2>接著模擬一個經典的資料庫查詢動作</h2><p>我們透過NotSureQuery()方法，將查詢到的資料列舉輸出在畫面上，這是一個很典型的運作方式，可惜這是涉世未深的菜鳥的思路，一個成熟的老鳥會將精力放在那行註解（老鳥筆記：這裡就是坑的所在啊！）並試圖讓他在執行期不會有錯誤。可以閱讀下面這個程式碼有個概念，之後我們就不再討論這個讀取與輸出的框架，重點會擺在怎麼把註解這邊的程式碼套用C#的NULL運算子。</p><pre><code class=language-cs>public static void Main()
+{
+  var oList = NotSureQuery();
+
+  //老鳥筆記：這裡就是坑的所在啊！
+
+  foreach (var oItem in oList)
+  { Console.WriteLine(oItem); }
+
+  Console.Read();
+}
+</code></pre><h2>??運算子（NULL聯合運算子）</h2><p>我們可以想像，NotSureQuery()有一定的機會回傳NULL，因此我們一定要把它攔截起來並賦予給他一個預設值，這時候就可以使用??運算子，這個運算子可以解釋成如果右邊是NULL的話，那就執行左邊，但不要高興得太早，編譯器會要求左右兩邊的型別必須相同。</p><pre><code class=language-cs>if (oList == null)
+{ oList = new System.Collections.Generic.List&lt;string>() { "查無使用者" }; }
+</code></pre><p>可以簡寫成</p><pre><code class=language-cs>oList = oList ?? new System.Collections.Generic.List&lt;string>() { "查無使用者" };
+</code></pre><h2>??=運算子（NULL聯合指派運算子）</h2><p>到了C#8.0之後，這個語法又更精簡成??=，可以省略一次的變數指派，詳見下面程式碼：</p><pre><code class=language-cs>oList ??= new System.Collections.Generic.List&lt;string>() { "查無使用者" };
+</code></pre><h3>備註</h3><p>NULL聯合運算子有一個很有趣的寫法，不妨自己發想看看，例如：</p><ol><li>oList ?? oListA ?? oListB<br /> 如果oList是NULL的話就回傳oListA；而如果oListA也是NULL的話就回傳oListB。</li><li>oList ??= oListA ??= oListB<br /> 如果oList是NULL的話就將oListA值回寫；而如果oListA也是NULL的話就將oListB值回寫。與上例子差別之處是若oList、oListA均為NULL，則經過這一番??=運算子騷操作後，oList、oListA的內容值均被感染成oListB了。</li></ol><h2>?.運算子、?[]運算子（NULL條件運算子）</h2><p>接著事情必須往更深處思考了... 如果當集合不為NULL但裡面沒有任何資料（空集合），那要怎麼辦？這時候菜鳥可能會這樣寫...</p><pre><code class=language-cs>if (oList.Count == 0)
+{ oList = new System.Collections.Generic.List&lt;string>() { "查無使用者" }; }
+</code></pre><p>那麼，你可能會有極大的機會爆炸，馬上收到System.NullReferenceException，原因很簡單，如果oList是NULL，那麼又何來的Count屬性的呼叫呢？因此我們通常會引入?.運算子並改成下列的寫法，這個寫法簡單的說就是如果oList不是NULL，那再幫我執行Count屬性看看是否為零，如果是NULL就請直接跳走不要再評估了：</p><pre><code class=language-cs>if (oList?.Count == 0)
+{ oList = new System.Collections.Generic.List&lt;string>() { "查無使用者" }; }
+</code></pre><p>然後你會開始想要整併oList是「NULL」或是「不含任何元素的空集合」的整合式寫法，但這時候你又會發現在「||」條件之後?.運算子又變成冗餘的考量了，畢竟oList是NULL的狀況在第一個條件就已經被評估完畢：</p><pre><code class=language-cs>if (oList == null || oList?.Count == 0)
+{ oList = new System.Collections.Generic.List&lt;string>() { "查無使用者" }; }
+</code></pre><p>事已至此，你會發現沒有利用任何NULL特殊運算子（?.、??、??=）的寫法其實也很OK，甚至特意用這些運算子還有點脫褲子放屁，超諷刺的是吧？（長久以來我一直是這樣想）當然或許還是有其可以特殊利用的場景（例如方法回傳前的直接檢查判斷），但以我來說有八成的時刻都是面對這樣尷尬的應用處境。</p><pre><code class=language-cs>if (oList == null || oList.Count == 0) //很傳統但很OK的寫法
+{ oList = new System.Collections.Generic.List&lt;string>() { "查無使用者" }; }
+</code></pre><h3>備註</h3><p>?[]運算子用於陣列型態的集合資料。</p><h2>進入到模式比對（Pattern Matching）時代</h2><p>先利用Switch Expressions來重新寫一次，看起來也沒有比較好閱讀：</p><pre><code class=language-cs>oList = oList switch
+{
+  _ when oList == null || oList.Count == 0 => new System.Collections.Generic.List&lt;string>() { "查無使用者" },
+  _ => oList,
+};
+</code></pre><p>但是拉回來使用模式比對增強（Pattern matching enhancements）的觀點後，好像語法又可以有進一步的精進空間了：</p><pre><code class=language-cs>if (oList?.Count is null or 0)
+{ oList = new System.Collections.Generic.List&lt;string>() { "查無使用者" }; }
+</code></pre><h2>附註</h2><p>如果你的oList是一個介面等級的集合（例如常見的<code>IEnumerable&lt;T></code>），那麼oList?.Count這個指令可能會被編譯器標記CS 8978錯誤（'方法群組'不可為NULL；'method group' cannot be made nullable）。要解決這個問題的話，可以試著改成「oList?.Count()」看看？或者是直接把集合轉乘非介面等級的集合，例如一個明確的<code>List&lt;T></code>。</p><p>以上就是C#對於NULL運算子的探討，若有機會再回來進行後續補充。</p><h3>相關連結</h3><ol><li><a href=/archive2021/20210224.html>在C#的SwitchExpression下使用模式比對（Pattern Matching）</a></li><li><a href=/archive2022/20220331.html>利用SwitchExpression來進行switch流程程式碼判斷的優化</a></li><li><a href=/archive2019/20190827.html>利用C#的switch case when語法來忽略字串大小寫</a></li><li><a href=/archive2021/20210301.html>C#的IS與AS運算子之撰寫方法</a></li><li><a href=/archive2022/20221108.html>C#的NULL運算演化：?.、??、??=、以及模式比對增強功能</a></li><li><a href=https://docs.microsoft.com/zh-tw/dotnet/csharp/language-reference/proposals/csharp-8.0/patterns>遞迴模式比對</a></li><li><a href=https://docs.microsoft.com/zh-tw/dotnet/csharp/whats-new/csharp-9#pattern-matching-enhancements>C# 9.0 中的新增功能</a></li></ol><h6>C# NULL Operators ?.Operators ??Operators ??=Operators SwitchExpressions PatternMatching PatternMatchingEnhancements</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

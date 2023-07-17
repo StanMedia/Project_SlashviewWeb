@@ -1,0 +1,47 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>Thread.Sleep與Task.Delay是完全不一樣的東西，請勿亂用</h1><p>自從.NET Framework 4.5開始提供一個System.Threading.Tasks.Task.Delay的方法後，就開始看到網路上有一些不明就裡的人開始在亂用，其中一個常見的錯誤用法如下：</p><pre><code class=language-cs>//This code is wrong, DO NOT USE IT!
+WriteLine("Waiting Start.");
+System.Threading.Tasks.Task.Delay(1000);
+WriteLine("Waiting End.");
+</code></pre><p>看到這行程式碼我都笑了，這個寫程式碼的人真的知道自己在寫什麼嗎？</p><h2>Thread.Sleep vs. Task.Delay</h2><p>最大不一樣之處，Thread.Sleep就是對本身自己這個執行緒，進行睡眠的功能。而反觀Task.Delay是指，在本身這個執行緒下再去生出一個新的執行緒，並對這個執行緒做時間計算。</p><p>基於此上面那個很好笑的程式碼是不會有任何作用的，試想，父執行緒生出一個子執行緒，並且叫子執行緒等候1秒，此時父執行緒的下一行早就被運行了，也就是說，子執行緒有沒有跑完根本不關父執行緒的事情了。讓我們回到ＭＳＤＮ看一下（<a href=https://goo.gl/OVOpg0>Task.Delay Method (Int32)</a>）就會發現，他的傳回值是 System.Threading.Tasks.Task，也就是他是一個支援非同步（async、await）的方法，因此Task.Delay如果是要用在延遲的作用上，那麼就得要在前面加上個await才會有效果。當然，如果不是作用在延遲的效果上，那就不一定需要加啦！作用在callback方式的.ContinueWith()實作上就是一個不錯的例子。</p><p>以下是Thread.Sleep vs. Task.Delay程式碼的範例：</p><p>其中的</p><ol><li>RunTest_1()如果調用者是一顆WinForm之類按鈕的話，將會造成UI端的Block。</li><li>RunTest_2()是一種完全無效的Delay範例，請勿使用（DO NOT USE IT!）。</li><li>RunTest_3()是一種正確的Delay範例，且不會造成UI端的Block。</li></ol><pre><code class=language-cs>static void Main(string[] args)
+{
+  RunTest_1();
+  //RunTest_2();
+  //RunTest_3();
+  ReadKey();
+}
+
+static void RunTest_1()
+{
+  WriteLine("Step 1.A");
+  System.Threading.Thread.Sleep(5000);
+  WriteLine("Step 1.B");
+}
+
+static void RunTest_2()
+{
+  WriteLine("Step 2.A");
+  System.Threading.Tasks.Task.Delay(5000);
+  WriteLine("Step 2.B");
+}
+
+static async void RunTest_3()
+{
+  WriteLine("Step 3.A");
+  await Delay(5000);
+  WriteLine("Step 3.B");
+}
+
+static async System.Threading.Tasks.Task Delay(int iSecond)
+{
+  WriteLine("Waiting Start.");
+  await System.Threading.Tasks.Task.Delay(iSecond);
+  WriteLine("Waiting End.");
+}
+</code></pre><p>RunTest_3()輸出的字串如下：</p><pre><code class=language-txt>Step 3.A
+Waiting Start.
+Waiting End.
+Step 3.B
+</code></pre><h2>同場加映ContinueWith()的用法</h2><p>static void RunTest_4() { WriteLine("Step 4.A"); System.Threading.Tasks.Task.Delay(5000).ContinueWith(_ => { WriteLine("I'm End."); }); //底線的寫法代表使用lambda時，如果不使用到傳入參數，就要打一個底線。 WriteLine("Step 4.B"); }</p><p>RunTest_4()輸出的字串如下：</p><pre><code class=language-txt>Step 4.A
+Step 4.B
+I'm End. ←由此可以看出CallBack效果
+</code></pre><h6>Thread.Sleep Task.Delay</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

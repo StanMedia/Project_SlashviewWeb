@@ -1,0 +1,79 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>利用EXCEL VBA將文字檔案資料轉換為EXCEL表格（Sheet）</h1><p>因為一些工作的因素，必須撰寫程式將外部純文字檔案內文，轉換成EXCEL內人類可以辨識與處理的表格文件，內容沒啥營養，只是使用VBA寫東西有如回到25年前在寫ASP（Basic）的痛苦與生疏感，筆記在此供給有需要的人參考。</p><h2>將純文字資料轉換回EXCEL表格資料</h2><p>這篇文章的目的是將一個格式固定的外部純文字檔案資料（通常為給機器判讀的資料，人類難以一眼識別），將其解析回EXCEL內部表格內文，以利人類可以進行後續的識別與處理，裡面的VBA會使用到自動化剖析的語法，如果你要匯入的資料是特定或無法進行自動化識別的格式，那可能就要自己跳下來撰寫剖析器的程式碼了。</p><p>Step 1. 產生一個名為「讀取文字檔並解析」的EXCEL頁籤，並在上面利用「開發人員」功能項次＞「插入」＞「表單控制項」＞「按鈕」，插入一個按鈕作為讓使用者操作的進入點（新增巨集：按鈕1_Click），並針對這個按鈕進行文字與外觀等設計工作。</p><p><img src=https://content.slashview.com/img/2023/20230111_01.jpg alt="" /></p><p>Step 2. 準備一個名為「data.txt」的純文字檔案如下，並以UTF-8格式儲存，從這個檔案中我們也可以發現文字不太好一眼就馬上識別資訊。此外，這個檔案僅為識別用途，欄位的確切妥適性不在討論範圍。</p><p><img src=https://content.slashview.com/img/2023/20230111_02.jpg alt="" /></p><p>Step 3. 對這棵按鈕點擊進入VBA編輯畫面（Microsoft Visual Basic for Applications），在Module1裡面會出現「按鈕1_Click()」的Sub副程式進入點，接著就在這邊插入我們想要編寫的程式碼。</p><p><img src=https://content.slashview.com/img/2023/20230111_03.jpg alt="" /></p><p>Step 4. 將下列的VBA（Visual Basic Applications）程式碼貼上：</p><pre><code class=language-vb>Sub 按鈕1_Click()
+    '***** 定義資料表 *****
+    Dim cSheetName As String
+    cSheetName = "解析檔案後資料表"
+    
+    '檢查是否已經有存在的目標資料表，如果有的話就砍掉
+    Dim oSheet As Worksheet
+    For Each oSheet In Sheets
+        If InStr(oSheet.Name, cSheetName) &lt;> 0 Then
+            Application.DisplayAlerts = False
+            oSheet.Delete
+            Application.DisplayAlerts = True
+        End If
+    Next
+    
+    '***** 取得匯入TEXT檔之路徑 *****
+    Dim cPath As String
+    With Application.FileDialog(msoFileDialogOpen)
+        .AllowMultiSelect = False
+        .Show
+        If .SelectedItems.Count &lt;> 0 Then
+            cPath = .SelectedItems(1)
+        Else
+            Exit Sub
+        End If
+    End With
+    
+    '***** 讀取檔案、解析並寫入資料表 *****
+    '螢幕更新關閉
+    Application.ScreenUpdating = False
+    '指定資料表
+    Sheets.Add After:=Sheets(Sheets.Count)
+    ActiveSheet.Name = cSheetName
+    '寫入標題
+    ActiveSheet.[A1] = "會員編號"
+    ActiveSheet.[B1] = "會員姓名"
+    ActiveSheet.[C1] = "會員生日"
+    ActiveSheet.[D1] = "會員存款"
+    '解析資料
+    With ActiveSheet.QueryTables.Add(Connection:= _
+        "TEXT;" + cPath, Destination:=Range("$A$2"))
+        .Name = "Data"
+        .FieldNames = True
+        .RowNumbers = False
+        .FillAdjacentFormulas = False
+        .PreserveFormatting = True
+        .RefreshOnFileOpen = False
+        .RefreshStyle = xlInsertDeleteCells
+        .SavePassword = False
+        .SaveData = True
+        .AdjustColumnWidth = True
+        .RefreshPeriod = 0
+        .TextFilePromptOnRefresh = False
+        .TextFilePlatform = 65001
+        .TextFileStartRow = 1
+        .TextFileParseType = xlFixedWidth
+        .TextFileTextQualifier = xlTextQualifierDoubleQuote
+        .TextFileConsecutiveDelimiter = False
+        .TextFileTabDelimiter = True
+        .TextFileSemicolonDelimiter = False
+        .TextFileCommaDelimiter = False
+        .TextFileSpaceDelimiter = False
+        .TextFileColumnDataTypes = Array(2, 2, 4, 1)
+        .TextFileFixedColumnWidths = Array(5, 6, 10, 4)
+        .TextFileTrailingMinusNumbers = True
+        .Refresh BackgroundQuery:=False
+    End With
+    
+    '***** 收尾工作 *****
+    '自動調整欄寬
+    Cells.Select
+    Cells.EntireColumn.AutoFit
+    Range("A1").Select
+    '螢幕更新打開
+    Application.ScreenUpdating = True
+    '顯示完成資訊
+    MsgBox "匯入工作完成！"
+End Sub
+</code></pre><p>Step 5. 完成後將這個EXCEL儲存可以執行的*.xlsm格式，當使用者點擊按鈕，VBA就會帶出檔案對話方塊。</p><p><img src=https://content.slashview.com/img/2023/20230111_04.jpg alt="" /></p><p>Step 6. 指定好檔案後VBA就會自動解析文字資料，並將其呈現在EXCEL名為「解析檔案後資料表」的頁籤中。</p><p><img src=https://content.slashview.com/img/2023/20230111_05.jpg alt="" /></p><h2>重點筆記</h2><p>其實所有重點的VBA程式碼落在自動剖析資料這塊，裡面的重點條列如下：</p><ol><li>TextFilePlatform：剖析文字檔案的編碼格式</li><li>TextFileColumnDataTypes：解析後的欄位格式，可參考<a href=https://learn.microsoft.com/zh-tw/office/vba/api/excel.xlcolumndatatype>TextFileColumnDataTypes XlColumnDataType Enumerations (Excel)</a></li><li>TextFileFixedColumnWidths：要切割的欄位寬度</li></ol><h3>相關參考</h3><ul><li><a href=/archive2023/20230110.html>利用EXCEL VBA將表格資料（Sheet）轉換為XML並存檔</a></li><li><a href=/archive2023/20230111.html>利用EXCEL VBA將文字檔案資料轉換為EXCEL表格（Sheet）</a></li></ul><h6>Microsoft EXCEL VBA Convert Parse TextFiles TextContents PlainText ExcelSheetContent Unicode UTF-8 UTF-16</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

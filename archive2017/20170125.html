@@ -1,0 +1,110 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>你真的懂Try-Catch嗎？Try-Catch流程及與Using之間的程式對應</h1><p>前幾天在寫using的時候，裡面再包一層try catch時，總覺得良心很過意不去，但是就當下的程式碼結構一定非要這樣寫不可（為了有條件的攔截錯誤而修正，不讓整個using結構因為某個錯誤立即崩潰）。於是想寫這一篇文章，讓面臨這樣抉擇的人可以重新的審視一下自己是否真的有需要在using裡面再包try catch。</p><p><img src=https://content.slashview.com/img/2017/20170125_01.jpg alt="" /></p><h2>心法：Try出錯時，先跑Catch區段，且一定會再去跑Finally區段</h2><p>話不多說，請先看一下程式碼：</p><pre><code class=language-cs>using System;
+using static System.Console;
+namespace Simply
+{
+  class Program
+  {
+    public static void Main()
+    {
+      try
+      {
+        MyMethod();
+      }
+      catch (Exception oEx)
+      {
+        WriteLine("run Main() catch block.");
+        WriteLine(oEx.Message);
+      }
+      finally
+      {
+        WriteLine("run Main() finally block.");
+      }
+      WriteLine("OK.");
+      Read();
+    }
+
+    public static void MyMethod()
+    {
+      int x = 10;
+      int y = 0;
+      try
+      {
+        x = x / y;
+      }
+      catch
+      {
+        WriteLine("run MyMethod() catch block.");
+        throw new Exception("Catch It!");
+      }
+      finally
+      {
+        WriteLine("run MyMethod() finally block.");
+      }
+    }
+  }
+}
+</code></pre><p>整段程式碼中，就是故意在MyMethod()中加入一個除零的錯誤，讓try被觸發到，那麼到底是catch段先執行，亦或是finally段被執行呢？答案請看輸出結果...</p><pre><code class=language-txt>run MyMethod() catch block.
+run MyMethod() finally block.
+run Main() catch block.
+Catch It!
+run Main() finally block.
+OK.
+</code></pre><p>很明顯的，當try捕捉到錯誤時，是先跑catch段，才再去跑finally段。且內部throw new Exception被觸發時，這個錯誤會被先押入堆疊中，然後程式碼還是會先把內層finally段跑完，再往層外拋錯誤。</p><h2>Java與C#在Try-Catch中的差異</h2><p>差異點在於在Java中，是允許你在finally段中寫下「return;」，進行中斷跳出區塊的做法，但是這個在C#中是不被允許的。估計是C#語言希望你在finally段被執行完成後，還有機會去把在堆疊中的指令（throw new Exception）再接著跑下去。</p><p>如果你硬要在C#中的finally段裡面加入「return;」指令，你會被編譯器回應下列字眼：</p><pre><code class=language-txt>編譯器錯誤 CS0157
+
+控制項不可脫離finally子句的主體。
+必須執行finally子句中的所有陳述式。
+
+Control cannot leave the body of a finally clause.
+All of the statements in a finally clause must execute.
+</code></pre><h3>C# Using編譯後呈現的try-catch結構</h3><p>這邊順便紀錄一下Using區段在經過編譯器的編譯後，背後幫我們轉回try-catch的結構概念。</p><p>Using的寫法：</p><pre><code class=language-cs>using (System.IO.StreamReader oSR = new System.IO.StreamReader(@"C:\test.txt"))
+{
+  string s = null;
+  while((s = oSR.ReadLine()) != null)
+  {
+    Console.WriteLine(s);
+  }
+}
+</code></pre><p>被編譯過後的寫法：</p><pre><code class=language-cs>{
+  System.IO.StreamReader oSR = new System.IO.StreamReader(@"C:\test.txt");
+  try
+  {
+    string s = null;
+    while((s = oSR.ReadLine()) != null)
+    {
+      Console.WriteLine(s);
+    }
+  }
+  finally
+  {
+    if (oSR != null) { ((IDisposable)oSR).Dispose(); }
+  }
+}
+</code></pre><p>看到這邊大家應該要注意下列的幾點重點：</p><ol><li>using寫法，只有支援該類別有實作Dispose()方法之實體。（System.IDisposable介面）</li><li>在簡單的情況下，using就已經涵蓋了finally自動實作Dispose()，所以基本上你不需要再去關心實體釋放的動作。</li><li>在絕大部分的況下（例如stream物件、SqlConnection物件）其實你不需要在using區段末特別下Close();來關閉，因為這一類的物件本身Dispose();時期就會Close();掉資源。所以你其實在using段中不寫Close();的語句是沒有問題的，但如果你真的不放心，一定要寫Close();其實也不會有問題，因為在物件還沒有Dispose();前重複下Close();指令是沒問題的，反而會出問題的是你重複下Open();指令。</li></ol><p>請特別注意，using在編譯器翻譯後，只有實作Try-Finally，並沒有包含catch區段、並沒有包含catch區段、並沒有包含catch區段（很重要所以說三次）。</p><p>在複雜的情況下，你或許應該在using區段中（或者在區段之外），自己再實作try-catch自己攔截與處理某些不需要整個中斷流程的錯誤。有需要的可以參考一下<a href=https://docs.microsoft.com/zh-tw/dotnet/articles/csharp/language-reference/keywords/using-statement>MSDN官方文件</a>。以下就用官方文件中的程式碼再帶大家仔細的觀察一次using語法：</p><p>using語法：</p><pre><code>using (Font font1 = new Font("Arial", 10.0f)) 
+{
+  byte charset = font1.GdiCharSet;
+}
+</code></pre><p>經過compiler編譯過的using結構原型，很有趣的是請特別注意字型物件宣告的那行，竟然是在Try結構之前就大喇喇地放上了，也就是說如果在實例化這個字型物件的時期出錯了，事實上還是會出錯的：</p><pre><code class=language-cs>{
+  Font font1 = new Font("Arial", 10.0f);
+  try
+  {
+    byte charset = font1.GdiCharSet;
+  }
+  finally
+  {
+    if (font1 != null)
+      ((IDisposable)font1).Dispose();
+  }
+}
+</code></pre><p>文章最末附上System.Data.SqlClient.SqlConnection.Dispose方法的反組譯程式碼：</p><pre><code class=language-cs>// System.Data.SqlClient.SqlConnection.Dispose disassemble
+protected override void Dispose(bool disposing)
+{
+  if (disposing)
+  {
+    this._userConnectionOptions = null;
+    this._poolGroup = null;
+    this.Close(); //人家有呼叫Close();喔！
+  }
+  this.DisposeMe(disposing);
+  base.Dispose(disposing);
+}
+</code></pre><p>可以的話，請順便參考這篇文章：</p><p><a href=/archive2017/20170511.html>真正捕捉System.Net.WebRequest的Timeout錯誤</a></p><h6>Try-Catch Using 錯誤捕捉 誤解 Dispose IDisposable</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

@@ -1,0 +1,11 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>ASP.NET自動攔截從URL傳入的非法字元</h1><p>今天在查IIS運行時期的錯誤記錄時，發現有機器利用URL一直在攻擊，其實這種動作在網路上已經是常態了，但是看到這台新建立的Server忘記設定處理URL這一塊，因此趕緊來修補一下。</p><p>攻擊字串是：</p><pre><code class=language-txt>w00tw00t.at.blackhats.romanian.anti-sec:)
+</code></pre><p>那個笑臉也太惹人嫌了吧！關鍵是無論如何URL也不應該出現括號啊！</p><p>之前都是用Microsoft所出產的URL Scan來阻擋，但是因為IIS畢竟也進化到8了，實在不太想再去用 IIS 6時代的產物（不過話說URL Scan還是有一直在推新版本啦！），所以開始研究內建的「要求篩選」怎麼擋。但不幸的是，怎麼設定「規則」跟「URL」怎麼都弄不好（也就是IIS根本不吃我餵進去web.config的參數），無論進行iisreset或者是重開機都一樣，這部份有待日後研究，因為工作實在太忙了，或者有心得的同好可以在下方留言分享。</p><p><img src=https://content.slashview.com/img/2014/20140228_01.jpg alt="" /></p><p>後來只好再往上端處理，也就是ASP.NET層，因此我們來到了web.config中的httpRuntime段，找到了requestPathInvalidCharacters。請特別注意Path這個關鍵字，這代表了這個屬性的設定，跟未來的QueryString是毫無關係的。我們參考MSDN後發現，如果你整個網站設定中，都沒有打入任何的requestPathInvalidCharacters參數，那麼系統會自動引用預設值幫你阻擋，所以這部份是很安全的設定。</p><pre><code class=language-txt>預設封鎖Characters列表如下：
+DefaultValue = "&lt;,>,*,%,&amp;,:,\,?"
+
+參考：http://goo.gl/d4UxZt
+</code></pre><p>所以如果你一旦打入requestPathInvalidCharacters，但卻沒有給任何的值，這代表...你全部要開放給外面的人來Try，就有如下方代碼所示，這種自爆的行為建議千萬不要這樣用，除非你真的知道你的需求。這樣的後果就是一旦有人真的在網址打入「%3C」，網站會彈回Http 404，千萬不要以為這代表ASP.NET不管你了，可以提升效能而高興！請你仔細一想，這不就是Server真的接受了這個字，然後真的去「執行」尋找，找不到檔案或目錄的結果嗎？</p><pre><code class=language-xml>&lt;system.web>
+  &lt;httpRuntime requestPathInvalidCharacters="" />
+&lt;/system.web>
+</code></pre><p>所以如果真的想要自訂的話，請自己詳細的考慮所有你覺得不對的字元吧！記得我們在web.config中填寫的字元，是要先進行URL Encode的喔！多種字元請自行用逗號分隔。例如：</p><pre><code class=language-txt>requestPathInvalidCharacters="%3A, ), ..."
+冒號、括號你們都被擋了！後面點點點請自行增補。
+</code></pre><h6>web.config URL character filtering</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

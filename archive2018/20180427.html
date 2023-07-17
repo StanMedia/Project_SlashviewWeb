@@ -1,0 +1,59 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>利用IHttpModule與Response.Filter，實作簡單的HTML壓縮器</h1><p>我們都知道有JavaScript與CSS的壓縮實作，但對於HTML壓縮的實作在網路上比較少人在討論（而且有很多程式碼都是錯誤的），但其實說實在的，在現代JavaScript與CSS技術氾濫的推播下，大家對於JS、CSS的Minify都已經很有sense，可是反過頭來看，乘載的HTML母體，卻充斥著更多大量的空白、跳位、換行。不相信的話，下面這張微軟的網站原始碼截圖出來給你感受一下（這些換行與空白只是原始碼中的冰山一角）！</p><p><img src=https://content.slashview.com/img/2018/20180427_01.jpg alt="" /></p><p>我這邊示範的範例還是以WebForm為主，如果你是採用MVC的話，可以考慮把類別掛在ActionFilter就可以了。</p><h2>在Web.Config中呼叫IHttpModule</h2><p>首先，打開你的Web.Config，找到system.webServer＞modules，然後把等一下想要寫的IHttpModule類別用力插進去就對了。</p><pre><code class=language-xml>&lt;system.webServer>
+  &lt;modules runAllManagedModulesForAllRequests="true">
+    &lt;add name="ChangeContent" type="Slashview.HttpResponseContent" />
+  &lt;/modules>
+&lt;/system.webServer>
+</code></pre><h2>實作IHttpModule類別，並利用Response.Filter掛上過濾類別</h2><p>沒有甚麼技術性，就是把IHttpModule叫出來掛上事件後，對Response.Filter再掛一個類別，接下來就交給ASP.NET的機制，等到最終要Flush前，ASP.NET會自動去Call你定義的Filter，等於對你的類別事件進行委派啦！</p><pre><code class=language-cs>namespace Slashview
+{
+  //實作IHttpModule來壓縮Http Response輸出的HTML字串
+  public class HttpResponseContent : System.Web.IHttpModule
+  {
+    public void Init(System.Web.HttpApplication oContext)
+    { oContext.BeginRequest += OnBeginRequest; }
+
+    public void OnBeginRequest(object sender, System.EventArgs e)
+    {
+      System.Web.HttpApplication oContext = (System.Web.HttpApplication)sender;
+      //如果是ASPX程式就套用過濾器（這個時期抓不到在後期才改變ContentType的ASPX程式，例如：打圖、打JSON...，因此在此不做無意義ContentType的判斷）
+      if (oContext.Request.CurrentExecutionFilePathExtension == ".aspx")
+      { oContext.Response.Filter = new CompressHtmlFilter(oContext.Response); }
+    }
+
+    public void Dispose() { }
+
+    //利用InnerClass建立一個過濾器（在裡面實作壓縮）
+    private class CompressHtmlFilter : System.IO.MemoryStream
+    {
+      private System.Web.HttpResponse _oResponse;
+      private readonly System.IO.Stream _oFilter;
+
+      public CompressHtmlFilter(System.Web.HttpResponse oResponse)
+      { _oResponse = oResponse; _oFilter = oResponse.Filter; }
+
+      public override void Write(byte[] aryBuffer, int iOffset, int iCount)
+      {
+        //如果最終ContentType是text/html」才處理
+        if (_oResponse.ContentType == System.Web.MimeMapping.GetMimeMapping(".html"))
+        {
+          string cTemp = System.Text.Encoding.UTF8.GetString(aryBuffer);
+          /* 以下條件均取代為空字串
+           * 換行符號：出現１次（含以上）
+           * 註解區段：會排除中括號是因為header有時會出現BrowserHack，例如[if lt IE 9]
+           */
+          cTemp = System.Text.RegularExpressions.Regex.Replace(cTemp, @"([\r\n]+)|(&lt;!--[^\[\]]*?-->)", string.Empty);
+          /* 以下條件均取代為一個空白
+           * 空白符號：出現２次（含以上）
+           * 跳位符號：出現１次（含以上）
+           */
+          //空白字元只要出現兩個（含以上），就會被取代為一個空白
+          cTemp = System.Text.RegularExpressions.Regex.Replace(cTemp, @"( {2,})|(\t+)", " ");
+          //將運算過的字串輸出
+          _oFilter.Write(System.Text.Encoding.UTF8.GetBytes(cTemp), iOffset, System.Text.Encoding.UTF8.GetByteCount(cTemp));
+        }
+        else  //一律不處理丟出
+        { _oFilter.Write(aryBuffer, iOffset, iCount); }
+      }
+    }
+  }
+}
+</code></pre><p>程式寫完後，去重新整理你的aspx網頁，就可以看到你的HTML都被壓縮啦！</p><h2>對於這支HTML壓縮程式想要補充的事項</h2><ol><li>其實空白、跳位、換行字元出現的頻率非常高，肯定名列字典檔的前三名，這意味著gzip對於這些字元的壓縮率非常的良好，若你還是有HTML壓縮的需求，應該要往安全性的方向考量。（例如：增加MVVM渲染前程式碼的不可閱讀性）</li><li>文章標題之所以會稱為「簡單」，最主要就是想要示範一下結構可以這樣設計，但這不意味著程式可以直接被你Copy上線運行（建議如果非必要，盡量不要在大型網站實作這一塊）。請試著想看看：你網頁中inline式Javascript的//註解，被你把換行都拿掉後會出現甚麼事情。</li><li>承上，你確定//只會出現在Javascript的註解裡面嗎？想看看<a href=//google.com>有幾種出現方法呢？</a></li><li>外掛Response.Filter對於輸出效能一定會有影響，大量的文字比對操作，也會增加你伺服器記憶體的負荷。</li><li>HTML壓縮程式每個網站運行的方式都不一樣（跟團隊Codeing Style也有正相關），所以世界上沒有一個良好又通用的HTML壓縮程式，你應該視自己的需求調整程式碼。</li><li>Response.Filter傳入的資料是採用區塊式（Chunked）的，大小大約是16KB（16352 Bytes），因此你得到的字串並不是網頁全貌，如果你已經做好準備在這個地方動手腳，那你可能要先來這個網頁讀一下資料（<a href=https://weblog.west-wind.com/posts/2009/Nov/13/Capturing-and-Transforming-ASPNET-Output-with-ResponseFilter>Capturing and Transforming ASP.NET Output with Response.Filter</a>）。這邊一定要特別注意，有非常多的網站提供的程式碼根本都沒有注意到自己正在解析Chunked級的資料，還以為自己很簡單的實作出一套機制，有很多隱性的Bug就藏在這個細節裡面。</li><li>IHttpModule有很多事件，但可以讓你及時掛上Response.Filter並且可以正常調用運作的其實很少（多數的事件都處於生命週期的晚期，已經來不急了），最下方補一張IHttpModule事件列表讓你自己實驗參考一下。如果有頁面是在最終輸出時期才決定自己要輸出Content-Type的型態，建議事件掛在PostRequestHandlerExecute會比BeginRequest來的有效率。</li></ol><p><img src=https://content.slashview.com/img/2018/20180427_02.jpg alt="" /></p><p>補充資料：附上Http Request（Http Module） Liftcycle生命週期，讓讀者可以有更透徹的認識。</p><p><img src=https://content.slashview.com/img/2018/20180427_03.jpg alt="" /></p><p>延伸閱讀</p><ul><li><a href=/archive2013/20131208.html>修正HTTP Response Header中的Server屬性</a></li><li><a href=/archive2018/20181217.html>使用ASP.NET的路由環境下，讓ASPX、ASHX等WebForm技術仍然可以繼續運作</a></li></ul><h6>ASP.NET MVC WebForm HTML Compression IHttpModule HttpModule Response.Filter LifeCycle</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

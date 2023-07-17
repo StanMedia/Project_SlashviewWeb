@@ -1,0 +1,38 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>執行緒的中斷範例實作，以及前景背景小知識</h1><p>一直沒有執行緒中斷的需求，直到最近有遇到這方面的問題，才開始翻這方面的知識，為了怕自己衰老記憶力不好，因此把它寫成文章記錄下來。下圖是KOF 99'引入SuperCancel的概念，我們後來的CancellationTokenSource工作物件我會以這個名稱來命名，用來紀念這個概念在該年代的創新。</p><p><img src=https://content.slashview.com/img/2016/20160204_01.jpg alt="" /></p><p>在這裡我想要使用一個Console Main方法來完全演繹這方面的程式工作過程，這中間包含了下列幾項特點：</p><ol><li>執行緒的手動中斷。</li><li>執行緒的自動（幾秒後）自我中斷。</li><li>執行緒的中斷後的事件委派（delegate）。</li><li>執行緒正常運行完成後的取值。</li><li>執行緒中斷運行完成後的取值。</li><li>判斷執行緒是否已經正常運行完成。</li><li>判斷執行緒是否已經被中斷完成。</li></ol><p>程式碼如下：</p><pre><code class=language-cs>static void Main(string[] args)
+{
+  Write("請輸入幾毫秒後執行緒自動中斷，本執行緒最多執行10秒（20 * 500）：");
+  int iCancelTime = System.Convert.ToInt32(ReadLine());
+  Write("--- 請輸入任意鍵中斷執行緒 ----");
+  //宣告可讓執行緒中斷之物件
+  System.Threading.CancellationTokenSource oSuperCancel = new System.Threading.CancellationTokenSource(iCancelTime);
+  //委派一個方法，讓執行緒中斷後回到此處運行
+  oSuperCancel.Token.Register(() => { WriteLine("\n「主程序」被「執行緒」告知他自己被中斷了。"); });
+  //生出一個TOKEN物件傳入執行緒內，以便執行緒讀取狀態，判斷是否應該進行中斷工作
+  System.Threading.CancellationToken oToken = oSuperCancel.Token;
+  //宣告一個執行緒起來，並特別留下一個oTask以供給之後判斷是否執行完成用
+  var oTask = System.Threading.Tasks.Task.Run&lt;string>(() => {
+    WriteLine($"\n編號【{System.Threading.Thread.CurrentThread.ManagedThreadId}】執行緒已經開始運行。");
+    for (int i = 0; i &lt; 20; i++)
+    {
+      if (oToken.IsCancellationRequested)
+      {
+        return "「執行緒」自己發現被「主程序」中斷了。";
+      }
+      Write(".");
+      System.Threading.Thread.Sleep(500);
+    }
+    return "執行緒自己跑完了。";
+  }, oToken).ContinueWith(oFinishTask => {
+    WriteLine($"\n執行緒結果：{oFinishTask.Result}");
+    return;
+  });
+  //讀取按鈕（主程序到這一行會被中斷卡住，藉以等候執行緒）
+  ReadKey();
+  //如果執行緒還沒結束，而且執行緒還沒有被中斷過，就進行中斷
+  if (!oTask.IsCompleted &amp;&amp; !oToken.IsCancellationRequested)
+  {
+    oSuperCancel.Cancel();
+    ReadKey();
+  }
+}
+</code></pre><p>基本上，所有的註解已經說明了程式碼中大部分的工作，我在這邊略提幾點說明。</p><ol><li>執行緒手動中斷後，delegate在Token.Register()裡面的優先權，會大於執行緒回傳優先權。也就是說程式碼會先印出「主程序被執行緒告知他自己被中斷了」後再印出「執行緒自己發現被主程序中斷了」。</li><li>執行緒的生成，這邊採用的是此方法<a href=https://goo.gl/3wwxec>Task.Run<tresult> Method (Func<tresult>, CancellationToken)</tresult></tresult></a>。</li><li>作為CallBack函式的ContinueWith，在這邊是採用此方法<a href=https://goo.gl/PA75fF>Task.ContinueWith Method (Action<task>)</task></a>。oFinishTasky在此作為Action<task>的引數，亦即資料型別是System.Threading.Tasks.Task<string>。</string></task></li><li>程式碼中用IsCompleted來檢查執行緒是否已經執行結束。</li><li>程式碼中用CancellationTokenSource.Token.IsCancellationRequested來檢查執行緒是否已經被中斷。</li></ol><h2>執行緒的前景、背景、線程池小知識</h2><h3>前景、背景執行緒</h3><ol><li>前景執行緒：不會隨著Process關閉而關閉，一定會執行完工作。（這是.NET的預設值）</li><li>背景執行緒：隨著Process關閉而關閉，不會執行完工作且不會有Exception。</li><li>前景與背景執行緒，可以透過IsBackground屬性來切換。</li></ol><h3>線程池（ThreadPool）</h3><h4>不使用線程池的做法</h4><ul><li>new Thread(OOO).Start(XXX);</li></ul><h4>使用線程池的做法</h4><ul><li>ThreadPool.QueueUserWorkItem(OOO, XXX);</li><li>Task.Run(OOO);</li><li>※註：OOO通常為function、Auction、Func，XXX意指為argument（即Func類的parameter）。</li></ul><h6>ThreadCancel TaskCancel CancellationTokenSource CancellationToken</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

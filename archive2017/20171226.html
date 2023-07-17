@@ -1,0 +1,26 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>使用WebGrease裡面的Microsoft.Ajax.Utilities.Minifier來動態壓縮JS、CSS</h1><p>在前一篇文章「<a href=/archive2017/20171223.html>在WSP WebForm下，使用System.Web.Optimization來進行JS、CSS壓縮與打包</a>」，我們提到利用System.Web.Optimization來進行全網站的靜態Javascript、CSS的壓縮，但是這無法解決可能我們偶然在系統開發階段，臨時載入的JS、CSS的壓縮，或者是離散在子系統之間的這些資源檔案，這些都是無法被System.Web.Optimization這種全網站式的架構所支援。</p><h2>接下來換WebGrease登場了</h2><p>在我們nuget System.Web.Optimization後，裡面的WebGrease.dll其實有隱含一個重要的類別，叫做Microsoft.Ajax.Utilities.Minifier。這個方法可以被我們利用來進行在執行階段時期，用很簡單的指令就可以進行到Javascript、CSS的壓縮。確定有參考到WebGrease.dll後，請輸入下列的程式碼即可：</p><pre><code class=language-cs>var oMin = new Microsoft.Ajax.Utilities.Minifier();
+
+//壓縮Javascript
+string cJS = oMin.MinifyJavaScript(@"
+  /* 這是一串無意義的註解 */
+  ""use strict"";
+
+  myFunction();
+
+  function myFunction() {
+      y = 3.14;  //這是一串無意義的註解
+  }
+");
+
+//壓縮Css
+string cCss = oMin.MinifyStyleSheet(@"
+  /* 這是一串無意義的註解 */
+  div {
+      width: 200px;  //這是一串無意義的註解
+      height: 50px;
+      background-color: #eee;
+      overflow: visible;
+  }
+");
+</code></pre><p>壓縮後的cJS + cCss輸出：（僅示範用，勿在意HTML語法）</p><pre><code class=language-js>"use strict";function myFunction(){y=3.14}myFunction()div{width:200px;height:50px;background-color:#eee;overflow:visible}
+</code></pre><h3>相關連結</h3><p><a href=/archive2017/20171223.html>在WSP WebForm下，使用System.Web.Optimization來進行JS、CSS壓縮與打包</a></p><h6>ASP.NET Compress Javascript Css Dynamic OnTheFly Runtime</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

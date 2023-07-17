@@ -1,0 +1,154 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>SQL筆記：關於SQL暫存表語法整理</h1><p>SQL的暫存表（TEMP TABLE）如果善加利用的話，其實可以提升非常多的可維護性與可閱讀性，撇除一般資料表運算式（Common Table Expressions, CTE）不說，一般來說暫存表區分成三種型態。</p><h2>SQL暫存表（#Table、##Table、@Table）</h2><ol><li><p>#Table：簡單的說就是自用的暫存表，別人看不見，使用SELECT INTO TEMP TABLE statement。理論上來說過一段時間SQL Server會自動把暫存表清除，但你永遠抓不準時間，因此這類的暫存表起手式就是先砍掉自己（DROP TABLE #Table_name）。使用這類的暫存表最大的優點是不需要事先宣告Table Schema，但由於開發或DEBUG時期很麻煩（需要隨時隨地DROP），因此Not my style。</p></li><li><p>##Table：簡單的說就是公用的暫存表，別人看的見。我實在無法理解什麼情況下會用到這種暫存表，或許需要遭遇到超大型資料且需要節省更新與資源的情境吧，用不到因此I don't care。</p></li><li><p>@Table：只活在查詢執行期當下，整個查詢周期結束後SQL會自動從記憶體刪除，使用INSERT INTO SELECT statement。最大的缺點就是需要事先宣告一個Table Schema，除此之外一切都好，因此敝人認為是SQL暫存資料表的首選！</p></li></ol><h2>SQL @Table 暫存資料表範例</h2><p>這個範例是基於先前的文章：「<a href=/archive2022/20221109.html>SQL筆記：關於子查詢（SubQuery）的語法整理</a>」所建立的資料架構下所撰寫，因此閱讀前請至該文章先瀏覽一次。在這個案例中所要達成的目標是，利用SQL暫存表語法，重新建立「年度銷售人員貢獻度」的查詢語法。</p><ol><li>製作人員年度銷售總表（@TEMP_ 總表）</li></ol><pre><code class=language-sql>/* 製作：總表  */
+DECLARE @TEMP_總表 TABLE (
+  銷售年分 INT, 
+  員工姓名 NVARCHAR(10), 
+  年度銷售金額 INT
+)
+
+INSERT INTO
+  @TEMP_總表 
+SELECT 
+  A.銷售年分, 
+  C.員工姓名, 
+  SUM(B.產品價格) AS 年度銷售金額 
+FROM 
+  dbo.TABLE_銷售 A 
+  INNER JOIN dbo.TABLE_產品 B ON A.銷售產品編號 = B.產品編號 
+  INNER JOIN dbo.TABLE_員工 C ON A.銷售員工編號 = C.員工編號 
+GROUP BY 
+  A.銷售年分, 
+  C.員工姓名 
+ORDER BY 
+  A.銷售年分, 
+  C.員工姓名 
+
+SELECT * FROM @TEMP_總表
+</code></pre><p>輸出結果如下：</p><pre><code class=language-txt>銷售年分  員工姓名  年度銷售金額
+－－－－  －－－－  －－－－－－
+2019  王小明  20000
+2019  李小華  12000
+2019  孫小美  12000
+2019  陳小玲  8000
+2020  王小明  7000
+2020  李小華  8000
+2020  孫小美  11000
+2020  陳小玲  13000
+2021  王小明  10000
+2021  李小華  12000
+2021  孫小美  14000
+2021  陳小玲  13000
+2022  王小明  7000
+2022  李小華  8000
+2022  孫小美  19000
+2022  陳小玲  21000
+</code></pre><ol start=2><li>製作年度銷售總額表（@TEMP_總額）</li></ol><pre><code class=language-sql>/* 製作：年度銷售總額表  */
+DECLARE @TEMP_總額 TABLE (
+  銷售年分 INT,
+  年度銷售總額 INT
+)
+
+INSERT INTO
+  @TEMP_總額 
+SELECT 
+  銷售年分, 
+  SUM(年度銷售金額) AS 年度銷售總額 --該年度所有人的銷售額相加就是年度銷售總額
+FROM 
+  @TEMP_總表 
+GROUP BY 
+  銷售年分
+
+SELECT * FROM @TEMP_總額 
+</code></pre><p>輸出結果如下：</p><pre><code class=language-txt>銷售年分  年度銷售總額
+－－－－  －－－－－－
+2019  52000
+2020  39000
+2021  49000
+2022  55000
+</code></pre><ol start=3><li>所有的材料都準備好了，就把這兩張表JOIN起來，順手拿起需要的參數計算百分比即可得出年度銷售人員貢獻度表。</li></ol><pre><code class=language-sql>/* 運算：年度銷售人員貢獻度表  */
+SELECT 
+  A.銷售年分, 
+  A.員工姓名, 
+  A.年度銷售金額, 
+  Cast(
+    Cast(
+      (
+        (A.年度銷售金額 + 0.0) / B.年度銷售總額 * 100
+      ) AS DECIMAL(38, 2)
+    ) AS VARCHAR
+  ) + '%' AS 年度銷售貢獻占比 
+FROM 
+  @TEMP_總表 A 
+  INNER JOIN @TEMP_總額 B ON A.銷售年分 = B.銷售年分
+</code></pre><p>輸出結果如下：</p><pre><code class=language-txt>銷售年分  員工姓名  年度銷售金額  年度銷售貢獻占比
+－－－－  －－－－  －－－－－－  －－－－－－－－
+2019  王小明  20000  38.46%
+2019  李小華  12000  23.08%
+2019  孫小美  12000  23.08%
+2019  陳小玲   8000  15.38%
+2020  王小明   7000  17.95%
+2020  李小華   8000  20.51%
+2020  孫小美  11000  28.21%
+2020  陳小玲  13000  33.33%
+2021  王小明  10000  20.41%
+2021  李小華  12000  24.49%
+2021  孫小美  14000  28.57%
+2021  陳小玲  13000  26.53%
+2022  王小明   7000  12.73%
+2022  李小華   8000  14.55%
+2022  孫小美  19000  34.55%
+2022  陳小玲  21000  38.18%
+</code></pre><p>SQL暫存表其實就是VIEW的觀念，一般來說#TABLE會比@TABLE的效能高一些。善用SQL暫存表語法可以在後續維護時期可讀性極高，不僅讓思路清晰，更有利於修改、撰寫與除錯，好處多多。文末再附上業界慣用的花式SELECT但相同產出語法，讓各位網友對比看看自己的喜好。</p><h2>附錄</h2><p>同款結果下的花式SELECT語法（子查詢 Sub Query、相關子查詢 Correlated SubQuery）</p><pre><code class=language-sql>SELECT 
+  銷售年分, 
+  員工姓名, 
+  年度銷售金額, 
+  Cast(
+    Cast(
+      (
+        (年度銷售金額 + 0.0) / 該年銷售總金額 * 100
+      ) AS DECIMAL(38, 2)
+    ) AS VARCHAR
+  ) + '%' AS 年度銷售貢獻占比 
+FROM 
+  (
+    SELECT 
+      銷售總表.銷售年分, 
+      銷售總表.員工姓名, 
+      SUM(產品價格) AS 年度銷售金額, 
+      (
+        SELECT 
+          SUM(產品價格) 
+        FROM 
+          (
+            SELECT 
+              dbo.TABLE_銷售.銷售年分, 
+              dbo.TABLE_產品.產品價格 
+            FROM 
+              dbo.TABLE_銷售 
+              INNER JOIN dbo.TABLE_產品 ON dbo.TABLE_銷售.銷售產品編號 = dbo.TABLE_產品.產品編號 
+              INNER JOIN dbo.TABLE_員工 ON dbo.TABLE_銷售.銷售員工編號 = dbo.TABLE_員工.員工編號
+          ) AS 銷售價格表 
+        WHERE 
+          銷售價格表.銷售年分 = 銷售總表.銷售年分
+      ) AS 該年銷售總金額 
+    FROM 
+      (
+        SELECT 
+          dbo.TABLE_銷售.銷售年分, 
+          dbo.TABLE_產品.產品分類, 
+          dbo.TABLE_產品.產品名稱, 
+          dbo.TABLE_產品.產品價格, 
+          dbo.TABLE_員工.員工姓名, 
+          dbo.TABLE_員工.員工性別 
+        FROM 
+          dbo.TABLE_銷售 
+          INNER JOIN dbo.TABLE_產品 ON dbo.TABLE_銷售.銷售產品編號 = dbo.TABLE_產品.產品編號 
+          INNER JOIN dbo.TABLE_員工 ON dbo.TABLE_銷售.銷售員工編號 = dbo.TABLE_員工.員工編號
+      ) AS 銷售總表 
+    GROUP BY 
+      銷售總表.銷售年分, 
+      銷售總表.員工姓名
+  ) AS 銷售貢獻統計 
+ORDER BY 
+  銷售年分, 
+  員工姓名
+</code></pre><h3>相關參考</h3><ul><li><a href=/archive2017/20170515.html>SQL筆記：利用SQL相關子查詢，來產生多張資料表間的統計檢視表</a></li><li><a href=/archive2022/20221109.html>SQL筆記：關於子查詢（SubQuery）的語法整理</a></li><li><a href=/archive2022/20221110.html>SQL筆記：關於SQL暫存表語法整理</a></li></ul><h6>SQL Command Statement TempTable InsertIntoSelect SelectIntoTempTable</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

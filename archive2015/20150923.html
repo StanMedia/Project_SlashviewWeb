@@ -1,0 +1,78 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>C#之物件實例之序列化與反序列化</h1><p>序列化有時候可以方便我們省下很多程式碼，又基於我目前所有的系統都是運行在非商用溝通的Web介面上，因此在這篇文章中我們討論的是「文字型XML序列化」、「二進制型序列化」，而「SOAP序列化」就不在我們討論的範圍了。</p><p><img src=https://content.slashview.com/img/2015/20150923_01.jpg alt="" /></p><p>在開始之前一定要先請建立觀念，序列化只會序列實例（instances）的Public等級的成員，也就是Private等級的一律被忽略無視，因此如果你某一個實例裡面有用到Private等級的成員來保持某一種狀態，那麼就很抱歉了。此外，也不要認為在沒有任何可以Reference目標類別（DLL）的環境中，可以憑空的反序列化回來，這也是不可能的事。</p><h2>序列化與反序列化依存的類別</h2><ol><li>文字型XML序列化 System.Xml.Serialization;</li><li>二進制型序列化 System.Runtime.Serialization.Formatters.Binary;</li></ol><h2>文字型XML序列化</h2><p>程式碼如下，我們故意在裡面加入一個byte陣列，來測試二進制資料在序列化成文字之後，是否可以成功的被反序列化。另外我們也實作了一個private方法，來測試反序列化之後，是否可以順利的操作物件得到正確資料。要讓一個類別可以序列化，除了在上方加入[Serializable]描述之外，類別本身「一定要是Public」喔！</p><pre><code class=language-cs>[Serializable]
+public class People
+{
+  public string cFirstName { get; set; }
+  public string cLastName { get; set; }
+  public byte[] bytTest = { 0x41, 0x42 };  //A, B
+  public string sayHello() { return processWords(); }
+  private string processWords() { return string.Format("{0}, {1} says Hello!", cFirstName, cLastName);  }
+}
+
+class Program
+{
+  static void Main(string[] args)
+  {
+    People oPeople = new People() { cFirstName = "John", cLastName = "Lee" };
+    System.Xml.Serialization.XmlSerializer oSerial = new System.Xml.Serialization.XmlSerializer(typeof(People));
+    
+    //序列化
+    System.IO.StringWriter oStream = new System.IO.StringWriter();
+    oSerial.Serialize(oStream, oPeople);
+    oStream.Close();
+    Console.WriteLine("序列化：");
+    Console.WriteLine(oStream.ToString());
+
+    //反序列化
+    oPeople = (People)oSerial.Deserialize(new System.IO.StringReader(oStream.ToString()));
+    Console.WriteLine("反序列化：");
+    Console.WriteLine(oPeople.sayHello());
+    Console.WriteLine("反序列化後之二進制資料測試：");
+    Console.WriteLine(System.Text.ASCIIEncoding.ASCII.GetString(oPeople.bytTest));
+
+    Console.Read();
+  }
+}
+</code></pre><p>由上面的程式碼我們可以得知，序列化的過程中，必須寄宿在Stream裡面進行運作，這是合理的，因為大部分我們序列化後都是要寫到檔案或資料庫之中。另外我們也可以在VisualStudio運行過程中得知，二進制的序列化成文字之後，他其實會以Base64的機制來將二進制編碼起來。執行結果如下：</p><p>序列化：</p><pre><code class=language-xml>&lt;?xml version="1.0" encoding="utf-16"?>
+&lt;People xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+  &lt;bytTest>QUI=&lt;/bytTest>
+  &lt;cFirstName>John&lt;/cFirstName>
+  &lt;cLastName>Lee&lt;/cLastName>
+&lt;/People>
+</code></pre><p>反序列化：</p><pre><code class=language-txt>John, Lee says Hello!
+</code></pre><p>反序列化後之二進制資料測試：</p><pre><code class=language-txt>AB
+</code></pre><h2>二進制型序列化</h2><p>二進制的序列化相對於文字型的序列化，變異不大，我們只要調用System.Runtime.Serialization.Formatters.Binary.BinaryFormatter類別來幫我們實作就可以了。由於他要求一定要System.IO.Stream抽象類別， 所以我們只好改換成System.IO.MemoryStream來實驗了。為了力求真實，我們把字串裡面的文字，由英文改成具備Unicode的中文，因此更可以反映反序列化後的正確性。</p><pre><code class=language-cs>[Serializable]
+public class People
+{
+  public string cFirstName { get; set; }
+  public string cLastName { get; set; }
+  public byte[] bytTest = { 0x41, 0x42 };
+  public string sayHello() { return processWords(); }
+  private string processWords() { return string.Format("{0}, {1} says Hello!", cFirstName, cLastName);  }
+}
+
+class Program
+{
+  static void Main(string[] args)
+  {
+    People oPeople = new People() { cFirstName = "錫堃", cLastName = "游" };
+    System.Runtime.Serialization.Formatters.Binary.BinaryFormatter oSerial = new System.Runtime.Serialization.Formatters.Binary.BinaryFormatter();
+
+    //序列化
+    System.IO.MemoryStream oStream = new System.IO.MemoryStream();
+    oSerial.Serialize(oStream, oPeople);
+    oStream.Close();
+    Console.WriteLine("序列化：");
+    byte[] bytTemp = oStream.ToArray();
+    Console.WriteLine(System.Text.ASCIIEncoding.UTF8.GetString(bytTemp));
+
+    //反序列化
+    oPeople = (People)oSerial.Deserialize(new System.IO.MemoryStream(bytTemp));
+    Console.WriteLine("反序列化：");
+    Console.WriteLine(oPeople.sayHello());
+    Console.WriteLine("反序列化後之二進制資料測試：");
+    Console.WriteLine(System.Text.ASCIIEncoding.ASCII.GetString(oPeople.bytTest));
+
+    Console.Read();
+  }
+}
+</code></pre><p>經過上面的程式碼我們發現是正確的運行的，我們勉強地把二進制資料轉換成文字印在Big5等級的Console上，想當然爾會出現一堆亂碼，不過可以確定的是，所有資料的反序列化回來後，都是正確的資料。</p><p><img src=https://content.slashview.com/img/2015/20150923_02.jpg alt="" /></p><h6>.NET C# Object Serialize Serializable Deserialize Deserializable</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

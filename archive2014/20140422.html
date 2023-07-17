@@ -1,0 +1,71 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>C#中的Attribute屬性（特性）用法</h1><p>經常在C#的範例程式碼中，看到在類別Class、方法Method上面，帶了一個中括號，裡面寫了一些蠻語意化的字串。這個東西在C#語言裡面用到不少，它源自於System.Attribute，並且在.NET的整體架構中佔了很重要的一環。</p><p>Attribute在英文中的意思是指「屬性」，但是這與我們一般在程式語言中理解的屬性是完全不一樣的意思的，更進階一點來說應該翻成「特性」才對。一般來說，在普通的程式碼環境根本不會用到這種Attribute語法，只有在特別的時期，例如Win32 DLL的引用[DllImport]，或者是Object Serializable時，才會使用到，Attribute是編譯時期的產物，像剛才講的這兩個時機點，都是要跟編譯器描述（講）一些資訊，以利其編譯之動作。</p><p>更簡單的說，Attritube最主要的目的，就是可以提供延伸的資訊給程式碼參考，並可動態去修正後續要進行的動作。</p><p>基於上述的理由，我們建立一個CMD環境的程式碼，其中包含了一個自訂的特性類別「Writer」，用來記錄這一段程式是由誰來撰寫，以及相關的參考參數可以取出。另外一個「SomeClass」則是真正的把Attribute的寫法使用上去，你可以發現它甚至可以拿來當成程式碼的註解來使用（這也是這個無用的範例假設的情境），無論是Class或Method都可以支援Attribute，且可以不只一個Attribute。</p><p>※註：可支援Attribute的寫法包含了組件Assembly、Module、Type、Property、Event、Field、Method、Param、Return等。</p><p>最後我們可以從主控台Main這邊，來進行這兩個類別的操作，程式碼以及相關說明如下：</p><pre><code class=language-cs>namespace Attribute
+{
+  class Program
+  {
+    static void Main(string[] args)
+    {
+      //取出操作對象的Type
+      System.Type oType = typeof(SomeClass);
+      //利用反射取出成員資訊（記住Reflection蠻很耗效能）
+      System.Reflection.MemberInfo oItemInfo = oType;
+      
+      /*取出類別上方的Attribute*/
+      //取出類別Class中隱含的屬性(0筆至多筆)
+      foreach (Writer oWriter in System.Attribute.GetCustomAttributes(oItemInfo))
+      {
+        System.Console.Write("Writer id={0}, ", oWriter.id.ToString());
+        System.Console.WriteLine("name={0}", oWriter.name);
+      }
+      
+      /*取出方法上方的Attribute*/
+      //取出這個類別裡面的所有方法
+      foreach (System.Reflection.MethodInfo oMethod in oType.GetMethods())
+      {
+        //取出類別Method中隱含的屬性(0筆至多筆)
+        foreach (var oTemp in System.Attribute.GetCustomAttributes(oMethod))
+        {
+          //因為有可能取到.ToString()之類的繼承方法，那些並不是我們所需要的，所以必須過濾掉
+          if (oTemp.GetType() == typeof(Writer))
+          {
+            Writer oWriter = (Writer)oTemp;
+            System.Console.Write("Method Name: {0}; ", oMethod.Name);
+            System.Console.Write("Writer id={0}, ", oWriter.id.ToString());
+            System.Console.Write("name={0}, ", oWriter.name);
+            System.Console.WriteLine("note={0}", oWriter.note);
+          }
+        }
+      }
+
+      System.Console.Read();
+    }
+  }
+
+  //無聊的示範類別（單純的示範這個程式用來記載某個類別方法是「誰」寫的）
+  [Writer(id=777, name="John")]
+  [Writer(id=888, name="Mary")]
+  class SomeClass
+  {
+    [Writer(id=901, name="Programer-1", note="程式設計師一")]
+    [Writer(id=902, name="Programer-2", note="程式設計師二")]
+    public string ADD()
+    { return "Method ADD has been run."; }
+
+    [Writer(id=903, name="Programer-3", note="程式設計師三")]
+    public string DEL()
+    { return "Method DEL has been run."; }
+  }
+
+  //自訂Attribute類別，一定要繼承System.Attribute
+  //且可藉由上方的Attribute來進行細部的設定（例如多Attribute的AllowMultiple設定）
+  [System.AttributeUsage(
+    System.AttributeTargets.All, 
+    Inherited=false, 
+    AllowMultiple=true)]
+  class Writer : System.Attribute
+  {
+    public int id { get; set; }
+    public string name { get; set; }
+    public string note { get; set; }
+  }
+}
+</code></pre><p>由上面的程式碼中，我們可以在執行期時，求得正在運行中的類別的「相關註解」，也可以針對正在運行中的類別中的某個方法進行求取「相關註解」，至於這個「相關註解」到底要幹嘛，就得看你後續的程式的需求了。執行出來的畫面如下：</p><p><img src=https://content.slashview.com/img/2014/20140422_01.jpg alt="" /></p><p>在Attribute的應用中，如果你用到的是自訂Attribute特性，其實最後大多是準備要用於晚期繫結，不然在執行期要這些無聊的類別註解資訊要幹嘛？晚期繫結在.NET裡面的實作就叫做Reflection，中文稱為反射，這個留在「<a href=/archive2014/20140423.html>C#中的Reflection反射（反映）用法</a>」中再來探討。</p><p>相關連結：</p><p><a href=/archive2019/20190509.html>利用Attribute Type打造一個類MVC的驗證</a><br /> <a href=/archive2020/20200303.html>利用Attribute為ORM型別的屬性添增新色彩</a></p><p>C# Attribute 屬性 特性 中括號 Reflection</p></main><footer></footer><script src=/.file/site.js></script></body></html>

@@ -1,0 +1,95 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>事件（Events）的研究：如何在類別物件中撰寫事件</h1><p>在ASP.NET或Windows Forms的程式設計中，我們很常用到事件，幾乎是視為已經習以為常的事。但是在我的程式設計經驗裡面，在自己設計的類別中幾乎不太用到事件的設計，總覺得這是一個很無聊的動作。今天剛好有機會要用到多重觸發的運行架構，因此特別研究了一下事件的撰寫方式，並記錄在此。一個C#事件的基本架構如下圖所示：</p><p><img src=https://content.slashview.com/img/2015/20150901_01.jpg alt="" /></p><p>在上圖中，我們可以看到使用者控制項中，有宣告了一個委派（Delegates），以及一個事件（Events）指向委派，而當使用者控制項觸發了（Fire、Raise）事件時，訂閱這些事件的應用程式，就會跟著一起動起來了，並將行為指定給Event Handler運行。</p><h2>一個利用事件來進行程式設計的簡單範例</h2><p>在這邊我們先用C# Console唯一提供的CancelKeyPress Events來進行設計示範，這個CancelKeyPress唯一的作用，就是當使用者在Console中按下Ctrl+C時，就會觸發這個事件來進行中斷程序。我們要做的事情就是攔截這個事件的工作，並將<a href=https://goo.gl/6ha95z>ConsoleCancelEventArgs.Cancel</a>設定成true，讓Console不至於中斷跳出。程式碼如下：</p><pre><code class=language-cs>static void Main(string[] args)
+{
+  //在Console唯一一個事件中，掛上我們自己定義的函式
+  Console.CancelKeyPress += myCancelKeyPress;
+
+  while (true)
+  {
+    Console.WriteLine("按下X鈕才能離開。");
+    ConsoleKeyInfo cki = Console.ReadKey(true);
+    Console.WriteLine("你按了：{0}", cki.Key);
+    if (cki.Key == ConsoleKey.X) break;
+  }
+}
+
+private static void myCancelKeyPress(object sender, ConsoleCancelEventArgs args)
+{
+  Console.WriteLine("你按了：{0}；Cancel屬性現在為：{1}，將改回true，否則真的會被中斷掉。", args.SpecialKey, args.Cancel);
+  args.Cancel = true;
+}
+</code></pre><p>其中在Console.CancelKeyPress += myCancelKeyPress;這一行程式碼，正規的寫法應該是要寫成下列式子，但是因為我們調用的EventArgs都是用官方的ConsoleCancelEventArgs所以等效。</p><p>Console.CancelKeyPress += new ConsoleCancelEventHandler(myCancelKeyPress);</p><p>當然，你可以將委派用黏巴達寫法來化簡，在不重複利用函式的情況為前提下，也就是說你可以把一整個函式終結掉，讓程式碼變得更精簡。</p><pre><code class=language-cs>static void Main(string[] args)
+{
+  //在Console唯一一個事件中，掛上我們自己定義的函式
+  Console.CancelKeyPress += (s, e) =>
+  {
+    Console.WriteLine("你按了：{0}；Cancel屬性現在為：{1}，將改回true，否則真的會被中斷掉。", e.SpecialKey, e.Cancel);
+    e.Cancel = true;
+  };
+
+  while (true)
+  {
+    Console.WriteLine("按下X鈕才能離開。");
+    ConsoleKeyInfo cki = Console.ReadKey(true);
+    Console.WriteLine("你按了：{0}", cki.Key);
+    if (cki.Key == ConsoleKey.X) break;
+  }
+}
+</code></pre><p>然後，這個Console運行時期的圖片如下所示，我們可以發現Ctrl-C真的被Console.CancelKeyPress攔截到並觸發了：</p><p><img src=https://content.slashview.com/img/2015/20150901_02.jpg alt="" /></p><h2>在自建類別中，撰寫事件供給他人使用</h2><p>如果一直都在用別人寫好的物件事件，而自己都不曾寫過給別人用，那麼這未免也太過分了吧！（笑）所以接下來的範例，我們將包裝一個叫做計算機的命名空間（namespace Calculator），然後我們會分別建立兩個類別、一個委派。</p><ol><li>AnswerArgs類別</li><li>AnswerEventHandler委派</li><li>Calc類別</li></ol><p>AnswerEventHandler這個委派應該要獨立被放在namespace目錄下，不應該被放在與Calc類別之中。例如你在下<a href=https://goo.gl/S0MJRH>System.Windows.Forms</a>，也可以找到「MouseEventHandler Delegate」、「KeyEventHandler Delegate」等委派，來受到MouseMove或KeyDown等事件之委託。</p><pre><code class=language-cs>namespace Calculator
+{
+  //事件參數包
+  public class AnswerArgs : EventArgs
+  {
+    public int iAnswer;
+  }
+  //事件委派
+  public delegate void AnswerEventHandler(object sender, AnswerArgs e);
+  //主要類別
+  public class Calc
+  {
+    //定義一個OnKnowAnswer事件，並將其委派給AnswerEventHandler
+    public event AnswerEventHandler OnKnowAnswer;
+    public string cName { set; get; }
+    public int Add(int A, int B)
+    {
+      AnswerArgs e = new AnswerArgs() { iAnswer = A + B };
+      if (OnKnowAnswer != null) { OnKnowAnswer(this, e); }
+      return A + B;
+    }
+  }
+}
+</code></pre><h2>在外部引用類別事件的方式</h2><p>萬事俱備，接著讓我們在主程序中來引用剛才建立好的類別事件吧！</p><pre><code class=language-cs>static void Main(string[] args)
+{
+  Calculator.Calc oTemp = new Calculator.Calc() { cName = "計算機一" };
+  //利用黏巴達為事件掛上一個簡單的處理函式
+  oTemp.OnKnowAnswer += (s, e) => { Console.WriteLine("簡單輸出: " + e.iAnswer); };
+  oTemp.Add(1, 2);
+  oTemp.Add(3, 4);
+  Console.WriteLine("---");
+
+  //事件化的優點ａ：同一時間可以掛上多個函式
+  oTemp.OnKnowAnswer += myOnKnowAnswer;
+  oTemp.Add(5, 6);
+  oTemp.Add(7, 8);
+  Console.WriteLine("---");
+
+  //事件化的優點ｂ：同類型的物件事件，多數時候是可以共用同一個函式的
+  Calculator.Calc oTemp2 = new Calculator.Calc() { cName = "計算機二" };
+  oTemp2.OnKnowAnswer += myOnKnowAnswer;
+  oTemp2.Add(9, 10);
+  Console.WriteLine("---");
+
+  //事件化的優點ｃ，除非你一開始就對Add方法下void，否則事件有可能只是個通知，你依然可以允許方法的執行結果可以有其他出口
+  int iTemp = oTemp2.Add(11, 12);
+  Console.WriteLine("Direct return: " + iTemp);
+
+  Console.WriteLine("--- END ---");
+  Console.Read();
+}
+
+private static void myOnKnowAnswer(object sender, Calculator.AnswerArgs e)
+{
+  Console.WriteLine(string.Format("The {0} answer is: {1}", ((Calculator.Calc)sender).cName, e.iAnswer));
+}
+</code></pre><p>輸出結果照片如下：</p><p><img src=https://content.slashview.com/img/2015/20150901_03.jpg alt="" /></p><p>最後值得一提的是（在Console示範時也有提醒過），如果你願意的話，可以將程式碼寫得更正規：（純粹可以表示這是受哪一個在委派託管，意義不大。）</p><pre><code class=language-cs>//oTemp.OnKnowAnswer += myOnKnowAnswer;
+oTemp.OnKnowAnswer += new Calculator.AnswerEventHandler(myOnKnowAnswer);
+</code></pre><p>註：如果沒有要帶入任何的EventArgs，也不想宣告delegate EventHandler，可以參考這一篇利用泛型委派的寫法：<a href=/archive2015/20150909.html>運用泛型委派進行基本的觀察者模式實作</a>。</p><h6>C# Events UserDefinedClass SelfDefinedClass Delegates FireEvents RaiseEvents</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

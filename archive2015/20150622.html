@@ -1,0 +1,14 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>有關於2015年閏秒的問題</h1><p>昨天新聞報導，鋪天蓋地的講台灣時間2015年07月01日07時59分出現60秒的閏秒問題（格林威治標準時間2015年06月30日23時59分59秒），讓我覺得有點恐怖，於是上網查了一下自己所管理的Windows群是否有相關的問題。最後的答案是：沒問題，如果你有在2015年01月16日進行KB909614修補的話。（相關連結：<a href=https://goo.gl/RnSMEX>How the Windows Time service treats a leap second</a>）</p><p><img src=https://content.slashview.com/img/2015/20150622_01.jpg alt="" /></p><p>依據蘋果在2015年06月21日08:09的報導</p><pre><code class=language-txt>由於地球自轉速度減慢，今年6月底有「閏秒」，台灣時間7月1日上午7時59分59秒，（格林威治標準時間6月30日23時59分59秒），全球時鐘將加多一秒。增加閏秒，可糾正地球自轉跟原子鐘所出現的時差，但電腦專家擔憂，各地電腦系統或會因為這一秒而出現大當機。閏秒之所以出現，是因為地球自轉速度並不平均，每天大約減慢1/2000秒左右，而原子鐘是以原子振動頻率為依據的時間標準，因此每隔數年便有需要加閏秒，讓「世界時鐘」與「原子時鐘」同步。今年是自1972年以來第26次調整閏秒，上一次閏秒出現在2012年7月1日，但當時卻導致包括Reddit、Mozilla、Yelp、LinkedIn等多個知名網站盪機，連航空公司也受到影響。電腦專家擔心今年也因為多了一秒而出現電腦系統故障或超載，不過多項大企業表明今年已有對策。Google的處理方法是從前一年開始，就逐漸增加幾分之一秒，故無需加多一秒，而是「拖長」多出的第二秒。新增一閏秒對一般人日常生活沒有影響，但如果地球自轉慢了而沒有加閏秒，那麼到了2100年就會有2至3分鐘誤差，至2700年誤差會多達半小時，若根據時間看日出，便可能會錯過。（國際中心／綜合外電報導）
+</code></pre><h2>Working as a NTP Client</h2><p>It will receive a packet that includes a leap second. Therefore, after the leap second occurs, the NTP client that is running Windows Time service is one second faster than the actual time. This time difference is resolved at the next time synchronization.</p><h2>Working as a NTP Server</h2><p>There is no way to include a leap second explicitly for the Windows Time service when the service is working as an NTP server. However, if an external NTP server sends a Leap Indicator that has a value of 01 to the Windows Time service NTP server, the Windows NTP server sends the same value to following NTP client, mentions KB909614.</p><h2>.NET Framework support?</h2><p>確定Windows OS有更新就沒問題之後，接下來當然是想到我們關心的.NET Framework支援閏秒的問題，於是開啟C#輸入下列的測試程式碼：</p><pre><code class=language-cs>static void Main(string[] args)
+{
+  try
+  { DateTime dDate = Convert.ToDateTime(@"2015/07/01 07:59:60"); }
+  catch (Exception ex)
+  { Console.WriteLine(ex.ToString()); }
+  Console.Read();
+}
+</code></pre><p>答案是，被TryCatch到了，也就是.NET Framework 4.5.1認為沒有60秒這種東西，彈出的錯誤資訊如下：</p><pre><code class=language-txt>日曆 System.Globalization.GregorianCalendar 不支援以字串表示的 DateTime。
+於 System.DateTimeParse.Parse(String s, DateTimeFormatInfo dtfi, DateTimeStyles styles)
+於 System.Convert.ToDateTime(String value)
+brabra...
+</code></pre><p>不知道日後的版本會不會改進，不過話說回來，如果正確的識別到後，那要Convert成何種日期格式？原封不動的接受60秒，或者進位，或者減一秒，或者這根本就是使用這傳入時真正誤植的數值？其實怎樣的做法最後的會變成很有爭議。所以或許微軟把這個問題歸類到系統級的問題，因此.NET Framework最後不去實作閏秒的包容性檢核，也是有這樣的可能論調。</p><h3>NTPServer NTPClient LeapSeconds LeapYears MicrosoftWindows</h3></main><footer></footer><script src=/.file/site.js></script></body></html>

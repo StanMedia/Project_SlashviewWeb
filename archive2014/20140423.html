@@ -1,0 +1,71 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>C#中的Reflection反射（反映）用法</h1><p>如果你程式碼中有要動態到動態極限的需求，那麼你會發現你根本沒有辦法動態的指定一個物件的類別。舉例來說，程式碼如「DataTable oDT = new DataTable();」，你根本沒有辦法在執行期才指定是要載入DataTable類別，也就是說一開始你注定只能夠在程式碼裡寫死了。如果你屈服於這樣的困境，那你就永遠不可能完成極致的動態了。</p><p>別灰心，Microsoft .NET Framework 2.0後提供了System.Reflection類別，就是專門要來解決這個問題，一般在我們都稱為「反射」，但是官方稱為「反映」也頗為傳神，這個功能最主要的就是可讓您取得已載入組件（Assemblies）及組件中所定義型別的相關資訊，例如類別(classes)、介面（interfaces）及實值型別（value types）等。講的更白一點，就是你可以透過「字串」的指定，就可以動態的將某物件指派成「你字串中指定要實體化的類別」並且進行操作，這簡直是太動態了。</p><p><a href=http://goo.gl/vpnF0S>微軟MSDN中對於Reflection的介紹</a></p><p>話不多說，下面的程式碼展示出，你可以透過動態的方式，隨意的將你程式碼中的物件動態指派成某一個類別，並且進行相關的操作，包含屬性的指派，以及介面成員的方法調用等。（程式運行的環境是命令列CMD）</p><pre><code class=language-cs>namespace Reflection
+{
+  class Program
+  {
+    static void Main(string[] args)
+    {
+      //使用者輸入
+      System.Console.Write("請輸入您的交通工具類型（1.摩托車；2.汽車）：");
+      int iMachineType = System.Convert.ToInt32(System.Console.ReadLine());
+      System.Console.Write("請輸入您的交通工具匿稱：");
+      string cTargetName = System.Console.ReadLine();
+
+      //定義等一下要調用的物件名稱
+      //請注意，這邊並沒有使用「早期繫結」的方式，把物件名稱寫死在程式碼之中
+      string cTargetClassName = "Reflection.Transportation";
+      string cTargetProperty = "Name";
+      string cTargetMethodName = "Wheels";
+
+      System.Object oTemp = System.Activator.CreateInstance(System.Type.GetType(cTargetClassName));
+      System.Type oTypeBase = System.Type.GetType(cTargetClassName);
+      
+      //設定與展示物件的名稱屬性
+      System.Reflection.PropertyInfo oProperty = oTypeBase.GetProperty(cTargetProperty);
+      oProperty.SetValue(oTemp, cTargetName);
+      System.Console.Write("您的愛車{0}", oProperty.GetValue(oTemp));
+
+      //依使用者選擇的「字串」，動態轉換物件去調用介面成員
+      System.Object oEntity;
+      switch (iMachineType)
+      {
+        case 2:
+          oTypeBase = System.Type.GetType("Reflection.ICar");
+          oEntity = (ICar)oTemp;
+          break;
+        default:
+          oTypeBase = System.Type.GetType("Reflection.IBike");
+          oEntity = (IBike)oTemp;
+          break;
+      }
+      System.Reflection.MethodInfo oMethod = oTypeBase.GetMethod(cTargetMethodName);
+      System.Console.WriteLine("擁有{0}顆輪子。", oMethod.Invoke(oEntity, null));
+
+      System.Console.Read();
+    }
+  }
+
+  //交通工具類別
+  class Transportation : ICar, IBike
+  {
+    public string Name { get; set; }
+    int ICar.Wheels() { return 4; }
+    int IBike.Wheels() { return 2; }
+  }
+
+  //小客車介面
+  interface ICar
+  {
+    int Wheels();
+  }
+
+  //機踏車介面
+  interface IBike
+  {
+    int Wheels();
+  }
+}
+</code></pre><p>運行出來的畫面如下：</p><p><img src=https://content.slashview.com/img/2014/20140423_01.jpg alt="" /></p><p>通常，程式設計應該不會做到如此動態的工法，但是如果你強調要把類別模型完全解耦合，System.Reflection或許是一個很好的類別載入器。Reflection反射（反應）的撰寫過程通常會跟Attribute屬性（特性）出現在一塊，原因是因為你可能需要從某一個類別（或已經編譯好的DLL）中取出寫這個組件當時的一些資訊，然後再動態的從程式碼中決定要調用哪一個適當的類別以及方法。</p><p>對Attribute有興趣者，可以參考「<a href=/archive2014/20140422.html>C#中的Attribute屬性（特性）用法</a>」。</p><h3>2019-12-30 補充說明：</h3><p>在網路上找資料時看到有網友在討論我這篇文章所提供的程式碼有問題，在System.Activator.CreateInstance時期會出現「System.ArgumentNullException: Value cannot be null. Parameter name: type」的錯誤。這個問題其實很簡單，就是這個網友他忽略掉一個關鍵的地方：一個典型的Type name形成應為如此「Namespace.TypeName, Assembly」，但是如果你的Type對象跟你的MAIN主程序位於同一個組件下，那麼後面那個「Assembly」組件名稱是可以省略不用撰寫的。也就是因為如此，我的程式碼中才只有寫著「Reflection（名稱空間）.Transportation（類別名稱）」。</p><p>個人推測他的實驗環境有可能是採用線上實驗環境（例如：try.dot.net），那種環境的編譯會幫你把組件拆開來陳列，自然是找不到而回報空值了。或者是他個人在Console環境下，根本沒有複製到Namespace為Reflection的區塊語句。有發生類似問題的網友，建議可以把程式碼修改一下，改成動態取出Type的AssemblyQualifiedName。</p><pre><code class=language-cs>//取得正規的組件名稱，例如：Reflection.Transportation, xxxxxxxx, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
+System.Type oTemp = typeof(Transportation);
+//取代之前寫死的「Reflection.Transportation」;
+string cTargetClassName = oTemp.AssemblyQualifiedName;
+</code></pre><h6>C# Reflection 反射 反映 Attribute</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

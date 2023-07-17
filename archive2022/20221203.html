@@ -1,0 +1,8 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>關於找不到GIT的ca-bundle.crt檔案之解法</h1><p>最近更新了一次Visual Studio後，就馬上發生GIT失效的問題，細查發現是因為找不到ca-bundle.crt，但是為何之前都是好好的呢？原因是因為全域參數（global）的http.sslverify被重新打開（true），知道了這個訊息後，去把它關掉就沒事了。</p><h2>解決ca-bundle.crt找不到的問題</h2><p>錯誤訊息如下：</p><pre><code class=language-txt>Git failed with a fatal error.
+unable to access 'https://XXX/': error setting certificate verify locations:  
+CAfile: C:/Program Files/Git/mingw64/ssl/certs/ca-bundle.crt 
+CApath: none
+</code></pre><p>解決方法：</p><p>打開CMD，輸入下列指令關閉SSL驗證：</p><pre><code class=language-txt>git config --global http.sslverify false
+</code></pre><p>執行後再去Visual Studio看，已經可以順利的跟遠端GIT站台通訊了。</p><h2>備註</h2><p>這個指令去修改到的gitconfig之目錄並非存放於「C:\Program Files\Git\etc」目錄下，而是放在現在正在使用Windows的使用者目錄（%USERPROFILE%），通常是「C:\User\SlashView」之類的路徑下，可以找到一個名為「.gitconfig」的檔案，打開來裡面就會有這個描述：</p><pre><code class=language-txt>[http]
+  sslverify = false
+</code></pre><h6>VisualStudio GIT Missing Losted ca-bundle.crt sslCAInfo</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

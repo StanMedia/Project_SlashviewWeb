@@ -1,0 +1,14 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>jQuery設定HTML Select Option使其成為Selected</h1><p>這篇文章的技術含量等於零，但是節省時間的含量卻是大得嚇人，原因就是我每次要使用jQuery操作Option時都會出現錯誤，此時腦袋會一片空白再回去翻Stack Overflow，當然翻找個數篇文章就會找到我所想要的Code，可是我的人生就浪費在這個蠢事上當然要想辦法消除，因此就記錄在此。</p><p><img src=https://content.slashview.com/img/2016/20160926_01.jpg alt="" /></p><p>觸發最主要的點是因為在撰寫HTML的下拉清單（DropDownList）時，我們常會遇到希望在第一個預設（Selected）是列舉跟內容無關的提詞，例如：請點選您要的菜色，請下拉選擇您的縣市．．．等。然後我們希望可以把這個清單的資料再複製到一個文字方框，但是的一個提詞的下拉就免了（不是我們主要需要得到的內容）。此時會遇到兩個狀況：</p><h2>在Bootstrap Modal（Dialog）開啟時，將下拉清單的預設值（Selected）指向到某個Option</h2><p>Bootstrap Modal（Dialog）在關閉的時候，會保留裡面的HTML操作狀態，直到下次再度被喚起顯示。有時候我們希望Modal（Dialog）裡面的select（DropDownList）下拉清單在下次開啟時可以清除成預設選項（option），此時可以參考下列這段程式碼。</p><pre><code class=language-js>$(document).ready(function(){
+  $("#BootstrapModalDialog").on("shown.bs.modal", function () {
+    $("#uiSomeSelect option").removeAttr("selected").filter("[value=XXXX]").attr("selected", true);
+  });
+});
+</code></pre><p>這段的重點其實就是.removeAttr("selected")，如果你忘記要先清除掉，可能會卡在你自己覺得的「我明明有設定.attr("selected", true)啊！」這個狀態大約數分鐘，直到某個Debugd看到時才想起來。</p><p>此外，如果要快速的將某個option value（例如：-1）設定成預設值，可以使用：</p><pre><code class=language-js>$("#uiSomeSelect").val(-1);
+</code></pre><h2>利用jQuery在下拉清單中，讓某個下拉欄位的觸發去做特別動作</h2><p>這個功能很簡單，就是我們希望提詞下拉欄位，與其他真正值的欄位區隔開來，去進行不一樣的動作。這時候我時常會糾結在jQuery Selector的:not、AND等邏輯判斷式中，等到我醒了的時候大概又要花數分鐘。</p><pre><code class=language-js>$("#uiSomeSelect option:selected").filter(function () {
+  if ($(this).val() != "XXXX") {
+    $("#OOOO").val($(this).text());
+  } else {
+    $("#OOOO").val("No Action!");
+  }
+});
+</code></pre><h6>jQuery HTML Select Options SetDefaultValue SetSelected SelectTrue Error NoActions</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

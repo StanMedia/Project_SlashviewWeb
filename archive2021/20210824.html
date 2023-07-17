@@ -1,0 +1,19 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>Request.ServerVariables抓不到自定義的Http Header鍵值？</h1><p>ASP.NET寫那麼久了，偶爾還是會有新鮮事發生，這件事情發生在確定傳過來的HTTP連線中，很肯定的有傳入一個名為「X_CustomizeName」的Header，然後怪事就發生了...</p><h2>Request.ServerVariables抓不到自定義Header</h2><p>其實ASP.NET要讀取傳入的HTTP Header有很多種方法，偏偏在這支程式中我是採用Request.ServerVariables來擷取值如下：</p><pre><code class=language-cs>string cHeader =
+  System.Web.HttpContext.Current.Request.ServerVariables["X_CustomizeName"] as string;
+</code></pre><p>然而，這樣寫卻發生了永遠擷取不到值的窘境。因為，除了IIS認知的Header Key（IIS Server Variables）之外，ASP.NET全部會幫你添加一個名為「HTTP_」的前贅詞（prefixed）啊！只能怪自己年少輕狂不看文件...如今報應來了！就這樣在這個ASP時代就存在的老方法中栽了。</p><h2>文件證明</h2><ol><li>MSDN說明：<a href="https://docs.microsoft.com/en-us/previous-versions/iis/6.0-sdk/ms525396(v=vs.90)?redirectedfrom=MSDN#remarks">Request.ServerVariables Collection</a></li><li>原始碼：<a href=https://referencesource.microsoft.com/#System.Web/HttpRequest.cs,448>ServerVariableNameFromHeader</a></li></ol><h2>抓自定義Header正確的寫法</h2><p>只要在你要擷取的KEY前面添加「HTTP_」字串即可。（幹！）</p><pre><code class=language-cs>string cHeader =
+  System.Web.HttpContext.Current.Request.ServerVariables["HTTP_X_CustomizeName"] as string;
+</code></pre><p>除了沒加「HTTP_」前置字串抓不到之外還有更神奇的事情喔，就是你把前置字串之後的字串中有出現底線（_）改成橫槓（-）符號也抓的到喔，以上面為例寫成「HTTP_X-CustomizeName」混合在一起也是可以的，但是寫成「HTTP-X-CustomizeName」就不可以喔，啾咪～</p><h2>其他擷取自定義HTTP Header的寫法</h2><p>程式設計師應該很討厭這種天外飛來<code>MagicString</code>的寫法才對，天曉得半年後你再看程式碼怎麼可能會回憶起「HTTP_」是三小？因此建議是永遠拋棄ServerVariables這個方法，以免日後又被挖坑。</p><h2>Headers Index寫法</h2><p>可以改用下列寫法：</p><pre><code class=language-cs>//有找到會回傳字串（或多筆逗號分隔字串），沒找到會回傳null
+string cHeader =
+  System.Web.HttpContext.Current.Request.Headers["X_CustomizeName"] as string;
+</code></pre><p>這個寫法基本上沒啥太大的問題，但有一點要注意的是因為NameValueCollection允許鍵值重複，所以你帶入一個認知中的單一鍵值（Key）有可能會回傳多重值（Value），舉例來說：</p><pre><code class=language-cs>var oNC = new System.Collections.Specialized.NameValueCollection() {
+  {"A", "小明"},
+  {"A", "小華"},  //鍵值重複
+  {"B", "小英"},
+};
+Console.WriteLine(oNC["A"]);
+</code></pre><p>上面這段程式在ToString時期會丟出「小明,小華」，而這可能不會是你想要的（或許也可能就是你要的）。</p><h2>Headers GetValues寫法</h2><p>下列這種寫法會更精準的汲取一筆</p><pre><code class=language-cs>//有找到會回傳字串（或第一筆字串），沒找到會回傳NotFound（或你比較喜歡null也可以改回）
+string cHeader = 
+  System.Web.HttpContext.Current.Request.Headers.GetValues(Ksu.Site.HttpHeaderKey.IpAddressDefault.ToExtensionString())?.FirstOrDefault()
+  ??
+  "NotFound";
+</code></pre><h6>ASP.NET GetCustomizeHttpHeader CanNotFoundHeader HeaderLost Request.ServerVariables IisServerVariables HttpHeader KeyPrefixed</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

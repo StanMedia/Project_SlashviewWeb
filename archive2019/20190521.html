@@ -1,0 +1,80 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>如何在父類別中知道是哪個子類別過來繼承、調用或呼叫</h1><p>這個題目也可以更改成「如何在某類別中的方法裡，主動知道是哪個類別的哪個方法來調用你？」，總而言之就是如何知道是誰來呼叫我？在傳統的應用下通常都是子類別去調用父類別的某些方法，所以子類別早就知道目的父類別是誰了。而在某些特定的應用場合下，我們可能需要知道是誰來調用，動態的去輸出或決策某些路徑或程序，這時候這篇文章就派上用場了。</p><p><img src=https://content.slashview.com/img/2019/20190521_01.jpg alt="" /></p><p>答案就是堆疊：System.Diagnostics.StackTrace</p><p>一開始有這個需求的時候，我也是找遍網路想破頭就是不得其門而路，但心中很確定一定某道門可以進入。後來使用Stack關鍵字去尋找果然找出端倪，進而達成我要的目的，話不多說先來看程式碼：</p><p>首先定義一個父類別，然後在「WhoWakeMeUp()」（誰調用我？）的方法中實作System.Diagnostics.StackTrace。</p><pre><code class=language-cs>class Father
+{
+  public Father()
+  {
+    WriteLine("我是Father建構子。");
+    WhoWakeMeUp();
+  }
+
+  public virtual string Name()
+  {
+    WhoWakeMeUp();
+    return "王爸爸";
+  }
+
+  private void WhoWakeMeUp()
+  {
+    //取得調用堆疊
+    System.Diagnostics.StackTrace oStack = new System.Diagnostics.StackTrace(true);
+    //取得呼叫當前方法之上一層類別方法（因為程式碼已經寫在「父類別的方法」裡面了，所以要跳２層）
+    System.Reflection.MethodBase oMethod = oStack.GetFrame(2).GetMethod();
+    //取得呼叫當前方法之上一層類別方法的類別名稱
+    WriteLine($"我知道是{oMethod.DeclaringType.Name}類別的{oMethod.Name}方法來調用我。");
+  }
+}
+</code></pre><p>子類別純粹繼承父類別，用來觸發父類別的建構子，並且在覆寫父類別的方法中，試圖去調用父類別的Name方法，故意在觸發一次WhoWakeMeUp()。</p><pre><code class=language-cs>class Child : Father
+{
+  public Child()
+  { WriteLine("我是Child建構子。"); }
+
+  public override string Name()
+  { return $"王小明 / {base.Name()}"; }
+}
+</code></pre><p>在Main方法裡面，分別進行Child、Father以及第三方類別Program的三種測試，都可以看到「到底是誰在呼叫（調用）我」這段程式碼工作的很正常。</p><pre><code class=language-cs>class Program
+{
+  public static void Main()
+  {
+    //測試：以子類別繼承父類別的方式調用
+    Child oTemp1 = new Child();
+    WriteLine(oTemp1.Name());
+    WriteLine("-----");
+    //測試：以直接呼叫父類別的方式調用
+    Father oTemp2 = new Father();
+    WriteLine(oTemp2.Name());
+    WriteLine("-----");
+    //測試：以外部類別的方式調用父類別
+    Program oTemp3 = new Program();
+    oTemp3.Test();
+
+    Read();
+  }
+
+  private Father _Father;
+
+  public Program()
+  { _Father = new Father(); }
+
+  public void Test()
+  {
+    WriteLine(_Father.Name());
+  }
+}
+</code></pre><h2>程式執行結果如下：</h2><pre><code class=language-txt>//測試：以子類別繼承父類別的方式調用
+我是Father建構子。
+我知道是Child類別的.ctor方法來調用我。
+我是Child建構子。
+我知道是Child類別的Name方法來調用我。
+王小明 / 王爸爸
+-----
+//測試：以直接呼叫父類別的方式調用
+我是Father建構子。
+我知道是Program類別的Main方法來調用我。
+我知道是Program類別的Main方法來調用我。
+王爸爸
+-----
+//測試：以外部類別的方式調用父類別
+我是Father建構子。
+我知道是Program類別的.ctor方法來調用我。
+我知道是Program類別的Test方法來調用我。
+王爸爸
+</code></pre><p>相關連結：<a href=/archive2016/20160603.html>C#函式如何得知是哪一個方法或屬性來呼叫自己本身</a></p><h6>C# Debug WhoCallMe WhoRunMe FatherClass SuperClass ChildClass SubClass 誰在調用我 誰在呼叫我 誰在Call我</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

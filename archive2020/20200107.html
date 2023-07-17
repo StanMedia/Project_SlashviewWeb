@@ -1,0 +1,128 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>利用介面（Interface）來實作相依注入（DI）</h1><p>這篇文章只是簡單的紀錄一下利用介面（Interface）來讓某主要操控元件內部降耦合的方式，基本上個人覺得若公司並沒有給你充分的時間返回去重構你的應用程式，只是一昧的把你當作機器不斷的生產程式碼，造出一個一個應用程式。那麼在這個情況下你要寫出具備應用各式設計模式的程式都只是嘴砲而已，畢竟當下怎麼可能有時間讓你去思考、打磨一個一個適切的介面呢？</p><p><img src=https://content.slashview.com/img/2020/20200107_01.jpg alt="" /></p><p>看過許多商務公司的程式碼，其實大概也都平鋪直敘的一路把程式碼跑完居多，用到設計模式者甚少，其實這也沒有啥大問題，畢竟沒出錯才是王道。這篇文章示範的DI（Dependency Injection），最主要就是把一些重型工作的類別，將期間依存（緊密耦合）的其他服務型的類別拆出，將控制反轉回調用端，此為相依注入也。</p><h2>以電子支付的應用為例</h2><p>現在生活上的電子收費管道琳瑯滿目，有ApplePay、GooglePay、LinePay...等，假設我們已經預計日後還會有其他新推出的電子支付服務，那我們要如何讓這個可能被主程序重度依賴的Cashier類別，在日後可以跟這些新推出的電子支付不再相依呢？答案就是透過界面（Interface）。</p><p>特別注意的是，這隻範例只是單純示範，真正的電子支付實作不在討論範圍內。</p><h2>定義電子支付介面</h2><pre><code class=language-cs>public interface IService
+{ //統一支付介面
+  void Send(string cUserAccount, int iMoney);
+}
+</code></pre><h2>實作某一種電子支付</h2><pre><code>public class ServiceApple : IService
+{ //實作
+  public void Send(string cUserAccount, int iMoney)
+  { Console.WriteLine($"利用ApplePay付款，自{cUserAccount}扣款金額{iMoney}元。"); }
+}
+</code></pre><h2>出納人員（Cashier）類別的實作</h2><pre><code class=language-cs>public class Cashier
+{
+  public string cUserAccount { get; set; }
+  public int iMoney { get; set; }
+  public string Take(IService oTemp)
+  { //透過介面的引入，解除與各式支付管道的相依性
+    oTemp.Send(cUserAccount, iMoney);
+    return "付款成功！";
+  }
+}
+</code></pre><h2>定義一下目前可以使用的支付管道</h2><pre><code class=language-cs>public enum Pay
+{
+  Apple  = 1, //蘋果支付
+  Google = 2, //谷歌支付
+  Line   = 3, //LINE支付
+  PX     = 4, //全聯支付
+  JKO    = 5  //街口支付
+}
+</code></pre><h2>丟過去給主程序使用</h2><pre><code class=language-cs>//透過介面
+IService oService = new ServiceApple();
+
+var cTemp = new Cashier()
+{
+  cUserAccount = "John",
+  iMoney       = 2806449
+}.Take(oService);
+</code></pre><h2>完整範例程式</h2><pre><code class=language-cs>class Program
+{
+  public static void Main()
+  {
+    IService oService = null;
+    Pay ePay = Pay.Line;
+
+    switch (ePay)
+    {
+      case Pay.Apple:
+        oService = new ServiceApple();
+        break;
+      case Pay.Google:
+        oService = new ServiceGoogle();
+        break;
+      case Pay.Line:
+        oService = new ServiceLine();
+        break;
+      case Pay.PX:
+        oService = new ServicePX();
+        break;
+      case Pay.JKO:
+        oService = new ServiceJKO();
+        break;
+      default: //尚未支援此種支付管道
+        return;
+    }
+
+    var cTemp = new Cashier()
+    {
+      cUserAccount = "John",
+      iMoney       = 2806449
+    }.Take(oService);
+
+    Read();
+  }
+}
+
+public enum Pay
+{
+  Apple  = 1, //蘋果支付
+  Google = 2, //谷歌支付
+  Line   = 3, //LINE支付
+  PX     = 4, //全聯支付
+  JKO    = 5  //街口支付
+}
+
+public interface IService
+{ //統一支付介面
+  void Send(string cUserAccount, int iMoney);
+}
+
+public class ServiceApple : IService
+{ //實作
+  public void Send(string cUserAccount, int iMoney)
+  { Console.WriteLine($"利用ApplePay付款，自{cUserAccount}扣款金額{iMoney}元。"); }
+}
+
+public class ServiceGoogle : IService
+{ //實作
+  public void Send(string cUserAccount, int iMoney)
+  { Console.WriteLine($"利用GooglePay付款，自{cUserAccount}扣款金額{iMoney}元。"); }
+}
+
+public class ServiceLine : IService
+{ //實作
+  public void Send(string cUserAccount, int iMoney)
+  { Console.WriteLine($"利用LinePay付款，自{cUserAccount}扣款金額{iMoney}元。"); }
+}
+
+public class ServicePX : IService
+{ //實作
+  public void Send(string cUserAccount, int iMoney)
+  { Console.WriteLine($"利用PXPay付款，自{cUserAccount}扣款金額{iMoney}元。"); }
+}
+
+public class ServiceJKO : IService
+{ //實作
+  public void Send(string cUserAccount, int iMoney)
+  { Console.WriteLine($"利用JKOPay付款，自{cUserAccount}扣款金額{iMoney}元。"); }
+}
+
+public class Cashier
+{
+  public string cUserAccount { get; set; }
+  public int iMoney { get; set; }
+  public string Take(IService oTemp)
+  { //透過介面的引入，解除與各式訊息管道的相依性
+    oTemp.Send(cUserAccount, iMoney);
+    return "付款成功！";
+  }
+}
+</code></pre><p>說到底，其實上述所有的設計思維就是物件導向裡面的多型（Polymorphism）而已，有了這樣的知識後，在套用到各式Framework給予的DI容器 （Dependency Injection Container），解除了main()主程序看似愚蠢的switch enum寫法，就是一個真正的DI實作了。</p><h6>耦合 解耦合 DependencyInjection 依賴倒置原則 DependencyInversionPrinciple DIP</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

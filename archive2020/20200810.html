@@ -1,0 +1,12 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>解決網址參數出現雙引號，引發Cross-Site Scripting弱點之問題</h1><p>今年度在處理年度弱點掃描的時候，發現了伺服器報告出現Cross-Site Scripting（XSS）風險，仔細一看竟然是由Url GET參數被帶入雙引號所引爆（這年頭連雙引號都不能帶入了啊！），經過網路爬文找到解決方法將其記錄在此。</p><p>這個問題的題目應該改成，要如何在ASP.NET的web.config，阻擋認知中不適當Query String的字元。</p><h2>在web.config中阻擋特定的Query String字元</h2><p>Step 1. 微軟<a href=https://docs.microsoft.com/en-us/iis/configuration/system.webserver/security/requestfiltering/denyquerystringsequences/>denyQueryStringSequences</a>文件有寫明在IIS 7.5之後才支援，在此之前的版本請自行尋找別的求生之路吧，例如：UrlScan。</p><p>Step 2. 你的伺服器必須安裝特定的角色功能：「要求篩選」，否則不會有這項feature出現。</p><p><img src=https://content.slashview.com/img/2020/20200810_01.jpg alt="" /></p><p>Step 3. 接著就可以去IIS的介面下，利用GUI新增要阻擋不合法的QueryString字元，我自己是比較偏好從web.config這邊來處理，因此把XML條列如下：</p><pre><code class=language-xml>&lt;configuration>
+  &lt;system.webServer>
+    &lt;security>
+      &lt;requestFiltering>
+        &lt;denyQueryStringSequences>
+          &lt;add sequence="&amp;quot;" />
+        &lt;/denyQueryStringSequences>
+      &lt;/requestFiltering>
+    &lt;/security>
+  &lt;/system.webServer>
+&lt;/configuration>
+</code></pre><p>更新丟上伺服器，就可以看到當QueryString出現自己認知內不合法的字串時，伺服器會拋出HTTP 404 Not Found。</p><h6>Acunetix ThreatLevelHigh CrossSiteScripting XSS CSS QueryString DoubleQuotes</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

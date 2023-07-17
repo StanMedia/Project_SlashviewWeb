@@ -1,0 +1,20 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>利用C#隱藏Console Window命令模式視窗</h1><p>有時候我們在寫一些小程式的時候，都會利用Console Window（命令模式視窗）來當作主要解決介面。問題是在某些時刻，我們會希望這個視窗能夠在作業系統背景工作，不需要出現一個黑色的視窗在前景干擾我的作業（但又不想寫成Windows Services服務），這時候問題就會變成「如何隱藏這個Console Window」。</p><p>其實，隱藏Console Window（命令模式視窗）不外乎下列幾種模式：</p><ol><li>將應用程式屬性更改輸出類型為「Windows應用程式」。</li><li>呼叫「kernel32.dll」的FreeConsole();</li><li>利用父子執行緒的方法，將要運行的程式拋到子執行緒裡，然後關掉父執行緒。</li><li>當然，還有很多種方式，例如呼叫System.Diagnostics.Process.GetCurrentProcess().MainWindowHandle;去設定ShowWindow為0等。在這邊就不再討論了。</li></ol><h2>將應用程式屬性更改輸出類型為「Windows應用程式」</h2><p>這個方法是最簡單的，優點是快速、免寫程式，缺點是如果使用者是透過非Console模式下去執行它（例如在檔案總管中雙擊這隻程式起來執行），那它會因為搞不清楚你是Windows應用程式還是Console程式，於是會出現卡頓一下的問題（但執行起來就好了）。設定畫面如下圖所示：</p><p><img src=https://content.slashview.com/img/2015/20150618_01.jpg alt="" /></p><h2>呼叫「kernel32.dll」的FreeConsole();</h2><p>這個作法是我個人最喜歡用的方式，原因是因為程式碼其實沒幾個字，運行起來很快速。缺點是在Console模式下去執行它，它會因為已經失去視窗介面，而會出現一個游標停在上面，原因是在等候回傳值（一直在背景表示是一個超大的迴圈，因此沒有終點）。這時候其實你已經可以放心的把這個Console Window關掉，因為它已經在背景跑起來了。</p><p>以下示範的是一個會在背景一直嗶嗶叫的程式碼：</p><pre><code class=language-cs>class Program
+{
+  [System.Runtime.InteropServices.DllImport("kernel32.dll")]
+  private static extern bool FreeConsole();
+
+  static void Main(string[] args)
+  {
+    //將視窗隱藏起來
+    FreeConsole();
+    while (true)
+    {
+      Console.Beep();
+      System.Threading.Thread.Sleep(1000);
+    }
+  }
+}
+</code></pre><h2>利用父子執行緒的方法</h2><p>這個方法我不是很推薦，因為你必須先創造一個包皮執行檔後，再用這個包皮執行檔去調用另外一個執行檔，這顯得很蠢，程式碼概念簡列在下面，但不多做討論了。（其實網路有流傳一些可以幫忙隱藏視窗的小程式，就是用這個去寫出來的。）</p><pre><code class=language-cs>System.Diagnostics.ProcessStartInfo oPI = new System.Diagnostics.ProcessStartInfo();     
+oPI.FileName = @"你程式的完整路徑＋你程式的檔名.exe";
+oPI.WindowStyle = System.Diagnostics.ProcessWindowStyle.Hidden;
+</code></pre><h6>C# HideConsole FreeConsole DisableConsole</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

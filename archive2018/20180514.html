@@ -1,0 +1,54 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>Json.Net輸出合約實作：將資料物件中某些欄位動態隱藏，不進行序列化</h1><p>Newtonsoft的Json.Net用到最後，難免會基於安全或頻寬等需求，要將某些資料物件（ORM）的某屬性隱藏起來，不在序列化階段將其序列化並輸出。這篇文章就是要討論這個情況下的實作問題。</p><p><img src=https://content.slashview.com/img/2018/20180514_01.jpg alt="" /></p><h2>隱藏屬性的靜態做法</h2><p>其實要隱藏屬性，Json.Net有提供許多簡單的作法，例如冠上[JsonIgnore]Attrubute就是一個非常直觀的做法。</p><pre><code class=language-cs>public class Customer
+{
+  [JsonIgnore]  //加上這個屬性就會隱藏了
+  public int CustId {get; set;}
+  public string FirstName {get; set;}
+}
+</code></pre><h3>隱藏屬性的半動態做法</h3><p>Json.Net還有另外提供一個半動態的做法稱為有條件的屬性序列化（Conditional Property Serialization），序列化階段利用反射取得方法名稱（過濾掉ShouldSerialize字串）後再去對應屬性，執行判斷是否要進行該屬性的序列化，非常屌。詳情請看：<a href=https://www.newtonsoft.com/json/help/html/conditionalproperties.htm#ShouldSerialize>ShouldSerialize</a></p><pre><code class=language-cs>public class Employee
+{
+  public string Name { get; set; }
+  public Employee Manager { get; set; }
+
+  //如果Manager不是自己物件本身，就顯示這個屬性
+  public bool ShouldSerializeManager()
+  { return (Manager != this); }
+}
+</code></pre><h2>隱藏屬性的全動態做法</h2><p>上面舉例的靜態與半動態的做法，在後端實務上仍然有力有未逮之處，因此，我們又得搬出DefaultContractResolver出來練兵了。</p><pre><code class=language-cs>public class JsonHiddenProperties : Newtonsoft.Json.Serialization.DefaultContractResolver
+{
+  /// &lt;summary>
+  /// 要隱藏的屬性名稱（字串陣列）
+  /// &lt;/summary>
+  public string[] aryHidden { get; set; } = new string[] { };
+
+  public JsonHiddenProperties() { }
+
+  protected override System.Collections.Generic.IList&lt;Newtonsoft.Json.Serialization.JsonProperty> CreateProperties(System.Type oType, Newtonsoft.Json.MemberSerialization oMS)
+  {
+    var oJP = base.CreateProperties(oType, oMS);
+    //實作LINQ NOT IN
+    return oJP.Where(x => !aryHidden.Contains(x.PropertyName)).ToList();
+  }
+}
+</code></pre><p>程式碼的工作原理很簡單，大致上就是你給我黑名單，我在序列化時期如果有看到不再黑名單內的屬性就往外丟（序列化），當然沒往外丟的就胎死腹中了（隱藏）。</p><h2>套用DefaultContractResolver合約</h2><p>套用方式很簡單，請參考下列的程式碼，你懂得！</p><pre><code class=language-cs>public static void Main()
+{
+  Employee oEmployee = new Employee();
+  oEmployee.cNameFirst  = "John1";
+  oEmployee.cNameMiddle = "John2";  //這個在序列化後會消失
+  oEmployee.cNameLast   = "John3";
+  
+  Console.WriteLine(
+    Newtonsoft.Json.JsonConvert.SerializeObject(
+      oEmployee,
+      Newtonsoft.Json.Formatting.None,
+      new Newtonsoft.Json.JsonSerializerSettings { ContractResolver = new JsonHiddenProperties() { aryHidden = new[] { "cNameMiddle" } }}
+    )
+  );
+}
+
+public class Employee
+{
+  public string cNameFirst  { get; set; }
+  public string cNameMiddle { get; set; }
+  public string cNameLast   { get; set; }
+}
+</code></pre><h3>相關參考</h3><ul><li><a href=/archive2020/20200518.html>Json.Net進行序列化物件後的屬性更名</a></li></ul><h6>Newtonsoft Json.Net DefaultContractResolver ORM POCO Property Properties Hide Hidden Disable</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

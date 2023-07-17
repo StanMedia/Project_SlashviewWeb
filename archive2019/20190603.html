@@ -1,0 +1,7 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>使用系統管理員身分執行cmd或powershell</h1><p>其實藏了一堆快速鍵，把使用方式整理並記載在這裡。當然啦，所有的動作還是會觸發UAC（User Account Control）的。</p><h2>方法一：Windows + R</h2><p>這個方法是我最常用的方式，Windows + R，打入cmd或PowerShell後，同時按下「Ctrl + Shift + Enter」。</p><h2>方法二：Windows + X</h2><p>Windows + X後按下「A」即可。開啟cmd或PowerShell可以自己在設定裡面切換。</p><p><img src=https://content.slashview.com/img/2019/20190603_01.jpg alt="" /></p><h2>方法三：透過檔案總管</h2><p>直接在檔案總管的URL列裡面，輸入cmd或PowerShell即可。這個方法可以直接進入到當前所在的目錄中，免再次CD更改目錄。但最大的缺點就是沒有快速鍵可以強制Run as Administrator。</p><h2>方法四：透過檔案總管內建的選單</h2><p>停留在某個目錄中，依照順序按下「Alt ＞ F ＞ S ＞ A」，就會自動幫你用PowerShell以最高管理者身分開啟至該目錄中，解決方法三的缺憾。</p><p><img src=https://content.slashview.com/img/2019/20190603_02.jpg alt="" /></p><p>其實PowerShell可以解決大部分cmd中所有動作，如果你還是比較喜歡看到cmd，那可以利用下列指令切換：</p><pre><code class=language-txt>已是系統管理員身分
+－－－－－
+cmd
+</code></pre><pre><code class=language-txt>非系統管理員身分
+－－－－－
+Start-Process cmd -verb runas
+</code></pre><h6>最高管理者 最高權限管理員 CMD Command PowerShell RunAsAdministrator HotKey ShortKey</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

@@ -1,0 +1,83 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>利用ExpandoObject類別，在執行期動態加入和移除成員</h1><p>在.NET Framework 4.0後出現的System.Dynamic，讓C#漸漸邁向語法鬆散化的不歸路，這次要練習的是ExpandoObject類別，有了ExpandoObject，我們再也不用羨慕JavaScript宣告一個物件的寫法，也不必再受限於匿名型別（Anonymous Types）只能夠承載資料型別（Data Types）或物件，但是沒有辦法承載方法（Methods）。因此，ExpandoObject類別在某些資料結構比較複雜的應用下，會讓你的程式碼變得更精簡！</p><p>一段JavaScript的Expando Property會長的像這樣，語法夠鬆散了吧！</p><pre><code class=language-js>var obj = { Prop1: '' };
+obj.Prop1 = 'foo';  //Prop1 is NOT an Expando Property
+obj.Prop2 = 'bar';  //Prop2 is an Expando Property
+</code></pre><p>不過在這邊也要先幫匿名型別（Anonymous Types）平反一下，當你選擇使用ExpandoObject後，因為所有的驗證（錯誤）都是在執行期運行了，所以VisualStudio引以為豪的IntelliSense瞬間變的毫無用武之地，也就是說你的觀念要變得很好，你才會知道自己正在寫什麼。反觀Anonymous Types，你在定義它完成後，VisualStudio的IntelliSense可是運作的非常良好呢！</p><h2>開始ExpandoObject的初體驗</h2><p>ExpandoObject的語法超簡單的，如果你說看不懂我也沒辦法了。要注意的是，一開始的變數前面要宣告dynamic，這表示叫編譯器不要檢查，一切到Runtime時期再說。此外，ExpandoObject是不可以被Instance的。此外，不要試圖去呼叫一個不存在的成員，不然你會在Runtime時期得到Exception。</p><pre><code class=language-cs>static void Main(string[] args)
+{
+  //注意這邊一定要用dynamic跟編譯器描述這是一個動態型別（不要幫我檢查），前面用「var」或是「System.Dynamic.ExpandoObject」都不可以喔！
+  dynamic oEmployee = new System.Dynamic.ExpandoObject();
+  oEmployee.cName = "John";
+  
+  //不可以被實例化
+  //dynamic oPeople = new oEmployee();
+
+  //不可以亂呼叫不存在的屬性，會觸發Exception
+  //Console.WriteLine(oEmployee.cTel);
+
+  Console.WriteLine(oEmployee.cName);
+  Console.Read();
+}
+</code></pre><h2>來個複雜一點的資料型別</h2><p>接著我們試著把某一些屬性，加載一些較複雜的類別物件List()，觀察看看是否可以正確的運行。其中的Class Motos我用偷懶的使用巢狀類别（Nested Type）。在驗證輸出，我使用Newtonsoft.Json.JsonConvert.SerializeObject來幫輸出成JSON，因為我想要觀察ExpandoObject在複雜的操作情況下，是否可以被正確的序列化成字串？</p><pre><code class=language-cs>class Program
+{
+  //Nested Type
+  class Motos
+  {
+    public string cID { get; set; }
+    public string cType { get; set; }
+  }
+  //Main
+  static void Main(string[] args)
+  {
+    dynamic oEmployee = new System.Dynamic.ExpandoObject();
+    oEmployee.cName = "John";
+    oEmployee.oMotos = new System.Collections.Generic.List&lt;Motos>();
+    oEmployee.oMotos.Add(new Motos() { cID = "AB-1234", cType = "汽車" });
+    oEmployee.oMotos.Add(new Motos() { cID = "CD-5678", cType = "機車" });
+    //吐出JSON
+    Console.WriteLine(Newtonsoft.Json.JsonConvert.SerializeObject(oEmployee));
+    Console.Read();
+  }
+}
+</code></pre><p>結果是可以的！真好！</p><pre><code class=language-json>{
+  "cName":"John",
+  "oMotos":[
+    {
+      "cID":"AB-1234",
+      "cType":"汽車"
+    },
+    {
+      "cID":"CD-5678",
+      "cType":"機車"
+    }
+  ]
+}
+</code></pre><h2>開始加入方法（Methods）</h2><p>接下來要做一些匿名型別Anonymous Types辦不到的事情了，開始加入可以被操作的方法成員！當然是採用我們喜愛的System.Action來進行委派啦！</p><pre><code class=language-cs>static void Main(string[] args)
+{
+  dynamic oEmployee = new System.Dynamic.ExpandoObject();
+  oEmployee.cName = "John";
+  oEmployee.iSalary = 22000;
+  oEmployee.AddSalary = (System.Action&lt;int>)((iMoney) => { oEmployee.iSalary += iMoney; });
+  //幫John加薪
+  oEmployee.AddSalary(1000);
+  Console.WriteLine(string.Format("{0}現在的薪資是{1}元。", oEmployee.cName, oEmployee.iSalary));
+  Console.Read();
+}
+</code></pre><p>很明顯的，John進入巨匠後薪資從22K升級到23K。</p><p>John現在的薪資是23000元。</p><h2>方法成員不可以被序列化</h2><p>在上面的例子中，我們使用了System.Action來實作方法成員，但如果我們這個物件最終，與前前例子一樣，在AddSalary()被操作後我們想要直接丟成JSON，這可行嗎？答案是否定的，因為方法不可能被序列化成資料啊！這時候我們就要請出System.Dynamic.ExpandoObject的原型，其實它就是一個實作System.Collections.Generic.IDictionary&lt;TKey, TValue>的類別。</p><pre><code class=language-cs>static void Main(string[] args)
+{
+  dynamic oEmployee = new System.Dynamic.ExpandoObject();
+  oEmployee.cName = "John";
+  oEmployee.iSalary = 22000;
+  oEmployee.AddSalary = (System.Action&lt;int>)((iMoney) => { oEmployee.iSalary += iMoney; });
+  //幫John加薪
+  oEmployee.AddSalary(1000);
+  //轉型回IDictionary&lt;TKey, TValue>
+  var oTemp = (System.Collections.Generic.IDictionary&lt;string, object>)oEmployee;
+  //移除不可能被序列化的成員
+  oTemp.Remove("AddSalary");
+  Console.WriteLine(Newtonsoft.Json.JsonConvert.SerializeObject(oTemp));
+  Console.Read();
+}
+</code></pre><p>這下John的23K薪資可以被大剌剌的公告在網路上了！</p><pre><code class=language-json>{
+  "cName":"John",
+  "iSalary":23000
+}
+</code></pre><h2>相關連結</h2><ul><li><a href=/archive2015/20150729.html>利用ExpandoObject類別，在執行期動態加入和移除成員</a></li><li><a href=/archive2021/20211120.html>手動建立DataTable資料與動態生成ExpandoObject屬性</a></li><li><a href=/archive2021/20210224.html>在C#的SwitchExpression下使用模式比對（Pattern Matching）</a></li><li><a href=/archive2022/20221029.html>C#如何將匿名型別（AnonymousTypes）傳遞到方法中</a></li></ul><h6>C# System.Dynamic.ExpandoObject AnonymousTypes JavaScript ExpandoProperty</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

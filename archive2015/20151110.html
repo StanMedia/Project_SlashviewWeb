@@ -1,0 +1,59 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>蒙提霍爾問題模擬運算 Monty Hall Problem Simulation</h1><p>蒙提霍爾問題（Monty Hall Problem）是一個經典的條件機率問題，大致上的遊戲規則如下：參賽者（Guest）會看見三扇關閉的門，其中一扇的後面有一輛汽車（Car），選中後面有車的那扇門就可以贏得該汽車，而另外兩扇門後面則各藏有一隻山羊（Goat）。當參賽者選定了一扇門且未去開啟它的時候，知道門後情形的節目主持人（Host）會開啟剩下兩扇門的其中一扇，露出其中一隻山羊。主持人其後會問參賽者要不要換另一扇仍然關上的門。問題是：換另一扇門會否增加參賽者贏得汽車的機率？</p><p><img src=https://content.slashview.com/img/2015/20151110_01.jpg alt="" /></p><h2>用貝氏定理來解決條件機率問題</h2><p>依照貝氏定理（Bayes' Theorem）所展示，P(A|B) = P(B|A) * P(A) / P(B)。其中各項函式代表意義是：</p><p><img src=https://content.slashview.com/img/2015/20151110_02.jpg alt="" /></p><ol><li>P(A|B)：在B事件已經發生的情況下，A事件發生的機率。</li><li>P(B|A)：在A事件已經發生的情況下，B事件發生的機率。</li><li>P(A)：沒有任何前提下，A發生的機率。</li><li>P(B)：沒有任何前提下，B發生的機率。</li></ol><p>P(A|B) = (1/2 * 1/3) / 1/2 = 1/3，也就是說，如果你堅持不換門的話，抽到汽車的機率只有1/3，如果換門的話，可以提升到2/3。這是貝氏定理跟我們講的事情，我相信大部的人的還是堅持無論如何機率都是1/2。沒錯，這是我們大腦依據最短路徑跟我們講的結果，所以下面我們就開始寫一隻程式來跑模擬吧！</p><h2>Monty Hall Problem Simulation 蒙提霍爾問題模擬運算</h2><p>Please input numbers to simulate and click "Experimentation" button. 請在下方輸入要模擬實驗（丟骰子）的次數，然後按下實驗按鈕後，就可以看出亂數模擬出來的結果。</p><form class=row><div class=col-auto><div class=input-group><span class=input-group-text>Simulate</span><input type=text class=form-control id=uSimulate placeholder="Numbers 輸入模擬次數" /> <span class=input-group-text>times.</span></div></div><div class=col-auto><button id=uExperimentation class="btn btn-outline-primary"><i class="fa-solid fa-dice"></i> Experimentation</button></div></form><h4><i class="fa-solid fa-hand fa-fw"></i> Result for decide to non-Switch（選擇不換）</h4><div class=progress style=height:2.5rem><div id=nonSwitchWin class="progress-bar progress-bar-striped progress-bar-animated bg-info mb-0"></div><div id=nonSwitchLost class="progress-bar progress-bar-striped progress-bar-animated bg-danger mb-0"></div></div><h4><i class="fa-solid fa-rotate fa-fw"></i> Result for decide to Switch（選擇交換）</h4><div class=progress style=height:2.5rem><div id=SwitchWin class="progress-bar progress-bar-striped progress-bar-animated bg-info mb-0"></div><div id=SwitchLost class="progress-bar progress-bar-striped progress-bar-animated bg-danger mb-0"></div></div><script>$(function(){!function(n,t,i,r,u,f,e,o,s){function w(n){var o,f=n.length,t=this,i=0,e=t.i=t.j=0,u=t.S=[];for(f||(n=[f++]);r>i;)u[i]=i++;for(i=0;r>i;i++)u[i]=u[e=h&e+n[i%f]+(o=u[i])],u[e]=o;(t.g=function(n){for(var e,o=0,u=t.i,f=t.j,i=t.S;n--;)e=i[u=h&u+1],o=o*r+i[h&(i[u]=i[f=h&f+e])+(i[f]=e)];return t.i=u,t.j=f,o})(r)}function v(n,t){var r,i=[],u=typeof n;if(t&&"object"==u)for(r in n)try{i.push(v(n[r],t-1))}catch(f){}return i.length?i:"string"==u?n:n+"\x00"}function l(n,t){for(var u,r=n+"",i=0;i<r.length;)t[h&i]=h&(u^=19*t[h&i])+r.charCodeAt(i++);return c(t)}function b(i){try{return a?c(a.randomBytes(r)):(n.crypto.getRandomValues(i=new Uint8Array(r)),c(i))}catch(u){return[+new Date,n,(i=n.navigator)&&i.plugins,n.screen,c(t)]}}function c(n){return String.fromCharCode.apply(0,n)}var a,k=i.pow(r,u),y=i.pow(2,f),d=2*y,h=r-1,p=i["seed"+s]=function(n,f,e){var h=[],a,o;return f=1==f?{entropy:!0}:f||{},a=l(v(f.entropy?[n,c(t)]:null==n?b():n,3),h),o=new w(h),l(c(o.S),t),(f.pass||e||function(n,t,r){return r?(i[s]=n,t):n})(function(){for(var n=o.g(u),i=k,t=0;y>n;)n=(n+t)*r,i*=r,t=o.g(1);for(;n>=d;)n/=2,i/=2,t>>>=1;return(n+t)/i},a,"global"in f?f.global:this==i)};if(l(i[s](),t),e&&e.exports){e.exports=p;try{a=require("crypto")}catch(g){}}else o&&o.amd&&o(function(){return p})}(this,[],Math,256,6,52,"object"==typeof module&&module,"function"==typeof define&&define,"random");Math.seedrandom();$("#uExperimentation").focus();$("#uExperimentation").click(function(){return $(this).hide(),setTimeout(function(){t($("#uSimulate").val())},10),!1});var t=function(t){var o=0,s=0,f,r,e,u;for(i=0;i<t;i++){for(f=Math.floor(Math.random()*3),r=Math.floor(Math.random()*3);;)if(e=Math.floor(Math.random()*3),e!=r&&e!=f)break;r==f&&o++;switch(e){case 0:r=r==1?2:1;break;case 1:r=r==0?2:0;break;case 2:r=r==0?1:0}r==f&&s++}u=Math.floor(o/t*100);n("nonSwitchWin",u);n("nonSwitchLost",100-u);u=Math.floor(s/t*100);n("SwitchWin",u);n("SwitchLost",100-u);$("#uExperimentation").show()},n=function(n,t){$("#"+n).attr("aria-valuenow",t).css("width",t+"%").text((n.indexOf("Win")!=-1?"Car（中獎）":"Goat（未中獎）")+": "+t+"%")}})</script><h2>實驗結果</h2><p>經過上面的模擬，結果已經很明顯了，當使用者面對這樣的條件狀況下，選擇切換（Switch、Change）的方式，以機率的角度來說才是對你最有利（2/3 ＞ 1/3）。下這樣的結論，也對，也錯！因為條件機率永遠是處於「主觀」的角度而「非客觀」。這樣說好了，如果你通過了步驟Ａ（選擇了一扇門，主持人開啟另一扇一定是Goat的門），這時候從天上掉下來一位陌生人且完全搞不清楚之前的狀況，面對是否在這兩扇門間切換，請問這個陌生人抽到Car的機率是？答案肯定是1/2。因為對陌生人來說，因為沒有之前的條件（完全狀況外），因此主觀的判定是1/2中獎機率。對你來說，因為你經歷過之前的步驟Ａ，所以你主觀的判定切換門扉可以達到2/3的中獎機率，請問誰對誰錯？誰的主觀意見才是真正最公平的「客觀」？</p><p>這個經典的條件機率的遊戲，我學習到了下列事情：</p><ul><li>無論你覺得自己多麼的聰明，眼見不一定為憑，你當下用腦思考的深思熟慮也不一定是最正確的決定。</li><li>世事無絕對！你就算你經過千百次計算佐以數據證明之事，未必適用於他人。在時空中的某一點你們相遇，未必代表在這點之前，你們的遭遇或經歷是相同的，因此就算你們一起站在同一個時空時間點上，大家的觀點與立場也未必相同。</li><li>條件機率告訴我們，不要去輕易地批判他人的決定。</li><li>條件機率告訴我們，輕易地批判他人決定的人，該人的世界觀一定很狹隘。</li></ul><p>感覺突然哲學起來了！話不多說了，接下來是程式碼的大放送時間。</p><h2>Monty Hall Problem Simulation with JavaScript Source Code</h2><p>You can also view HTML/JavaScript source code of this webpage.</p><pre><code class=language-html>&lt;html>
+  &lt;head>
+    &lt;meta http-equiv="content-type" content="text/html; charset=utf-8">
+    &lt;script src="http://code.jquery.com/jquery-2.1.4.min.js">&lt;/script>
+    &lt;title>Monty Hall Problem Simulation with JavaScript Source Code&lt;/title>
+  &lt;/head>
+  &lt;body>
+    &lt;div id="probabilityForSwitch">&lt;/div>
+    &lt;div id="probabilityForNonSwitch">&lt;/div>
+    
+    &lt;script>
+      //亂數種子函式(seedrandom.min.js)
+      !function(r,n,t,e,o,i,u,a,f){function c(r){var n,t=r.length,o=this,i=0,u=o.i=o.j=0,a=o.S=[];for(t||(r=[t++]);e>i;)a[i]=i++;for(i=0;e>i;i++)a[i]=a[u=m&amp;u+r[i%t]+(n=a[i])],a[u]=n;(o.g=function(r){for(var n,t=0,i=o.i,u=o.j,a=o.S;r--;)n=a[i=m&amp;i+1],t=t*e+a[m&amp;(a[i]=a[u=m&amp;u+n])+(a[u]=n)];return o.i=i,o.j=u,t})(e)}function p(r,n){var t,e=[],o=typeof r;if(n&amp;&amp;"object"==o)for(t in r)try{e.push(p(r[t],n-1))}catch(i){}return e.length?e:"string"==o?r:r+"\x00"}function l(r,n){for(var t,e=r+"",o=0;o&lt;e.length;)n[m&amp;o]=m&amp;(t^=19*n[m&amp;o])+e.charCodeAt(o++);return g(n)}function s(t){try{return h?g(h.randomBytes(e)):(r.crypto.getRandomValues(t=new Uint8Array(e)),g(t))}catch(o){return[+new Date,r,(t=r.navigator)&amp;&amp;t.plugins,r.screen,g(n)]}}function g(r){return String.fromCharCode.apply(0,r)}var h,y=t.pow(e,o),d=t.pow(2,i),v=2*d,m=e-1,j=t["seed"+f]=function(r,i,u){var a=[];i=1==i?{entropy:!0}:i||{};var h=l(p(i.entropy?[r,g(n)]:null==r?s():r,3),a),m=new c(a);return l(g(m.S),n),(i.pass||u||function(r,n,e){return e?(t[f]=r,n):r})(function(){for(var r=m.g(o),n=y,t=0;d>r;)r=(r+t)*e,n*=e,t=m.g(1);for(;r>=v;)r/=2,n/=2,t>>>=1;return(r+t)/n},h,"global"in i?i.global:this==t)};if(l(t[f](),n),u&amp;&amp;u.exports){u.exports=j;try{h=require("crypto")}catch(w){}}else a&amp;&amp;a.amd&amp;&amp;a(function(){return j})}(this,[],Math,256,6,52,"object"==typeof module&amp;&amp;module,"function"==typeof define&amp;&amp;define,"random");
+      //設定亂數種子
+      Math.seedrandom();
+      //總共實驗次數
+      var iLoop = 1000000;
+      //在交換演算法中猜對的次數
+      var iSwitchCount = 0;
+      //在非交換演算法中猜對的次數
+      var iNonSwitchCount = 0;
+      //開始模擬
+      for(i=0; i&lt;iLoop; i++) {
+          //亂數指定[0,1,2]哪個門後是車子
+          var iAnswer = Math.floor(Math.random() * 3);
+          //亂數產生使用者指出[0,1,2]哪道門
+          var iGuest = Math.floor(Math.random() * 3);
+          //主持人知道答案，因此故意去開[0,1,2]一定是羊的門
+          var iHost;
+        while(true) {
+           iHost = Math.floor(Math.random() * 3);
+           if((iHost != iGuest) &amp;&amp; (iHost != iAnswer)) { break; }
+          }
+        //計算結果（非交換）
+          if(iGuest == iAnswer) { iNonSwitchCount++; }
+          //改採用交換法則
+          switch(iHost) {
+              case 0:
+                  if(iGuest == 1) { iGuest = 2; }
+                  else { iGuest = 1; }
+                  break;
+              case 1:
+                  if(iGuest == 0) { iGuest = 2; }
+                  else { iGuest = 0; }
+                  break;
+              case 2:
+                  if(iGuest == 0) { iGuest = 1; }
+                  else { iGuest = 0; }
+                  break;
+          }
+          //計算結果（交換）
+          if(iGuest == iAnswer) { iSwitchCount++; }
+      }
+      $("#probabilityForSwitch").text((iSwitchCount / iLoop) * 100);
+      $("#probabilityForNonSwitch").text((iNonSwitchCount / iLoop) * 100);
+    &lt;/script>
+  &lt;/body>
+&lt;/html>
+</code></pre><h6>MontyHallProblem Simulation Simulator Experimentation Lab Probability SourceCode</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

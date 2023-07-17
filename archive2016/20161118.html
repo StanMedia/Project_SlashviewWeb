@@ -1,0 +1,5 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>在Windows 10登入畫面或鎖定畫面中，移除右下角的網路圖示</h1><p>如同TILTE，沒甚麼好講的，純粹是想要將windows 10登入畫面以及鎖定畫面中的右下角那個網路圖示移除，讓每天早上上班的第一眼看見電腦畫面時，可以覺得更清爽而已。（這已經算是一種偏執了沒錯）</p><p><img src=https://content.slashview.com/img/2016/20161118_01.jpg alt="" /></p><h2>移除網路符號圖示的方法</h2><p>動作也很簡單，把下列的指令碼存成一個叫做「DontDisplayNetworkSelectionUI.reg」的純文字檔案，然後在這個檔案上面點兩下登錄到註冊檔即可。記得登錄完成後要重新開機。</p><pre><code class=language-txt>Windows Registry Editor Version 5.00
+
+[HKEY_LOCAL_MACHINE\SOFTWARE\Policies\Microsoft\Windows\System]
+"DontDisplayNetworkSelectionUI"=dword:00000001
+</code></pre><h2>結果</h2><p>一如我們預測的一樣，重開機後的登入畫面、以及鎖定畫面，都已經沒有看到網路符號的圖示了。如果想改回來也很簡單，把上面那個DWORD值改寫成0，再重新開機即可。</p><p><img src=https://content.slashview.com/img/2016/20161118_02.jpg alt="" /></p><h6>Windows10 RemoveNetworkIcon RemoveNetworkButton LockScreen LoginScreen</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

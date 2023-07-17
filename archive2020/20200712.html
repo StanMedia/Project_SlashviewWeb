@@ -1,0 +1,16 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>Javascript之數值千分位符號（Comma）的顯示</h1><p>講白一點就是當我的Javascript裡面有一個數值型態的資料（字串也可以啦，總之就是可轉換成數值的類型），而我們想要把這個數值以字串的型態顯示在前端HTML的時候，每千位數有一個逗號在上面。</p><h2>解法一：使用正規表示式</h2><p>大概沒有甚麼是正規表示式辦不到的事情吧，以下就是正規表示式的寫法。</p><pre><code class=language-js>var money = "123456.789";
+console.log(
+  money.replace(/\B(?&lt;!\.\d*)(?=(\d{3})+(?!\d))/g, ",")
+);
+//輸出：123,456.789
+</code></pre><h3>解法二：使用原生方法toLocaleString</h3><p>這種寫法有神人很正經去分析過，答案是挺消耗效能的，但就語意上來說可閱讀性變得很高，想要怎麼使用就端看你自己的想法了。</p><pre><code class=language-js>var money = "123456.789";
+console.log(
+  Number(
+    parseFloat(money).toFixed(3)
+  ).toLocaleString("en", {
+    minimumFractionDigits: 3
+  })
+);
+//輸出：123,456.789
+</code></pre><h2>拿掉千分位數的Comma逗號</h2><p>基本上不建議直接拿掉逗號，因為每個國家對於逗號、句號之於數值上的意義的解釋都不一樣，如果你這個專案是i18n等級，那麼直接拿掉逗號可能會導致數值轉換災難。如果真的不顧慮這些硬要拿掉逗號的話，可以考慮下面這行：</p><pre><code class=language-js>money.replace(/,/g, "");
+</code></pre><h6>Javascript int float display comma GroupSeparator DecimalSeparator 千分位符號 千位分隔符</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

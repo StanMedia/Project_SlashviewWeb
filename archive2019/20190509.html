@@ -1,0 +1,56 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>利用Attribute Type打造一個類MVC的驗證</h1><p>今天有個朋友詢問到C#的Attribute的使用方式與觀念，並且提到ASP.NET MVC裡面的一些神奇用法，例如為何Controller類別的方法上面冠上[Authorize]就會自動驗證了呢？例如下列程式碼：</p><p><img src=https://content.slashview.com/img/2019/20190509_01.jpg alt="" /></p><pre><code class=language-cs>public class ShitController : Controller
+{
+  [Authorize]
+  public ActionResult Shits()
+  {
+    return View();
+  }
+}
+</code></pre><p>向朋友稍微說明了一下Attribute的運行機制以及簡單的ASP.NET MVC架構後，朋友說是否可以在WebForm上面實現一次給他看？其實MVC底層有很多Reflection，讓你參數取得的途徑太爽，一般狀況下不太可能以範例的方式完全模擬，不過稍微弄出一點點味道倒是可以的。</p><h2>建立報明牌網頁dataView.ashx</h2><p>以下以泛型處理常式ASHX，搭配Attribute類別來進行範例，此網頁需要登入才能看的到，因此我們冠上[Authorize]屬性類別。</p><pre><code class=language-cs>&lt;%@ WebHandler Language="C#" Class="dataView" %>
+
+[Authorize]
+public class dataView : CheckMember, System.Web.IHttpHandler
+{
+  public void ProcessRequest (System.Web.HttpContext oContext)
+  {
+    System.Random oRnd = new System.Random();
+    oContext.Response.Write($"本期最新明牌報號：{oRnd.Next(0, 100)}");
+  }
+
+  public bool IsReusable {get {return false;} }
+}
+</code></pre><h2>建立Attribute類別</h2><p>在這邊為了更清楚表達這個類別也是可以有多重的屬性設定的，因此故意實作多載，讓操作者可以在上面直接關閉驗證，但其實效果就等同於「沒打」[Authorize]這段文字。</p><pre><code class=language-cs>public class AuthorizeAttribute : System.Attribute  //記得要繼承System.Attribute，因為它是一個屬性類別啊
+{
+  public AuthorizeAttribute()
+  { bIsNeedAuth = true; }
+
+  public AuthorizeAttribute(bool bTemp)
+  { bIsNeedAuth = bTemp; }
+
+  public bool bIsNeedAuth { get; set; }
+}
+</code></pre><h2>建立CheckMember類別</h2><p>但天底下最好會有這麼爽的事情，加上一個[Authorize]就會自動幫你把這網頁驗證？其實我們要靠後面這個CheckMember繼承類別幫我們在後面偷偷「讀取屬性並實作驗證」，最辛苦的就是這個類別啦！</p><pre><code class=language-cs>using System.Reflection;
+public class CheckMember
+{
+  public CheckMember()
+  {
+    var oAuthorize = this.GetType().GetCustomAttribute&lt;AuthorizeAttribute>();
+    //未設定認證屬性
+    if (oAuthorize == null) { return; }
+    //設定認證屬性，但屬性為false
+    if (!oAuthorize.bIsNeedAuth) { return; }
+    //協助認證傳遞過來的帳號密碼參數
+    var oContext = System.Web.HttpContext.Current;
+    string cAcc = oContext.Request.Form["cAcc"]?.ToString();
+    string cPwd = oContext.Request.Form["cPwd"]?.ToString();
+    //如果帳號密碼不對就踢走
+    if (!(cAcc == "john" &amp;&amp; cPwd == "1234"))
+    {
+      oContext.Response.Write("使用本服務需要登入正確的帳號密碼。");
+      //攔截Context強制中斷
+      oContext.Response.Flush();
+      oContext.ApplicationInstance.CompleteRequest();
+    }
+  }
+}
+</code></pre><p>像不像三分樣，基本上的運作原理大概就是這樣，不過WebForm這個環境沒有MVC那樣爽，幫你把前端傳過來的參數包整理好丟給你，所以你看我們要自行攔截POST過來的帳號密碼自己處理嘍！</p><p>運行時期如果你的程式碼「沒有」加上[Authorize]，或者是加上的程式碼是[Authorize(false)]，那基本上就是可以看到明牌嘍！</p><p>如果「有」加上[Authorize]，那麼你一定要POST正確的帳號密碼給dataView.ashx，才有可能會看到寶貴的明牌，例如下圖：</p><p><img src=https://content.slashview.com/img/2019/20190509_02.jpg alt="" /></p><p>相關連結：</p><ul><li><a href=/archive2014/20140422.html>C#中的Attribute屬性（特性）用法</a></li><li><a href=/archive2020/20200303.html>利用Attribute為ORM型別的屬性添增新色彩</a></li></ul><h6>C# Attributes AttributeType SampleCode ASP.NET WebForms MVC Authorize Authorization</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

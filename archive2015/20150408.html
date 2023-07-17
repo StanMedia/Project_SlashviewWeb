@@ -1,0 +1,84 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>Server Side JSON/XML的相關寫法</h1><p>這幾天碰到一個需要從Server端去發出HTTP拿JSON的需求，與之前全Client端的經驗不一致，開發的過程倒也是零障礙啦，但是為了加速日後開發（免找資料）的速度，還是記錄在這邊會比較妥當。</p><p>一開始的問題一定是Server端的HTTP Request物件，承襲.NET 1.1的寫法，在這邊還是習慣使用HttpWebRequest，但經過研究後發現.NET提供了三種物件，這些物件的結構經過研究後如下所示。</p><pre><code class=language-txt>System.Net.WebRequest（abstract）
+System.Net.HttpWebRequest（implement）
+System.Net.WebClient（wrapper）
+</code></pre><p>在考量效能至上的情況下，當然是只能選擇把程式碼實作量最少的WebClient丟掉啦！且拋棄WebClient類別還有一個很重要的點，就是他並沒有把Timeout屬性包進去，當然啦，我們可以實作一個Extension來再包皮，但是這樣作原本的程式碼量少優勢就不見了，這樣一來不還是選擇HttpWebRequest。程式碼的概念如下，如果Timeout的話，會跳到catch裡。</p><pre><code class=language-cs>System.Net.HttpWebRequest oWRq = (System.Net.HttpWebRequest)System.Net.WebRequest.Create("JsonURL");
+oWRq.Timeout = 1000;  //設定網路對接逾時秒數為一秒
+try
+{
+  System.Net.HttpWebResponse oWRp = (System.Net.HttpWebResponse)oWRq.GetResponse();
+  using (System.IO.StreamReader oSR = new System.IO.StreamReader(oWRp.GetResponseStream(), System.Text.Encoding.UTF8))
+  {
+    string cJSON = oSR.ReadToEnd();
+    var oTemp = Newtonsoft.Json.JsonConvert.DeserializeObject&lt;ORM_Class>(cJSON);
+    //wrote something...
+  }
+}
+catch
+{
+  return false;  //如果是逾時或其它原因，一律傳回false
+}
+</code></pre><h2>JSON的格式種類：ａ</h2><p>基本上有些情況你只能毫無怨言的收下對方餵給你的JSON，如果他是一個懂狀況的程式設計師，他可能會餵給你這樣的結構。</p><pre><code class=language-json>{
+  {
+    "productID":  1,
+    "name":  "ABC"
+  },
+  {
+    "productID":  2,
+    "name":  "DEF"
+  }
+}
+</code></pre><p>這樣的結構很好解，基本上你只要準備一套ORM Class跟善用List<t>就可以解決，像是這樣...</t></p><pre><code class=language-cs>//ORM
+public class Prodcut
+{
+  public int productID { get; set; }
+  public string name { get; set; }
+}
+//然後
+List&lt;Prodcut> oProdcuts = (List&lt;Prodcut>)JsonConvert.DeserializeObject(cJSON);
+//接下來你就可以去count它或操作他了
+oProdcuts.Count;
+oProdcuts[0];
+foreach(var oItem in oProdcuts) { oItem.productID; ... }
+</code></pre><h2>JSON的格式種類：ｂ</h2><p>有時也會有一些毫無sense的人直接把XML轉JSON丟給你了事（留下一個大腸頭、闌尾），但是你又沒有要求的權利，在這裡不考慮多筆的狀況，JSON格式我改成如下：</p><pre><code class=language-json>{
+  "product":
+  {
+    "productID":  1,
+    "name":  "ABC"
+  }
+}
+</code></pre><p>就算是迫於無奈也得接受，這就是程式設計師的宿命，因此你為了這種骯髒的JSON還要再寫一層Wrapper ORM。程式碼如下：</p><pre><code class=language-cs>//ORM
+public class ProdcutRoot
+{
+  public Prodcut product { get; set; }
+}
+public class Prodcut
+{
+  public int productID { get; set; }
+  public string name { get; set; }
+}
+//然後
+var oProdcuts = JsonConvert.DeserializeObject&lt;ProdcutRoot>(cJSON);
+//接下來操作是
+oProdcuts.products.productID;
+oProdcuts.products.name;
+</code></pre><h3>Update 20150708：</h3><p>C# 4.0以後有支援dynamic宣告，也就是說，你可以搭配Newtonsoft.Json.JsonConvert.DeserializeObject來進行操作，因此可以省略掉Wrapper ORM的撰寫，以上面為例，可以改寫成下列的程式碼，更顯得超級清爽啊！</p><pre><code class=language-cs>//ORM
+public class Prodcut
+{
+  public int productID { get; set; }
+  public string name { get; set; }
+}
+//然後
+dynamic oJsonTemp = Newtonsoft.Json.JsonConvert.DeserializeObject(cJSON);
+//oJsonTemp.product即為動態運算式，此作業將於執行階段解決
+var oProdcut = Newtonsoft.Json.JsonConvert.DeserializeObject&lt;Prodcut>(oJsonTemp.product.ToString());
+//接下來操作是
+oProdcut.productID;
+oProdcut.name;
+</code></pre><h3>同場加映：如何避免輸出無謂的XML Root Node給JSON</h3><p>以上述的那個毫無sense的JSON，直翻回XML應同等如下（型別我就省略了，那不是討論的重點）：</p><pre><code class=language-xml>&lt;product>
+  &lt;productID>1&lt;/productID>
+  &lt;name>ABC&lt;/name>
+&lt;/product>
+</code></pre><p>翻一下JSON.NET應該可以找到「JsonConvert.SerializeXmlNode Method (XmlNode, Formatting, Boolean)」這個建構子，第三個引數Boolean的宣告如下：omitRootObject／Type: System.Boolean／Omits writing the root object。我想答案已經很明顯了，以下示範如何把這個XML灌入JSON.NET去Parse。</p><pre><code class=language-cs>XmlDocument oXML = new XmlDocument();
+oXML.LoadXml(@"XML字串；不再綴述");
+string cJson = JsonConvert.SerializeXmlNode(oXML, Formatting.None, true);
+</code></pre><p>※ 相關連結</p><ul><li><a href=/archive2015/20150709.html>利用匿名型別來化簡JSON ORM讀取時之冗長程式碼</a></li><li><a href=https://aspnetmonsters.com/2016/08/2016-08-27-httpclientwrong/>延伸參考：YOU'RE USING HTTPCLIENT WRONG AND IT IS DESTABILIZING YOUR SOFTWARE；HttpClient因IDisposable反而引發連線資源耗盡（TIME_WAIT）問題</a></li><li><a href=/archive2018/20181212.html>HttpClient所引爆的Sockets Port耗盡問題</a></li></ul><h6>ServerSide WebRequest HttpWebRequest WebClient JSON XML RootElement RootNode</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

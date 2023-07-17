@@ -1,0 +1,140 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>C#於多執行緒狀態的增速方式（CacheLine）</h1><p>無意間在網路上看到一個以前都沒有注意到的坑，就是當我們把程式設計成多執行緒狀態，其實在CPU內部運算盡管是多核心，但其CPU Cache的存取其實還是共用的，這意味著如果你再多執行緒之間共享某個物件實例，在更替其欄位值（或相關的參數異動）時，其實CPU內部的各執行緒只是不斷地在洗（重載）內部的Cache而已。</p><p><img src=https://content.slashview.com/img/2018/20181015_01.jpg alt="" /></p><p>重載意味著必須重新耗用大量的執行週期等待，這也代表著你設計的多執行緒程式在CPU中的運算裡，Cache的增速機制已經完全失效了。在程式設計的領域裡面，這樣的結果叫做「False Sharing」。</p><h2>那C#要怎麼控制物件在記憶體中位址呢？</h2><p>在這邊要先提一下CPU內所謂的Cache Line機制，也就是說無論你的CPU中的Cache是幾K，其實他是用每一條管線來切割看待之，也就是每條Cache Line都是64Bytes。</p><p>在一般的情況下，C#的設計裡你並不需要去理會物件在記憶體中的配置，否則你乾脆回去寫C++算了，但其實.NET還是留了一條路讓語言可以有機會管理記憶體的配置，那就是System.Runtime.InteropServices命名空間裡面的：StructLayout與FieldOffset啦。（注意：FieldOffset只能套用在Field喔！）例如：</p><pre><code class=language-cs>//把ParaA欄位偏移 8 Bytes
+[System.Runtime.InteropServices.FieldOffset(8)]
+int ParaA;
+
+//把ParaB欄位偏移 16 Bytes
+[System.Runtime.InteropServices.FieldOffset(16)]
+int ParaB;
+
+//把ParaC欄位偏移 8 Bytes
+[System.Runtime.InteropServices.FieldOffset(8)]
+int ParaC;  //這個寫法很pointer，ParaC取出來的值其實就是ParaA
+</code></pre><h2>CPU Cache Line的計算方式</h2><p>假設某程式有四個工作要丟給CPU（假定有四個核心），欲共用一個物件但存取不同欄位（long: 8 Bytes），每個欄位自我累加一千萬次，那麼我們的Cache Line的偏移量計算如下（故意讓每個Cache Line前56 Bytes被忽略，用以佔滿64 Bytes）：</p><pre><code class=language-txt>Cache Line Size 
+|---64Bytes--|
+
+Cache Line: 0
+0      56    63
+|--56--|--8--|
+
+Cache Line: 1
+64    120    127 
+|--56--|--8--|
+
+Cache Line: 2
+128   184    191
+|--56--|--8--|
+
+Cache Line: 3
+192   248    255
+|--56--|--8--|
+</code></pre><p>範例程式碼如下：</p><pre><code class=language-cs>public class NonPadding
+{
+  public long Core1;
+  public long Core2;
+  public long Core3;
+  public long Core4;
+}
+
+//具備偏移物件
+[System.Runtime.InteropServices.StructLayout(System.Runtime.InteropServices.LayoutKind.Explicit)]
+public class Padding
+{
+  [System.Runtime.InteropServices.FieldOffset(56)]
+  public long Core1;
+  [System.Runtime.InteropServices.FieldOffset(120)]
+  public long Core2;
+  [System.Runtime.InteropServices.FieldOffset(184)]
+  public long Core3;
+  [System.Runtime.InteropServices.FieldOffset(248)]
+  public long Core4;
+}
+
+class Program
+{
+  static void Main(string[] args)
+  {
+    var oTasks = new System.Collections.Generic.List&lt;System.Threading.Tasks.Task>();
+    int iTimes = 10_000_000;
+
+    Console.WriteLine("---- Normal ----");
+    var oNormal = new NonPadding();
+    oTasks.Add(System.Threading.Tasks.Task.Run(() =>
+    {
+      var oSW = System.Diagnostics.Stopwatch.StartNew();
+      for (var t = 0; t &lt; iTimes; t++) { oNormal.Core1++; }
+      oSW.Stop();
+      WriteLine($"Core1: {oSW.ElapsedMilliseconds}ms");
+    }));
+    oTasks.Add(System.Threading.Tasks.Task.Run(() =>
+    {
+      var oSW = System.Diagnostics.Stopwatch.StartNew();
+      for (var t = 0; t &lt; iTimes; t++) { oNormal.Core2++; }
+      oSW.Stop();
+      WriteLine($"Core2: {oSW.ElapsedMilliseconds}ms");
+    }));
+    oTasks.Add(System.Threading.Tasks.Task.Run(() =>
+    {
+      var oSW = System.Diagnostics.Stopwatch.StartNew();
+      for (var t = 0; t &lt; iTimes; t++) { oNormal.Core3++; }
+      oSW.Stop();
+      WriteLine($"Core3: {oSW.ElapsedMilliseconds}ms");
+    }));
+    oTasks.Add(System.Threading.Tasks.Task.Run(() =>
+    {
+      var oSW = System.Diagnostics.Stopwatch.StartNew();
+      for (var t = 0; t &lt; iTimes; t++) { oNormal.Core4++; }
+      oSW.Stop();
+      WriteLine($"Core4: {oSW.ElapsedMilliseconds}ms");
+    }));
+
+    System.Threading.Tasks.Task.WaitAll(oTasks.ToArray());
+    oTasks.Clear();
+
+    Console.WriteLine("---- Padding ----");
+    var oPadding = new Padding();
+    oTasks.Add(System.Threading.Tasks.Task.Run(() =>
+    {
+      var oSW = System.Diagnostics.Stopwatch.StartNew();
+      for (var t = 0; t &lt; iTimes; t++) { oPadding.Core1++; }
+      oSW.Stop();
+      WriteLine($"Core1: {oSW.ElapsedMilliseconds}ms");
+    }));
+    oTasks.Add(System.Threading.Tasks.Task.Run(() =>
+    {
+      var oSW = System.Diagnostics.Stopwatch.StartNew();
+      for (var t = 0; t &lt; iTimes; t++) { oPadding.Core2++; }
+      oSW.Stop();
+      WriteLine($"Core2: {oSW.ElapsedMilliseconds}ms");
+    }));
+    oTasks.Add(System.Threading.Tasks.Task.Run(() =>
+    {
+      var oSW = System.Diagnostics.Stopwatch.StartNew();
+      for (var t = 0; t &lt; iTimes; t++) { oPadding.Core3++; }
+      oSW.Stop();
+      WriteLine($"Core3: {oSW.ElapsedMilliseconds}ms");
+    }));
+    oTasks.Add(System.Threading.Tasks.Task.Run(() =>
+    {
+      var oSW = System.Diagnostics.Stopwatch.StartNew();
+      for (var t = 0; t &lt; iTimes; t++) { oPadding.Core4++; }
+      oSW.Stop();
+      WriteLine($"Core4: {oSW.ElapsedMilliseconds}ms");
+    }));
+
+    System.Threading.Tasks.Task.WaitAll(oTasks.ToArray());
+    oTasks.Clear();
+
+    ReadKey();
+  }
+}
+</code></pre><p>執行結果的畫面大概長的如下：</p><pre><code class=language-txt>---- Normal ----
+Core1: 137ms
+Core4: 190ms
+Core2: 213ms
+Core3: 215ms
+---- Padding ----
+Core1: 29ms
+Core3: 31ms
+Core2: 32ms
+Core4: 33ms
+</code></pre><p>以上的結果我是使用Intel i7-4790 @ 3.6GHz跑出來的結果，可以發現結果大約增速6~7倍速度，如果將以上的觀念用在實際的運算上，可謂是效果驚人啊！</p><p>附註：有些CPU的CacheLine並非64Bytes，要動態求取的話，可以參考網路的相關文章。</p><h6>C# FieldOffset StructLayout CPU CacheLine SpeedUp MultiCore FalseSharing FalseShare</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

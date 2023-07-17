@@ -1,0 +1,50 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>Google OAuth 2.0 Service Account Impersonate Personal Account</h1><p>對Google的服務因為很少用到，所以一直處於不求甚解的狀態，某個專案有在使用Google Data API 2.2.0，一直以來也都相安無事，一直到2015年5月份時出現了無法使用的錯誤，資訊如下：「Execution of authentication request returned unexpected result: 404」。原本會動的專案突然變成不會動，還丟一個沒頭沒腦的錯誤訊息，經過數十年訓練的嗅覺馬上拋出一個關鍵語句：「免費的最貴！」，於是馬上去<a href=https://goo.gl/wSennQ>Google Apps > Sheets API</a>找到這一個亮起來的關鍵語句，如下圖所示：</p><p><img src=https://content.slashview.com/img/2015/20150629_01.jpg alt="" /></p><pre><code class=language-txt>You must use OAuth 2.0 to authorize requests.
+Important: OAuth 1.0 is no longer supported and will be disabled on May 5, 2015. If your application uses OAuth 1.0, you must migrate to OAuth 2.0 or your application will cease functioning.
+</code></pre><p>看到這個訊息當下心都涼了，再去論壇找一下資訊，果然受害者非常的多啊！而Google是分區關閉服務的，所以未必所有的人都是在同一天發生，從發生的時間點開始計算，散列到一兩個星期後都還有人陸續中獎，其中包含不少企業級的內部系統（已經編譯完了看怎麼辦才好），因此沒有產生瞬間爆炸性的民怨（好招！以後學起來）。不過這還是驗證了一句話「免費的最貴」（Google表示：下向相容？我聽都沒聽過！）唉～由於手頭上還有更重要的專案在處理，因此這件事只好拖到現在才進行修正工程。</p><h2>* 使用前聲明：</h2><p>由於Google的說明文件寫的是出名的爛（最近介面有大改，好了一些，但是內容還是爛），跟MSDN完全無法比擬，所以請詳細閱讀以下的聲明，否則你會陷在它的鳥文件裡面打轉數個小時而無法脫身。</p><ol><li>本案假定的是你擁有Google Apps帳戶，簡單的說也就是你登入GMail的帳號是自帶網域的，例如：someone@slashview.com。</li><li>本案假定的是你擁有Google Apps帳戶的管理者權限，也就是你可以存取<a href=https://admin.google.com/>https://admin.google.com/</a>這個頁面下的安全性（security）功能。</li><li>本案假定的是你擁有某Spreadsheets檔案的完整存取權。</li></ol><h2>Step 1. 請到<a href=https://console.developers.google.com/project>Google Developers Console</a>建立一個專案</h2><p>不要懷疑，單純的使用帳號密碼登入，然後去存取自己的服務這個事情，已經消失了。請去這個畫面點選建立專案吧！</p><ol><li>建立專案＞新增專案＞專案名稱（自己亂打，假設叫TEST）＞建立。</li><li>回到管理所有專案頁面，點選TEST字眼上的連結。</li><li>點選左選單中的「API和驗證」＞憑證＞建立新的用戶端ID。</li><li>由於我們要寫的是無介面的Console程式，也沒有任何的交談方框可以與使用者進行交互驗證。因此在應用程式類型中，我們選擇的是服務帳戶（Service Account），並點選建立用戶端ID。</li><li>接下來你會看到OAuth 2.0的介紹：「OAuth 2.0可讓使用者在不公開使用者名稱、密碼等資訊的情況下，與您分享特定資料 (例如，聯絡人名單)」。</li><li>接下來你會看到網頁中直接打一個*.json的私密金鑰檔案給你，用不到，請直接丟棄。</li><li>因為我們要走的是X509標準，所以請點選產生新的P12金鑰，儲存該檔案到你的C:\，並重新命名成「myKey.p12」。</li><li>愛乾淨的話，可以把你原來JSON的憑證指紋砍掉，因為我們完全不會用到。</li></ol><p>基於上述動作，我們可以得到下列的參數：</p><pre><code class=language-txt>服務帳戶
+  用戶端 ID
+    594319598513-9mc93uki2kk12rlea17nkfo2g60oavvv.apps.googleusercontent.com
+  電子郵件地址
+    594319598513-9mc93uki2kk12rlea17nkfo2g60oavvv@developer.gserviceaccount.com
+  憑證指紋
+    b3c6bb121bb8407a2ac130e7aa6b6748b7217800
+</code></pre><h2>Step 2. 將你的Google Data API升級到OAtuh 2.0</h2><p>這個世界上已經沒有「SpreadsheetsService(null).setUserCredentials(cUserAccount, cUserPassword);」這種東西了，請徹底的忘了這些方法的存在吧！</p><p>先NuGet一下必要的DLL參考：</p><pre><code class=language-txt>Install-Package Google.Apis.Auth
+</code></pre><p>改寫的程式碼放在下方，請自行參考：</p><pre><code class=language-cs>//填入你從Google Developers Console（GDC）拿到的Email
+string cEmail = "594319598513-9mc93uki2kk12rlea17nkfo2g60oavvv@developer.gserviceaccount.com";
+//指定你從Google Developers Console（GDC）拿到的P12金鑰檔路徑
+string cKeyFile = @"C:\myKey.p12";
+System.Security.Cryptography.X509Certificates.X509Certificate2 oCert = new System.Security.Cryptography.X509Certificates.X509Certificate2(
+  cKeyFile,
+  "notasecret",  //用P12金鑰，不需要密碼
+  System.Security.Cryptography.X509Certificates.X509KeyStorageFlags.Exportable
+);
+var oCred = new ServiceAccountCredential
+  (
+    new ServiceAccountCredential.Initializer(cEmail)
+    {
+      Scopes = new[] { "https://spreadsheets.google.com/feeds" }
+    }.FromCertificate(oCert)
+  );
+//如果取得Token失敗就踢走
+if (!oCred.RequestAccessTokenAsync(System.Threading.CancellationToken.None).Result)
+{ throw new System.Exception("權杖（Token）認可失敗。"); }
+//建立要求工廠
+GDataRequestFactory oGF = new GDataRequestFactory("MySpreadsheetIntegration-v1");
+oGF.CustomHeaders.Add(string.Format("Authorization: Bearer {0}", oCred.Token.AccessToken));
+//登入
+SpreadsheetsService oService = new SpreadsheetsService("MySpreadsheetIntegration-v1") { RequestFactory = oGF };
+//開始Big Query，取得可用的工作列表（檔案集）
+SpreadsheetFeed oSF = oService.Query(new SpreadsheetQuery());
+//brabra...
+</code></pre><h2>Step 3. 歹誌絕對不是像憨人想的那麼簡單</h2><p>程式碼跑了，Token拿到了，我已經可以用Big Query去查我要查的東西了吧！結果無論你怎麼在ServiceAccountCredential.Initializer去授權Scopes，無倫是存取整個https://docs.google.com/feeds或單一服務https://spreadsheets.google.com/feeds，你永遠得到的檔案數（feeds）都是為零（0）。原因是，你的Service Account並不能代表你自己（someone@slashview.com），就算建立的這個Service Account的正是你（someone@slashview.com）本人。更爛的是，Google官方開發者文件並不會跟你講這些事情。答案是，請在上面的程式碼中，加入User屬性。</p><pre><code class=language-cs>new ServiceAccountCredential.Initializer(cEmail)
+{
+  Scopes = new[] { "https://spreadsheets.google.com/feeds" },
+  User = "someone@slashview.com"
+}.FromCertificate(oCert)
+</code></pre><p>加了之後呢？更慘，程式直接吐出你的Client端沒有認證？！</p><pre><code class=language-cs>[Google.Apis.Auth.OAuth2.Responses.TokenResponseException]
+Error =
+{
+  Error: "unauthorized_client",
+  Description: "Unauthorized client or scope in request.",
+  Uri: ""
+}
+</code></pre><p>發生這個問題的原因，是因為我們沒有任何的方式，與要被扮演Impersonates、被模擬Simulation的（someone@slashview.com）真正使用者，進行人機介面的溝通，所以被擋下來了。但是，一個Console介面的程式怎麼可能在自動執行的時候，還要去跟使用者每一次都取得授權呢？這樣也叫自動化豈不好笑？</p><h3>Step 4. 請到<a href=https://admin.google.com/>Google Admin Console</a>管理控制台</h3><p>經過了在茫茫網海中的找尋，最終我們來到了這一頁的設定，如下列圖中所示，請隨之設定：</p><p><img src=https://content.slashview.com/img/2015/20150629_02.jpg alt="" /></p><p><img src=https://content.slashview.com/img/2015/20150629_03.jpg alt="" /></p><p><img src=https://content.slashview.com/img/2015/20150629_04.jpg alt="" /></p><p><img src=https://content.slashview.com/img/2015/20150629_05.jpg alt="" /></p><p>以此例來說，上圖用戶端名稱你要填入「594319598513-9mc93uki2kk12rlea17nkfo2g60oavvv.apps.googleusercontent.com」，API就填入你要存取的Scopes嘍！按下授權後，理論上你BigQuery到的Feeds數量，應該就不是0了，除非你真的是零筆。</p><h6>扮演 模仿 模擬 Impersonates Simulation ManageThirdPartyOAuthClientAccess AuthorizedAPIClients ClientName OneOrMoreAPIScopes</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

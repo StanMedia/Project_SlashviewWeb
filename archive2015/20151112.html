@@ -1,0 +1,52 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>透過C#切換到目前處於背景工作中的執行緒（應用程式）</h1><p>因為工作中有用到，需要去找尋目前正在Windows工作階段內的所有工作（應用程式、執行緒），並且將其調用到平台的最前面（前景、Foreground）。因此去翻了一下偉大的Windows API，果然在user32.dll中找到相關的好物啦！</p><p>有用到的方法列舉如下：</p><pre><code class=language-cs>//設定視窗型式
+private static extern bool ShowWindowAsync(IntPtr hWnd, int iSWCmd);
+//設定視窗型式常數
+private const int SW_HIDE = 0;
+private const int SW_NORMAL = 1;
+private const int SW_MAXIMIZE = 3;
+private const int SW_SHOWNOACTIVATE = 4;
+private const int SW_SHOW = 5;
+private const int SW_MINIMIZE = 6;
+private const int SW_RESTORE = 9;
+private const int SW_SHOWDEFAULT = 10;
+//設定視窗為前景
+private static extern bool SetForegroundWindow(IntPtr hWnd);
+//判斷視窗是否為最小化
+private static extern bool IsIconic(IntPtr hWnd);
+</code></pre><h2>調用背景工作中的執行緒到前景之程式碼</h2><p>話不多說了，直接看程式碼，運行的介面一樣是採用我最愛的console啦！</p><pre><code class=language-cs>class Program
+{
+  //設定視窗型式
+  [System.Runtime.InteropServices.DllImport("user32.dll")]
+  private static extern bool ShowWindowAsync(IntPtr hWnd, int iSWCmd);
+  private const int SW_HIDE = 0;
+  private const int SW_NORMAL = 1;
+  private const int SW_MAXIMIZE = 3;
+  private const int SW_SHOWNOACTIVATE = 4;
+  private const int SW_SHOW = 5;
+  private const int SW_MINIMIZE = 6;
+  private const int SW_RESTORE = 9;
+  private const int SW_SHOWDEFAULT = 10;
+  //設定視窗為前景
+  [System.Runtime.InteropServices.DllImport("user32.dll")]
+  private static extern bool SetForegroundWindow(IntPtr hWnd);
+  //判斷視窗是否為最小化
+  [System.Runtime.InteropServices.DllImport("user32.dll")]
+  private static extern bool IsIconic(IntPtr hWnd);
+  static void Main(string[] args)
+  {
+    WriteLine("//切換程式視窗//");
+    Write("請輸入應用程式檔案名稱（不必包含副檔名）：");
+    System.Diagnostics.Process[] oProcess = System.Diagnostics.Process.GetProcessesByName(ReadLine());
+    if (oProcess.Length > 0)
+    {
+      IntPtr hWindow = oProcess[0].MainWindowHandle;
+      if (IsIconic(hWindow)) { ShowWindowAsync(hWindow, SW_MAXIMIZE); }
+      SetForegroundWindow(hWindow);
+    }
+    else
+    {
+      WriteLine("目前的工作中沒有這個執行緒喔！");
+    }
+  }
+}
+</code></pre><h6>WindowsAPI System.Diagnostics.Process BackgroundTask ForegroundTask ShowWindowAsync SetForegroundWindow</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

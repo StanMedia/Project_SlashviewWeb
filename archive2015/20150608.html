@@ -1,0 +1,23 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>取得程式本身執行期的路徑與檔名</h1><p>沒技術性，但每次都會用到，每次都要在網路浪費一分鐘，所以記在這裡以後好找。當然啦！絕對還有超多的方法可以存取。不過，你學那麼多種方法幹嗎？</p><h2>取得程式本身執行期的路徑</h2><p>方法Ａ：注意！若執行檔有被建立捷徑，則透過捷徑運行程式的當下，有可能會抓到錯誤的路徑，例如C:\Windows\System32</p><pre><code class=language-txt>System.Environment.CurrentDirectory  
+</code></pre><p>方法Ｂ：</p><pre><code class=language-txt>System.AppDomain.CurrentDomain.BaseDirectory
+</code></pre><p>方法Ｃ：</p><pre><code class=language-txt>System.IO.Path.GetDirectoryName(System.Reflection.Assembly.GetEntryAssembly().Location)
+</code></pre><h2>取得程式本身執行期的檔名</h2><p>方法Ａ：</p><pre><code class=language-txt>System.AppDomain.CurrentDomain.FriendlyName
+</code></pre><p>方法Ｂ：</p><pre><code class=language-txt>System.IO.Path.GetFileName(System.Diagnostics.Process.GetCurrentProcess().MainModule.FileName)
+</code></pre><p>方法Ｃ：</p><pre><code class=language-txt>System.Diagnostics.Process.GetCurrentProcess().ProcessName
+</code></pre><p>程式碼都幫你準備好了，自己貼上去試試最靠的住！</p><pre><code class=language-cs>static void Main(string[] args)
+{
+  Console.WriteLine("---取出路徑---");
+  Console.WriteLine(System.Environment.CurrentDirectory);
+  Console.WriteLine(System.AppDomain.CurrentDomain.BaseDirectory);
+  Console.WriteLine(System.IO.Path.GetDirectoryName(System.Reflection.Assembly.GetEntryAssembly().Location));
+  Console.WriteLine("---取出檔名---");
+  Console.WriteLine(System.AppDomain.CurrentDomain.FriendlyName);
+  Console.WriteLine(System.IO.Path.GetFileName(System.Diagnostics.Process.GetCurrentProcess().MainModule.FileName));
+  Console.WriteLine(System.Diagnostics.Process.GetCurrentProcess().ProcessName);
+  Console.Read();
+}
+</code></pre><p>※ 有用到Reflection都很耗效能，能不用就不要用。</p><h2>取得ASP.NET WebForm目前運行的路徑與檔名</h2><pre><code class=language-cs>var oFI = new System.IO.FileInfo(Request.Url.AbsolutePath);
+string cName = oFI.Name;
+</code></pre><h2>取得ASP.NET Url Routing後，真正運行的路徑與檔名</h2><p>上面講的那個方式，到了ASP.NET MVC時代就沒有用處了，在到處都是routing的狀況下，你只會拿到rewrite過的URL而已。如果要求得真正的執行路徑（Handler），就要改用下列這個方法：</p><pre><code class=language-cs>var oPage = (System.Web.UI.Page)System.Web.HttpContext.Current.CurrentHandler;
+string cName = oPage.AppRelativeVirtualPath;
+</code></pre><h6>C# ExeSelfName ExeSelfPath Runtime ASPX ASHX ASP.NET MVC UrlRouting</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

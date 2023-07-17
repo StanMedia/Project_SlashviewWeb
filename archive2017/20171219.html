@@ -1,0 +1,62 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>Enum列舉的尋訪、比對並進行變數指派</h1><p>Enum列舉的尋訪尋值動作並不常用，每次要用的時候都要重新去翻一次System.Enum.GetValues的用法，因此把他筆記這裡，讓有需要的人可以快速地找到使用範例。</p><p><img src=https://content.slashview.com/img/2017/20171219_01.jpg alt="" /></p><h3>已知一整數數值，利用此整數回傳某列舉型別</h3><p>假設有一列舉行別如下：</p><pre><code class=language-cs>enum myFriend
+{
+  NoFriend = 0,
+  John = 1,
+  Marry = 2,
+  Sam = 3,
+  Chris = 4
+}
+</code></pre><p>如果我們從前端、或資料庫端得到一個整數數值，那麼我們可以利用下列程式碼比對myFriend裡面所有的列舉項次，並進而取得可能命中的列舉項次。</p><pre><code class=language-cs>public static void Main()
+{
+  int iFriend = 3;
+  myFriend eFind = myFriend.NoFriend;
+  
+  foreach (int iItem in System.Enum.GetValues(typeof (myFriend)))
+  {
+    if (iFriend == iItem) { eFind = (myFriend)iItem; break; }
+  }
+  
+  Console.WriteLine($"{(int)eFind} / {eFind.ToString()}");
+}
+</code></pre><h2>利用Linq來進行列舉的查找篩選</h2><p>如果是把System.Linq弄進來，使用他的語法來進行資料搜尋的話，語法變成一行就可以解決了。這樣的寫法還有一個好處，就是因為enum是實值型別（ValueType），所以就算找不到命中FirstOrDefault也不會傳回null，而是會傳回這個enum的預設值，也就是等於0的NoFriend。（如果列舉裡面沒有等於0的項次，則會回傳一個0，你對它.GetType()還是會回傳myFriend。）</p><pre><code class=language-cs>myFriend eFind = System.Enum.GetValues(typeof(myFriend)).OfType&lt;myFriend>().Where(x => (int)x == iFriend).FirstOrDefault();
+</code></pre><h2>利用列舉名稱（Enum Name；String）來取得列舉型別本身</h2><p>有時候我們會希望利用某個Enum的名稱來反轉換（反求得）列舉型別，可以使用下列程式碼來進行：</p><pre><code class=language-cs>//Parse寫法
+try
+{
+  var eTemp = System.Enum.Parse(typeof(myFriend), "John");
+  Console.WriteLine(eTemp.ToString());
+}
+catch
+{ Console.WriteLine("找不到這個列舉名稱。"); }
+
+//TryParse寫法，這個方法另外有個多載引數可以支援不區分大小寫比對
+System.Enum.TryParse("John", out myFriend eTemp);
+//如果不存在這個字串而比對失敗，會回傳預設值NoFriend（0）
+Console.WriteLine(eTemp.ToString());
+</code></pre><h2>利用列舉數值（Enum Value；Int）來取得列舉型別本身</h2><p>有時候我們會希望利用某個Enum的數值來反轉換（反求得）列舉型別，可以使用下列程式碼來進行：</p><pre><code class=language-cs>//傳統轉型寫法
+myFriend eTemp = (myFriend)3;
+Console.WriteLine(eTemp.ToString());  //印出Sam
+
+//傳統轉型寫法的缺點
+myFriend eTemp = (myFriend)123;       //根本沒有此列舉
+Console.WriteLine(eTemp.ToString());  //不會出錯且印出123
+
+//使用Enum.IsDefined來輔助檢查
+int i = 123;
+if(System.Enum.IsDefined(typeof(myFriend), i))
+{ 
+  myFriend eTemp = (myFriend)i;
+  Console.WriteLine(eTemp.ToString());
+}
+else
+{ Console.WriteLine("找不到這個列舉數值。"); }
+</code></pre><p>要特別注意的是，當Enum被套用了[System.Flags] Attributes屬性時Enum.IsDefined將會失效（失去判斷作用），如果你有到這麼深的程度，要自己特別小心。</p><h2>利用LINQ來判斷某外部列舉，其值是否符合列舉項次？</h2><p>承上，若列舉的來源是外部參數賦予（例如使用Newtonsoft.Json.JsonConvert.DeserializeObject綁定回物件），那麼極有可能這個賦予的值根本不存在於你的列舉表之中，舉例下列程式碼來說是不會有任何錯誤的，但你的列舉項次其實根本沒有這個項目：</p><pre><code class=language-cs>var eTemp = (myFriend)99;  //這是合法的，儘管99根本不在myFriend裡面
+Console.WriteLine($"{(int)eTemp} / {eTemp}"); //將會輸出：99 / 99
+</code></pre><p>多數時候我們可不想要這種外部來源來汙染我們的列舉值，或者是逼著我們採用預設值，若不想採用IsDefined()方法的話，可以另外考慮採用LINQ語法來進行檢查：</p><pre><code class=language-cs>if (System.Enum.GetValues(typeof(myFriend)).OfType&lt;myFriend>().Where(x => (int)x == (int)eTemp).Count() != 0)
+{ Console.WriteLine("有在列舉項目裡"); }
+else
+{ Console.WriteLine("沒在列舉項目裡"); }
+</code></pre><p>再修改成使用LINQ Any()方法會更有效率一點：</p><pre><code class=language-cs>if (System.Enum.GetValues(typeof(myFriend)).OfType&lt;myFriend>().Any(x => (int)x == (int)eTemp))
+{ Console.WriteLine("有在列舉項目裡"); }
+else
+{ Console.WriteLine("沒在列舉項目裡"); }
+</code></pre><p>Happy Coding！</p><h3>參考文章</h3><p><a href=/archive2019/20190126.html>Enum用於位元邏輯運算的寫法</a></p><h6>System.Enum.GetValues System.Enum.GetNames Foreach Int32 Assignment IntToEnum StringToEnum ConvertToEnum</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

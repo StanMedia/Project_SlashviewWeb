@@ -1,0 +1,9 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>SQL筆記：基於某資料表內容來更新（Update）另一資料表的值</h1><p>純粹自己做SQL語法的筆記，沒甚麼有營養價值的內容。</p><p>SQL的需求動作為在不討論VIEW檢視表的情況下，某張資料表Ａ的某欄位內容因故消失了，而這個消失的欄位值可以在資料表Ｂ中找回來（找到對應值），因此想要透過資料表Ｂ來下Update更新指令，將資料表Ａ消失的欄位資訊補回。</p><h2>基於另外一張資料表來更新資料欄位值</h2><p>Step 1. 確認資料表Ａ狀態，有一個欄位（cName）因故消失了。特別注意的是這裡安排了一位不存在的員工紀錄（C003）。</p><p><img src=https://content.slashview.com/img/2020/20201005_01.jpg alt="" /></p><p>Step 2. 確認資料表Ｂ狀態，只有兩位員工且cName欄位具備值可取用。</p><p><img src=https://content.slashview.com/img/2020/20201005_02.jpg alt="" /></p><p>Step 3. 接下來使用下列SQL指令：</p><pre><code class=language-sql>UPDATE
+  A
+SET
+  A.cName = B.cName
+FROM
+  TEST_Money AS A, TEST_Employee AS B
+WHERE
+  A.cEmployeeNumber = B.cEmployeeNumber
+</code></pre><p>Step 4. 服用後產生的效果，其中不存在的員工紀錄（C003）因為找不到，所以還是留著NULL。</p><p><img src=https://content.slashview.com/img/2020/20201005_03.jpg alt="" /></p><p>以上範例。</p><h6>SQL Command Update ColumnsValueFromAnotherTable</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

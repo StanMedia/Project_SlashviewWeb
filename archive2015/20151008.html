@@ -1,0 +1,72 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>System.Collections常用集合使用範例</h1><p>System.Collections應該是所有程式設計師最常使用的namespace了吧，對我來說，常常是心之所至想到什麼就寫什麼，反正可以用就好了。不幸的是上次踩到了一個執行期的地雷（在具備Hash Index的集合中，加入重複的鍵值），所以只好把所知道的集合整了一下，提醒自己以後不要再犯這種陽春等級的錯誤。</p><p>程式碼如下所示，哪些可以重複鍵值（非雜湊集合），哪些不可以重複鍵值（雜湊集合），請務必自己要搞清楚喔！</p><pre><code class=language-cs>static void Main(string[] args)
+{
+  //////////
+  //非雜湊集合
+  //////////
+
+  System.Collections.ArrayList oAL = new System.Collections.ArrayList();
+  oAL.Add("John");
+  oAL.Add("John");  //OK
+
+  System.Collections.Generic.List&lt;string> oIL = new System.Collections.Generic.List&lt;string>();
+  oIL.Add("John");
+  oIL.Add("John");  //OK
+
+  System.Collections.Generic.IEnumerable&lt;string> oIE = new string[] { "John", "John" };
+
+  //////////
+  //雜湊集合
+  //////////
+
+  System.Collections.Hashtable oHT = new System.Collections.Hashtable();
+  oHT.Add("John", "1234");
+  //oHT.Add("John", "1234");  //Error
+  foreach (System.Collections.DictionaryEntry oItem in oHT)
+  {
+    WriteLine($"Hashtable | key:{oItem.Key.ToString()}, value:{oItem.Value.ToString()}");
+  }
+
+  System.Collections.Generic.Dictionary&lt;string, string> oDI = new System.Collections.Generic.Dictionary&lt;string, string>();
+  oDI.Add("John", "1234");
+  //oDI.Add("John", "1234");   //Error
+  foreach (System.Collections.Generic.KeyValuePair&lt;string, string> oItem in oDI)
+  {
+    WriteLine($"Dictionary | key:{oItem.Key.ToString()}, value:{oItem.Value.ToString()}");
+  }
+}
+</code></pre><p>在兩個雜湊集合（Hashtable、Dictionary）中，我加入了foreach的寫法將其讀出，可能會有人認為幹嘛寫成這麼複雜，用var動態型別不就好了？我會這樣寫的原因，是因為要提醒我自己這邊的子屬類別是什麼，純粹是「多知道一件事就少犯下一件錯」。而一般來說，Hashtable、Dictionary不太有人會進行foreach的操作，因為類別中提供的ContainsKey、ContainsValue等方法成員就已經很好用了。</p><p>至於IEnumerable是所有泛型集合的根源，它實質上只是一個指標指往欲存取的目標實體（instance）而已，我通常用佐以yield return，來解決陣列型別無法動態的新增資料的問題。範例程式碼如下：</p><h3>利用IEnumerable讓傳統的物件陣列，也可以動態的新增資料</h3><pre><code class=language-cs>public class Person
+{
+  public string cName { set; get; }
+}
+
+class Program
+{
+  static void Main(string[] args)
+  {
+    Person[] oPers = new Person[]
+    {
+      new Person() { cName = "123" },
+      new Person() { cName = "456" }
+    };
+
+    System.Collections.Generic.IEnumerable&lt;Person> oTemp;
+    oTemp = AddPerson(oPers, new Person() { cName = "789" });
+    oTemp = AddPerson(oTemp, new Person() { cName = "012" });
+
+    foreach (var item in oTemp)
+    {
+      WriteLine(item.cName);
+    }
+  }
+
+  static System.Collections.Generic.IEnumerable&lt;Person> AddPerson(System.Collections.Generic.IEnumerable&lt;Person> oSource, Person oTarget)
+  {
+    foreach (Person item in oSource)  {  yield return item; }
+    yield return oTarget;
+  }
+}
+</code></pre><p>執行結果當然就是：</p><pre><code class=language-txt>123
+456
+789
+012
+</code></pre><p>補充說明：</p><ol><li>對IEnumerable有興趣的人，可以參考我的另外一篇文章： <a href=/archive2015/20150831.html>利用yield return與IEnumerable(T)來讓ORM類別可以被集合化與尋訪</a></li><li>對System.Collections.Specialized有興趣的人，可以參考我的另外一篇文章： <a href=/archive2013/20130823.html>利用.NET Collections類別來幫你達成Group的功能</a></li><li>另有一篇MS MVP Huan-Lin以其他的的面向去整理的集合類型，同樣非常具有參考價值： <a href=//www.huanlintalk.com/2018/02/choosing-net-collection-types.html>選擇合適的 .NET 集合類型</a></li></ol><h6>System.Collections ArrayList List IList IEnumerable Hashtable DictionaryEntry Dictionary IDictionary KeyValuePair</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

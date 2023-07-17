@@ -1,0 +1,66 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>找出字串中隱藏的Big5造字字元，並用Unicode將其取代</h1><p>大概是去年簡單處理在Excel檔案尋找造字字元，被程式設計之神詛咒，連我自己都很驚訝，到西元2018年這種鳥問題又爆發了，而且這次需要很正式的面對它！或許這也是老程式設計師永遠逃避不了的問題吧。</p><p>總而言之，相關編碼知識可能要請大家要先建立起來。</p><ul><li>推薦先看一下：<a href=/archive2017/20170127.html>如何在在Excel中找出BIG5的使用者造字字元？</a></li><li>.NET Framework的字元採用UTF16編碼。（<a href=https://docs.microsoft.com/zh-tw/dotnet/standard/base-types/character-encoding>.NET 中的字元編碼</a>）</li><li>網頁字元出現「&amp;#XXXXX;」，統稱為NCR（Numeric Character Reference）編碼，其實就是將UTF16字元轉成整數而已。（看一下逆轉的過程：<a href=https://blog.darkthread.net/blog/convert-from-ncr>還原NCR編碼</a>）</li><li>Big5與倚天中文有他們自己的包袱，而Microsoft的CodePage 950並沒有完全將這些包袱背負在肩上。</li><li>維基百科中的<a href=https://en.wikipedia.org/wiki/Code_page_950>Code page 950</a>，很直接了當的載明對應到Unicode PUA（Private Use Area）區塊，只有實作四大區塊。</li></ul><pre><code class=language-txt>Big5      Unicode
+8140–8DFE U+EEB8–U+F6B0
+8E40–A0FE U+E311–U+EEB7
+C6A1–C8FE U+F6B1–U+F848
+FA40–FEFE U+E000–U+E310
+</code></pre><ul><li>維基百科中的另外一個CodePage 950中文頁面，載明了F9D6-F9FE其實是有意義的字元（<a href=https://zh.wikipedia.org/wiki/%E4%BB%A3%E7%A2%BC%E9%A0%81950>倚天文字與表格符號</a>），但這些在微軟內建的轉碼表中，其實確實被轉成真正Unicode的文字了。（Moztw網站中提供的轉換表可以證明非循序性：<a href=https://moztw.org/docs/big5/table/big5_2003-b2u.txt>B2U.txt</a>）</li><li>基於上列的論點，基本上我們可以拋棄F9D6-F9FE區段的識別及轉換了。（因為即便轉出來也是廢物）</li></ul><h2>如何找出字串中的Big5使用者造字字元？</h2><p>網路上流傳的利用.NET Framework內建的Big5轉碼機制，透過尋找「?」字元（HEX: 3F、Dec: 63），就可以進行Big5的難字與使用者造字字元偵測，其實這個解決方案只能解決難字問題。這類的轉碼方式大概會長得像下列程式碼：</p><pre><code class=language-cs>var oBig5 = System.Text.Encoding.GetEncoding("Big5");
+string cQuestionMark = oBig5.GetString(oBig5.GetBytes(new char[] { '堃' }));
+if (cQuestionMark == '?') { ... }
+Console.WriteLine(String.Concat(cQuestionMark.Select(x => ((int)x).ToString("X"))));
+</code></pre><p>在真正的深入套用後會發現，.NET內建的Utf16轉Big5機制並沒有實作「依據EUDC定義的造字區間」對應「?」，他只有實作「在Unicode有這個字但Big5沒這個字時」吐出「?」，例如「堃」。</p><p>舉例來說：FDCD（Big5）這個字確定被定義在EUDC的「FA40–FEFE」區間內，那麼oBig5.GetString我們期待吐回「?」，但顯然的回傳的Char卻是「E242」。以下是這個字的相關解碼，這證明找問號是行不通的：</p><pre><code class=language-txt>中文字元：（可以使用微軟新注音輸入「‵BFDCD」）
+UTF16（HEX）：E242（將字元ToInt32後的返回值）
+UTF16（DEX）：57922
+UTF16（NCR）：&amp;#57922;
+BIG5 （HEX）：FDCD
+</code></pre><h2>答案：若是造字區間，不要oBig5.GetString找問號，要找PUA對應區間</h2><p>答案就是.NET Framework沒有這種機制，自己K知識後硬幹吧！</p><pre><code class=language-cs>//字典檔
+private static readonly System.Collections.Generic.Dictionary&lt;int, char> oEudcUtfDictionary = new System.Collections.Generic.Dictionary&lt;int, char>
+{
+  {57922, '堃'},
+};
+
+//被我包裝成擴充方法的使用者造字的Unicode字元取代器
+public static string ToEudcUnicode(this System.String cTemp)
+{
+  System.Text.StringBuilder oSB = new System.Text.StringBuilder();
+  /* Big5 EUDC to Unicode PUA */
+  //FA40-FEFE
+  int iPUA_1S = System.Convert.ToInt32(0xE000);
+  int iPUA_1E = System.Convert.ToInt32(0xE310);
+  //8E40-A0FE
+  int iPUA_2S = System.Convert.ToInt32(0xE311);
+  int iPUA_2E = System.Convert.ToInt32(0xEEB7);
+  //8140–8DFE
+  int iPUA_3S = System.Convert.ToInt32(0xEEB8);
+  int iPUA_3E = System.Convert.ToInt32(0xF6B0);
+  //C6A1–C8FE
+  int iPUA_4S = System.Convert.ToInt32(0xF6B1);
+  int iPUA_4E = System.Convert.ToInt32(0xF848);
+  //F9D6-F9FE
+  //在CP950中，微軟真實的實作了字元的對照到Unicode，也就是說所對照出來的數值已經不是循序的0xF849-0xF8FF了。
+  //因此下列這段程式碼就算寫了，實務上也是沒鳥用。（使用者造字與繕打這個編碼，存入資料庫的時候就被翻譯對應到其他字元編碼了）
+  //int iPUA_5S = System.Convert.ToInt32(0xF849);
+  //int iPUA_5E = System.Convert.ToInt32(0xF8FF);
+
+  //尋訪中文難字字元
+  foreach (char cUtf16 in cTemp)
+  {
+    char cResult = cUtf16;
+    int iValue = System.Convert.ToInt32(cUtf16);
+    //找看看這個字元的NCR是否落在PUA
+    if
+    (
+      (iPUA_1S &lt;= iValue &amp;&amp; iValue &lt;= iPUA_1E) ||
+      (iPUA_2S &lt;= iValue &amp;&amp; iValue &lt;= iPUA_2E) ||
+      (iPUA_3S &lt;= iValue &amp;&amp; iValue &lt;= iPUA_3E) ||
+      (iPUA_4S &lt;= iValue &amp;&amp; iValue &lt;= iPUA_4E)
+    )
+    { //如果有找到就回傳替換字，沒有找到就維持原字碼丟回去
+      cResult = oEudcUtfDictionary.Where(x => x.Key == iValue).FirstOrDefault().Value;
+      if (cResult == 0) { cResult = cUtf16; }
+    }
+    //將字元加回去
+    oSB.Append(cResult);
+  }
+  return oSB.ToString();
+}
+</code></pre><h3>相關參考</h3><ul><li><a href=/archive2018/20180927.html>列舉Windows作業系統下的造字檔內的所有文字（粗略版）</a></li><li><a href=/archive2022/20221222.html>列舉Windows作業系統下的造字檔內的所有文字（精準版）</a></li><li><a href=/archive2018/20180925.html>找出字串中隱藏的Big5造字字元，並用Unicode將其取代</a></li><li><a href=/archive2017/20170127.html>如何在在Excel中找出BIG5的使用者造字字元？</a></li><li><a href=/archive2021/20211122.html>更新造字字型檔（EUDC Fonts）的批次小程式</a></li></ul><h6>Big5 EndUserDefinedCharacters Unicode PrivateUseArea Convert Converter Finder Seracher CodePage950</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

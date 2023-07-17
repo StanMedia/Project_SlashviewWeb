@@ -1,0 +1,6 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>解析具備空白分隔的字串，並快速取出特定的區間資料</h1><p>簡單的說，就是有一個字串資料中間有使用空格分離，我們想要取出後面特定的字串但又不想寫大批的程式碼，只能使用System.Linq來處理了，在此簡單筆記一下。</p><pre><code class=language-cs>string cTemo = $"aaa bbb ccc ddd eee";
+//跳過兩個取全部：ccc／ddd／eee
+WriteLine($"{string.Join("／", cTemo.Split(' ').Skip(2))}");
+//跳過一個取兩個：bbb／ccc
+WriteLine($"{string.Join("／", cTemo.Split(' ').Skip(1).Take(2))}");
+</code></pre><p>沒啥可分享，純粹筆記一下而已。</p><h6>String Split Get Take Skip Jump Space Array System.Linq</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

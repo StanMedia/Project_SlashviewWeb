@@ -1,0 +1,46 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>IIS的ApplicationHost.config設定（含Client Cache設定）</h1><p>在 IIS7 後，所有的設定都可以檔案化了，很適合大量部署機器，但是重點是，如果不要在大量部屬時還要去設定相關的路徑（或服務）讓主機去套用到同一個設定，這時候我們會希望在虛擬環境中先去弄一個已經被完整設定過的IIS，再來搞工程師最愛的copy-paste。</p><p>在這個時期中，我們去IIS的最上層，也就是總設定時期階層先去搞定所有的基礎設定，但是我們會發現在HttpCompression的設定想要手動去編輯文件時，會發現檔案被鎖定問題。</p><p>這時候請不要再一直試著要解除鎖定，然後再去找檔案，那是無意義的。</p><p>請乖乖的使用 UI 去單筆編輯吧，因為這時候他根本不會去讀取 ApplicationHost.config 的，在 UI 編輯的東西似乎會被寫成PowerShell語法之類的，然後在IIS相關服務起來時自動產生一個xml檔案來被讀取。</p><p>結論就是說，我們一直以為的 C:\Windows\System32\inetsrv\config\ApplicationHost.config 是最終的總設定目錄，這是錯誤的，這個檔案充其量只能說是被引用（複製）的階層（在IIS被新增網站後馬上套用），而被複制出來的檔案，不是我們用 editor 去改就可以直接儲存的，一定用進IIS UI介面下的『設定編輯器』才可以改。這個檔案被放在『C:\inetpub\temp\appPools\DefaultAppPool\DefaultAppPool.config』，有興趣的人可以自己看一下。</p><p>要注意的事，這邊的論述跟.NET Framework內的machine.config或web.config是完全不一樣的事情，請勿搞混。</p><p>以下是覺得還OK的配置：</p><pre><code class=language-xml>&lt;httpCompression sendCacheHeaders="true" directory="D:\WWW Temporary Compressed Files" maxDiskSpaceUsage="2048" minFileSizeForComp="512" staticCompressionDisableCpuUsage="90" staticCompressionEnableCpuUsage="89" dynamicCompressionEnableCpuUsage="89">
+    &lt;scheme name="gzip" dll="%Windir%\system32\inetsrv\gzip.dll" staticCompressionLevel="9" dynamicCompressionLevel="8" />
+        &lt;dynamicTypes>
+            &lt;clear />
+            &lt;add mimeType="text/*" enabled="true" />
+            &lt;add mimeType="text/*; charset=utf-8" enabled="true" />
+            &lt;add mimeType="message/*" enabled="true" />
+            &lt;add mimeType="message/*; charset=utf-8" enabled="true" />
+            &lt;add mimeType="application/x-javascript" enabled="true" />
+            &lt;add mimeType="application/x-javascript; charset=utf-8" enabled="true" />
+            &lt;add mimeType="application/xml" enabled="true" />
+            &lt;add mimeType="application/xml; charset=utf-8" enabled="true" />
+            &lt;add mimeType="application/json" enabled="true" />
+            &lt;add mimeType="application/json; charset=utf-8" enabled="true" />
+            &lt;add mimeType="application/atom+xml" enabled="true" />
+            &lt;add mimeType="application/atom+xml; charset=utf-8" enabled="true" />
+            &lt;add mimeType="application/xaml+xml" enabled="true" />
+            &lt;add mimeType="application/xaml+xml; charset=utf-8" enabled="true" />
+            &lt;add mimeType="*/*" enabled="false" />
+        &lt;/dynamicTypes>
+        &lt;staticTypes>
+            &lt;clear />
+            &lt;add mimeType="text/*" enabled="true" />
+            &lt;add mimeType="text/*; charset=utf-8" enabled="true" />
+            &lt;add mimeType="message/*" enabled="true" />
+            &lt;add mimeType="message/*; charset=utf-8" enabled="true" />
+            &lt;add mimeType="application/x-javascript" enabled="true" />
+            &lt;add mimeType="application/x-javascript; charset=utf-8" enabled="true" />
+            &lt;add mimeType="application/xml" enabled="true" />
+            &lt;add mimeType="application/xml; charset=utf-8" enabled="true" />
+            &lt;add mimeType="application/json" enabled="true" />
+            &lt;add mimeType="application/json; charset=utf-8" enabled="true" />
+            &lt;add mimeType="application/atom+xml" enabled="true" />
+            &lt;add mimeType="application/atom+xml; charset=utf-8" enabled="true" />
+            &lt;add mimeType="application/xaml+xml" enabled="true" />
+            &lt;add mimeType="application/xaml+xml; charset=utf-8" enabled="true" />
+            &lt;add mimeType="*/*" enabled="false" />
+        &lt;/staticTypes>
+&lt;/httpCompression>
+</code></pre><p>題外話：cacheControlHeader與expiresHeader這兩個在設定編輯器中，應該被清空（建議），因為後來的cache控制權應該交給web.config來處理。</p><pre><code class=language-xml>&lt;system.webServer>
+    &lt;staticContent>
+        &lt;!-- Implement Client Cache: Http Status 304 -->
+        &lt;clientCache cacheControlMode="UseMaxAge" cacheControlMaxAge="300.00:00:00" />
+    &lt;/staticContent>
+&lt;/system.webServer>
+</code></pre><h6>IIS applicationHost.config machine.config web.config</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

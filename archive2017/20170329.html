@@ -1,0 +1,49 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>利用Nullable＜T＞所擁有的屬性來判斷是否為null</h1><p>這篇文章基本上是屬於廢文等級，純粹是用來協助自己記憶用的。一般來說，在宣告實質型別（Value Type）可為null時，在取值時我都會採用<code>Nullable&lt;T>==null</code>的形式來進行判斷，但事實上，是可以使用<code>Nullable&lt;T></code>所提供的屬性來進行判斷的，這樣一來程式碼的可讀性又往上提升了一點點了。</p><p><img src=https://content.slashview.com/img/2017/20170329_01.jpg alt="" /></p><p>在這邊小提醒一下，<code>Nullable&lt;T></code>是以Struct（結構）的型態出現的喔！</p><h2>HasValue屬性</h2><p>取得值，指出目前的<code>Nullable&lt;T></code>物件是否具有其基礎類型的有效值。</p><h2>Value屬性</h2><p>取得目前<code>Nullable&lt;T></code>物件的值，如果這個物件已有指派的有效基礎值。</p><h2>程式碼示範以及註解說明</h2><pre><code class=language-cs>static void Main(string[] args)
+{
+  //兩種寫法都可以
+  int? Test1 = 1234;
+  Nullable&lt;int> Test2 = 5678;
+
+  //大家都是System.Int32
+  WriteLine($"{Test1.GetType()} / {Test2.GetType()}");
+
+  if (Test1 != null)  //以後盡量不要再用這種寫法了
+  { WriteLine(Test1.Value); }
+
+  if (Test2.HasValue)  //改用這種寫法清爽多了
+  { WriteLine(Test2.Value); }
+
+  Read();
+}
+</code></pre><p>特別注意！若沒有經過<code>Nullable&lt;T>==null</code>或者是<code>Nullable&lt;T>.HasValue</code>的檢查，就直接用<code>Nullable&lt;T>.Value</code>去調用到一個可能為null的實質型別，當null真的發生時，會吐出錯誤「System.InvalidOperationException」，所以取值時請小心。</p><h3>最後來看一下<code>Nullable&lt;T></code>原始碼</h3><p><a href=https://referencesource.microsoft.com/#mscorlib/system/nullable.cs,712e7d0ea9003815>本草綱目Microsoft .NET Reference Source有紀載</a>，看原始碼輕鬆又便利，真是太棒啦！</p><pre><code class=language-cs>[Serializable]
+[System.Runtime.Versioning.NonVersionable] // This only applies to field layout
+public struct Nullable&lt;T> where T : struct
+{
+  private bool hasValue; 
+  internal T value;
+
+  [System.Runtime.Versioning.NonVersionable]
+  public Nullable(T value) {
+    this.value = value;
+    this.hasValue = true;
+  }        
+
+  public bool HasValue {
+    [System.Runtime.Versioning.NonVersionable]
+    get {
+        return hasValue;
+    }
+  } 
+
+  public T Value {
+    get {
+      if (!hasValue) {
+        ThrowHelper.ThrowInvalidOperationException(ExceptionResource.InvalidOperation_NoValue);
+      }
+      return value;
+    }
+  }
+　
+ ... BraBra ...
+
+</code></pre><ol><li>看到[Serializable]屬性了，代表可以序列化。</li><li><code>Nullable&lt;T></code>是struct結構。</li><li>利用public Nullable(T value)來進行建構，若有實值進來，則馬上把value與hasValue欄位灌值進去。</li><li>因為struct沒有辦法對欄位進行初始化賦值，所以巧妙的利用private bool hasValue;布林值實值天生的預設值false來進行預設。所以當從來沒有使用過（建構子沒有被調用過），hasValue自然就是false了。</li><li>Value屬性被調用前，struct內部還是會先去檢查一下hasValue欄位是否為true，否則就吐出InvalidOperationException錯誤。</li></ol><p>以上就是有關於<code>Nullable&lt;T></code>的一篇廢文，謝謝大家。</p><h6>Nullable(T) HasValue Value GetType() InvalidOperationException</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

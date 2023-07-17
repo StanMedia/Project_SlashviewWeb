@@ -1,0 +1,12 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>網站不斷的顯示HTTP 500錯誤</h1><p>今天臨時被叫去解決一件怪事，就是有一個ASP.NET的網站，在Server本機端，用瀏覽器打開來看，一直被提示HTTP 500錯誤，無論怎麼樣做都沒有辦法解決。</p><h2>發生前的情況簡述：</h2><ol><li>有改過資料庫連線字串。</li><li>改完有測試過，一切沒問題。</li><li>把舊的連線字串用XML格式的註解標記起來。</li><li>之後就離開了，沒有再去管它，沒想到過一段時間後就開始出HTTP 500狀況。</li></ol><p>一開始就先去web.config打開來，查看為何為是本地端顯示HTTP 500，但是遠端連入確是一遍空白？web.config顯示下列資訊，經檢查無誤。</p><pre><code class=language-xml>&lt;system.web>
+  //確定debug模式有打開
+  &lt;compilation debug="true" targetFramework="4.5" defaultLanguage="c#" />
+  //確定客製化錯誤訊息有關閉
+  &lt;customErrors mode="Off" redirectMode="ResponseRewrite" defaultRedirect="~/error.aspx" />
+&lt;/system.web>
+</code></pre><p>既然有打開，為何錯誤訊息不是傳統的黃底紅字程式碼的錯誤訊息，而是一片空白或顯示HTTP 500錯誤？於是我開始朝著ASP.NET與IIS層級的錯誤來查找，查看IIS Log只是陽春的顯示單行500錯誤，沒有額外的資訊，畢竟這只是單純的HTTP Request。</p><p>接著想到，是否是入口頁的index.aspx出現問題，於是去把程式碼單純化，純化到最後只剩下HTML語法，沒有任何的Server Side語法，還是一樣出現錯誤，真的很奇怪！？</p><p>接著開始往ASP.NET層找，去了C:\Windows\Microsoft.NET目錄下跑了aspnet_regiis -ir，看能不能藉由重新安裝註冊ASP.NET的dll來換取解決，沒想到情況依然，這下真的懸疑了！莫非鬧鬼！</p><p>百般無奈下，重新回web.config看一下案發前改的連線字串是否有誤，但看起來一切正常啊，這時候看到上面有之前連線字串修改前的備份，被以註解的形態標記起來如下。</p><pre><code class=language-xml>&lt;!--
+  這裡於201500417被修改成新連線字串，舊字串備份如下。
+  &lt;add name="mainDB" connectionString="oldString" />
+-->
+&lt;add name="mainDB" connectionString="newString" />
+</code></pre><p>怎麼看都沒有錯誤啊！百般無奈加上亂試的心態，想說先再去消掉錯誤前的變數，就把註解拿掉並儲存，再去瀏覽器重新整理，沒想到...好...好了，錯誤完全不見！</p><p>當下心裡想，騙肖耶，最好這樣的註解方式會出錯啦！這是正確的XML註解語法啊！然後開始去StackOverflow翻討論文件，大家也都是這樣寫啊！接著我把註解英文部份移掉，還是出錯，中文部份再移掉（剩英文），沒想到好了！</p><h2>XML文件編碼問題</h2><p>中文會出錯！當下就馬上想到是編碼問題，於是開啟NotePad++查看一下，web.config果然是被存成ANSI格式，當下轉換成具備BOM標頭的unicode後，發現中文果然變成亂碼了，這表示ASP.NET在解析這份web.config文件時，在這個地方被中文編碼干擾了。經過正確的轉換成unicode後，把中文字再重新貼回去，並以unicode格式儲存文件，整個網站恢復正確運作，結案！</p><p>這次的經驗告訴我們，收工前一定要再測一次，就算你很確定你只是把一行小小的程式碼mark成註解，都有可能引發一場超難偵錯的災難。</p><h6>IIS ASP.NET HTTPError500 Web.Config ErrorLog BlankPage BlankContents</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

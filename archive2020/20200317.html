@@ -1,0 +1,16 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>利用ngrok在localhost測試https Webhook</h1><p>撰寫Webhook最幹的事情，就是它往往會限定你要用掛載https且具備DomainName的網址，具備這樣的條件大都是正式網站才有這樣的環境，而程式設計師看看自己的本機（localhost）往往只能默默的滴下眼淚，最慘的是有可能根本搞不清楚來源端送過來的JSON格式，最後只能用最原始的Print Log或通靈的方式來撰寫程式碼來佈署測試，ngrok是一個解決這個問題的好工具。</p><p><img src=https://content.slashview.com/img/2020/20200317_01.jpg alt="" /></p><p>接下來我們來練習一下怎麼使用ngrok。</p><h2>ngrok設定方式</h2><p>Step 1. 先去<a href=https://ngrok.com/>ngrok</a>申請一個屬於你自己的帳號。</p><p>Step 2. 下載ngrok執行檔案，如果你是Windows環境，那麼解壓縮後就是一支Console模式下的程式碼罷了。</p><p>Step 3. 登入你的ngrok帳號，在頁面的Auth選項中，找到個人的「Your Authtoken」並將其複製下來（做一次就好）。</p><p><img src=https://content.slashview.com/img/2020/20200317_02.jpg alt="" /></p><p>Step 4. 打開Console執行ngrok，並輸入下列指令讓你的Tunnel Authtoken被寫入ngrok.yml（指令碼格式請詳閱線上網站，因為可能隨時會有更迭）。</p><pre><code class=language-txt>ngrok authtoken 貼上你在步驟三複製的TunnelAuthtoken
+</code></pre><p>Step 5. 打開你的localhost測試環境，記下現在的Localhost Http Port Number（假設是8080），並在Concole視窗輸入下列指令。</p><pre><code class=language-txt>ngrok http 8080
+</code></pre><p>Step 6. 接著你會看到下列畫面，其中Forward裡面有一個https的亂數網址（每次執行都會換掉），那個就是你要複製起來去某服務登錄Webhook的字串了。</p><p><img src=https://content.slashview.com/img/2020/20200317_03.jpg alt="" /></p><p>以上就是ngrok的操作方式。另外有幾點注意事項如下：</p><ol><li>因為他是一支Console模式程式，因此在除錯的期間必須讓Console視窗留著，按下Ctrl+C可以關閉服務。</li><li>當你關閉後再重新執行一次ngrok，那麼你的Webhook字串就會被更換，因此必須重新再跑一次Console使其向遠端註冊。（廠商故意的！覺得麻煩就花錢。）</li><li>Console在response時期會有資訊跳出，另外也可以透過固定網址：<a href=http://127.0.0.1:4040>http://127.0.0.1:4040</a>看到更多Request、Response詳細資訊。（有提供迷你HttpService）</li></ol><h2>補充說明：</h2><p>實作上若有遇到400 Bad Request的錯誤，或者得到下列的錯誤資訊輸出：</p><pre><code class=language-html>&lt;!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN""http://www.w3.org/TR/html4/strict.dtd">
+&lt;HTML>
+&lt;HEAD>
+    &lt;TITLE>Bad Request&lt;/TITLE>
+    &lt;META HTTP-EQUIV="Content-Type" Content="text/html; charset=us-ascii">
+&lt;/HEAD>
+&lt;BODY>
+    &lt;h2>Bad Request - Invalid Hostname&lt;/h2>
+    &lt;hr>
+    &lt;p>HTTP Error 400. The request hostname is invalid.&lt;/p>
+&lt;/BODY>
+&lt;/HTML>
+</code></pre><p>可以試著用下列的啟動指令解決：</p><pre><code class=language-txt>ngrok http 8080 -host-header="localhost:8080"
+</code></pre><h6>ngrok Install Http Https Webhook Bot ChatBot Telegram Whatsapp Line IM InstantMessage</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

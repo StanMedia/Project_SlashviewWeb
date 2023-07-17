@@ -1,0 +1,21 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>使用C#抓取運行中的執行緒資訊以及檔案資訊</h1><p>一直以來都知道使用System.Diagnostics.Process.GetProcesses();可以取得系統中所有的執行緒，卻一直沒有深入地去瞭解，因為有太多的工具可以協助我查看這面的資訊，例如越來越強大的工作管理員（Task Manager），直到今天需要自己實作執行緒的取得時，才發現案情並不單純。原來我們在工作管理員中看到的應用程式名稱，其實是檔案描述，這一點你可以在執行檔案上點選右鍵＞內容＞詳細資料＞檔案描述中，可以發現端倪。</p><p><img src=https://content.slashview.com/img/2015/20151111_01.jpg alt="" /></p><p>如上圖所示，你在工作管理員中看到的應用程式名稱，其實是「檔案描述」。接下來的問題是，我們自己設計的程式，要如何來編輯更改這個描述呢？</p><h2>如何在VisualStudio中進行「檔案描述」等資訊變更？</h2><p>其實很簡單，打開專案總管＞屬性＞應用程式＞組件資訊＞標題，在標題中打入你想要的字串，這裡就是所謂的檔案描述。這裡設定的東西，在編譯後的執行檔中，你可以透過檔案總管（File Explorer）中的內容＞詳細資料中看到對應的訊息。</p><p><img src=https://content.slashview.com/img/2015/20151111_02.jpg alt="" /></p><h2>透過C#抓取執行緒的相關資訊</h2><p>接下來就更簡單了，直接調用.Net Framework中的System.Diagnostics.Process.GetProcesses()，透過Process物件類別就可以取得你想要的資訊。在此要特別注意的是，如果你今天編譯的是32Bit（x86）的程式，是不可以調用64Bit（x64）系統程式的相關訊息的，此外，如果你是UWP APP設計架構的執行緒，在調用上也有一定的權限限縮。</p><p>程式碼如下：</p><pre><code class=language-cs>static void Main(string[] args)
+{
+  foreach (System.Diagnostics.Process oItem in System.Diagnostics.Process.GetProcesses())
+  {
+    string cID = "";  //執行續ID
+    string cPN = "";  //執行檔名稱
+    string cFD = "";  //執行檔描述
+    try
+    {
+      cID = oItem.Id.ToString();
+      cPN = oItem.ProcessName;
+      cFD = oItem.MainModule.FileVersionInfo.FileDescription;
+    }
+    catch
+    {
+      //Access Denied
+    }
+    WriteLine($"PID: {cID}\nFileName: {cPN}\nFileDescription: {cFD}\n---");
+  }
+}
+</code></pre><p>執行結果如下：</p><p><img src=https://content.slashview.com/img/2015/20151111_03.jpg alt="" /></p><h6>System.Diagnostics.Process.GetProcesses TaskManager FileName FileDescription</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

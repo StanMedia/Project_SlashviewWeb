@@ -1,0 +1,126 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>JavaScript Functions的Declarations與Expressions</h1><p>這一篇我想了寫很久了，但遲遲未下筆的原因就是我始終對於匿名函式（Anonymous Functions）是有恨意的，更別提再加上JavaScript這種東拼西湊縫縫補補的語言後，他混亂的程度更令人難以理解。難以理解就沒辦法全面透通，所以這就是拖了很久沒有寫下來的理由。最後我選擇還是要寫下來，因為JavaScript還在成長且被重用，如果我現在沒有把我已知的寫下來，未來ECMA再添補新語法時只會更令人哭泣。（但要聲明這篇並非現行全面性的JS Functions探討，因為網路總會有更多的程式設計師想辦法把程式寫的更詭異更難以閱讀及維護，只是我不太清楚這種心態是什麼心態就是了。）</p><h2>Function Declaration宣告式函式</h2><p>這個是最正規且最簡單的函式宣告，且一定帶有名字，它最大的優點是易於閱讀且維護，跨語言別也無需重新理解。只是在現代JavaScript framework化的影響，它「全域性」的特性，慢慢的出現有可能干擾整體網站運作的可能，因此現在寫成Function Declaration看起來都有一種「俗氣感」，但是我還是很愛用就是了。下面是一個很典型的JavaScript宣告式函式傳入與傳出範例：</p><pre><code class=language-js>showString("Hello world FRONT!");  //正確調用
+
+function showString(cTemp){
+    alert(cTemp);
+}
+
+showString("Hello world BEHIND!");  //正確調用
+showString();  //正確調用但是會顯示空字串
+showString;  //不會被調用執行（這個觀念很簡單但很重要）
+</code></pre><p>在調用函式後面加()，表示我們要執行它，如果沒有加上括號，事實上函式只會傳回一連串的正規文字（Regular Value），詳見下列的程式碼。</p><pre><code class=language-js>function showString(cTemp){
+    alert(cTemp);
+    return ++cTemp;
+}
+alert(showString(1));
+alert(showString);
+</code></pre><p>輸出結果依序如下：</p><p><img src=https://content.slashview.com/img/2014/20140611_01.jpg alt="" /></p><h2>Dynamic Function Declaration動態宣告式函式</h2><p>從上面的例子我們也可以發現一個很重要的事實，就是Function Declaration在整體JavaScript要執行時，就被預先審視與建立起來，而並非在執行期才動態建立，這個優點可以保證整體的程式品質，缺點就是缺乏彈性。我個人認為缺乏彈性比起容易閱讀、維護、穩定等特性渺小的太多了，可是很多程式設計師不這麼認為就是了。Function Declaration寫成動態的方式也不無可能，如下面就是一個很好的例子，只是要注意的是這種寫法不常見，也有跨瀏覽器的問題，不是每一個瀏覽器的每一種版本跑出來的結果都是一樣的，我相信舊一點的瀏覽器IE6之類的，可能會崩潰。我個人測過IE11以及FF29是沒問題的，但這也直接的顯示出一個問題，就是JavaScript一直在改變他的語法特性：</p><pre><code class=language-js>/* Function Declaration寫成「在執行期建立」的方式 */
+//alert(showString);  //在這時還是undefined！
+
+if(true){
+    function showString(cTemp){ alert("fn1:" + cTemp); }
+}else{
+    function showString(cTemp){ alert("fn2:" + cTemp); }
+}
+
+//輸出 fn1:Hello world
+showString("Hello world");
+
+if(false){
+    function showString(cTemp){ alert("fn3:" + cTemp); }
+}else{
+    function showString(cTemp){ alert("fn4:" + cTemp); }
+}
+
+//覆寫輸出 fn4:Hello world
+showString("Hello world");
+</code></pre><h2>將Function Declaration宣告式函式指派給一個變數</h2><p>基本上這個寫法就是把執行前的函式建置與執行期的建置混在一起思考的觀念，但實務上的運行是將一個宣告式函式指派給一個變數，就有如傳址（By Reference）調用一樣，指過去函式所處的記憶體位址進行運行，在JavaScript Functions的觀念當然是傳遞這個正規文字（Regular Value）嘍！</p><pre><code class=language-js>//一定可以調用成功
+showString("Hello!");
+
+//不可以運行，因為hi1是在下方執行期運行時才被指派的
+//hi_1("Hello! with hi_1");
+
+//將在執行前就被建置完成
+function showString(cTemp){
+  if(cTemp === undefined)
+    return "foo";
+  else
+    alert(cTemp);
+}
+
+//指派兩個變數，指向showString
+var hi_1 = showString;
+var hi_2 = showString();  //因為()而執行showString並傳入空參數，收到"foo"
+
+hi_1("Hello! with hi_1");
+
+alert(hi_1 === hi_2);  //輸出false；一個相當是函式，一個是字串變數
+alert(hi_1 === showString);  //輸出true；hi_1本來就指向showString函式
+alert(hi_2);  //輸出一個字串變數內容是foo
+</code></pre><p>上面這段程式，如果你有基本的程式設計底子一定都看的懂，這沒什麼好意外的。最特別要注意的是()這個符號，他代表著「會自動自我執行函式」的這個隱性意義。</p><h2>Function Expression表達式函式</h2><p>如果上面的程式碼中，我們可以宣告一個變數指向一個既有存在的函式，那可不可以我再也不用給這個函式名字呢？答案是可以的！這樣的寫法就進入了Expression表達式的世界。一切都是偷懶！下面的程式將展現如何宣告Function Expression，在變數後面的函式宣告，就是匿名函式<a href=/archive2014/20140514.html>Anonymous Functions</a>的寫法。</p><pre><code class=language-js>//Function Expression宣告（也就是匿名函式Anonymous Functions）
+var callMe = function(cTemp){
+  if(cTemp === undefined)
+    return "Nothing";
+  else
+    alert(cTemp);
+}
+
+callMe("TEST");  //傳回TEST
+alert(callMe);  //顯示function(cTemp...程式碼
+alert(callMe());  //傳回Nothing
+</code></pre><h2>Dynamic Function Expression動態表達式函式</h2><p>弄成Function Expression最立即的優點，就是回到程式設計師最愛的動態宣告之運用，讓我們在把前面的程式再來出來回味，你會發現變得很精簡，且可以跨各種版本的瀏覽器運行，並且沒有任何錯誤！</p><pre><code class=language-js>var callMe;
+
+if(false){
+    callMe = function(cTemp){ alert("fn1:" + cTemp); }
+}else{
+    callMe = function(cTemp){ alert("fn2:" + cTemp); }
+}
+
+callMe("Hello world"); //輸出fn2:Hello world
+</code></pre><h2>Function Expression真正的匿名化</h2><p>懶惰的力量是沒有盡頭的，因此，程式設計師下一個要求是要真正的匿名，不像上面那段程式碼還有var callMe = ... 變數出現，要討論這個前，要先再確定一下剛才就有的遇到()就自我執行觀念！</p><pre><code class=language-js>//一般型Function Expression
+var cal1 = function(a, b){ return a + b; }
+alert(cal1(2, 3));  //輸出5
+
+//自我執行型Function Expression
+var cal2 = function(a, b){ return a + b; }(2, 3);
+alert(cal2);  //輸出5
+</code></pre><p>可能你會覺得，喔，這樣我懂了！那就照下方程式碼這樣寫嘛～答案是：錯。這樣寫的話會被JavaScript判斷成你要使用Function Declarations宣告式函式寫法，但你沒有指定最重要的名稱（names），因此他會回傳給你「SyntaxError: function statement requires a name」。</p><pre><code class=language-js>function(a, b){ return a + b; }(2, 3);
+</code></pre><p>這問題要怎麼解決呢？答案是給定它一個括號就可以了！JavaScript規定在()內可以使用Function Expressions的宣告方式。</p><pre><code class=language-js>(function(a, b){ return a + b; })(2, 3);  //這樣就合法了，但是沒有地方可以展示傳回值，你可以加個alert();來展示
+</code></pre><p>因此我們得到一個結論，如果你不想污染到全域環境，所以需要一個函式來隔離你要操作運算的變數，但是你又想要連函式的名稱完全的匿名不去污染到全域環境時，那就是這個模型可以解決你的問題啦！且永遠只能跑一次，因為你再也沒有任何變數可以去參考調用（Reference）它了。</p><pre><code class=language-js>(function(){
+  /* some code... */
+})();
+
+//或者這樣也可以（就我大量看程式碼的經驗來看比較少人用）
+(function(){
+  /* some code... */
+}());
+</code></pre><h2>利用Function Constructor來進行Expressions表達式函式的建立</h2><p>你千萬不要以為有關於Function的寫法到此結束，還有另外一派的寫法是使用建構子來建構一個匿名函式，我只能說很正規，但是能見度不是很高就是了，在JavaScript的世界中很少見到純物件導向的語句。</p><pre><code class=language-js>var callMe = new Function("cTemp", "alert(cTemp);");  //記得F要大寫，它已經是class與instance的關係了
+callMe("Hello, world!");
+</code></pre><h2>利用Function Regular Value的特性來重構Expressions表達式函式</h2><p>我們從上面的結論知道，利用alert(someFunctionName);會傳回一個被正規化驗證過的可執行程式碼，再加上Expressions表達式函式用來寫匿名函式的撰寫方式我們也掌握了，因此下面的程式碼騰空而出，也就不會太感到意外了！我覺得程式碼至此已經進入藝術階段了，這一段看完後你也已經具備能力看jQuery的相關程式碼了。下面的程式碼展示出更動態的感覺，根本已經變成隨人隨地隨便都可寫了。</p><pre><code class=language-js>function wrapper(xCode){
+  alert((xCode)(100, 200));
+}
+
+//加法計算機，傳回300
+wrapper(function(a, b){
+  return a + b;
+});
+
+//減法計算機，傳回-100
+wrapper(function(a, b){
+  return a - b;
+});
+</code></pre><p>或許上面的例子有人會覺得很無聊，因為參數不可能是包皮wrapper來幫你代入的，所以我重新寫了這個版本，看是不是比較有感覺一點。</p><pre><code class=language-js>function wrapper(xCode, x, y){
+  alert((xCode)(x, y));
+}
+
+wrapper(function(a, b){
+  return a + b;
+}, 100, 200);
+
+wrapper(function(a, b){
+  return a - b;
+}, 100, 200);
+</code></pre><h2>具備名稱的Expressions表達式函式</h2><p>什麼！還沒寫完？是的，程式設計師的要求是沒有極限的。在前面我們看到沒有名稱的函式的好處，重點在於不污染全域命名空間，且跑完單次後資源幾乎就可以釋放了。那為何又要改回有名稱版本，答案是因為程式設計師想要在單次之中，為自己的程式跑遞迴。但正所謂「遞迴只應天上有，人間該當用迴圈。」，所以不喜歡寫遞迴的我，只好用最常舉的費波那契數列（Fibonacci）來示範了。</p><pre><code class=language-js>var result = function Fibonacci(n){
+  return n === 1 ? n : n + Fibonacci(n - 1);
+};
+alert(result(100));  //1+...+100=5050
+</code></pre><p>※PS1: 特別注意：具備名稱的Expressions正式名稱叫Named function expressions（NFE），基本上IE9以下的瀏覽器並不支援，所以如果你真的逼不得以喜歡上這個語法，請考慮Cross Browser的問題。</p><p>※PS2: jQuery也是一個NFE著名的應用實例，它把變數名稱叫$，所以你想起了「$(selector)...」的寫法了嗎？</p><p>※PS3: 有關於JavaScript函式的寫法還有其它的寫法，只是不常見或是我才疏學淺看不懂。</p><h6>JavaScript Functions Declarations Expressions Anonymous RegularValue</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

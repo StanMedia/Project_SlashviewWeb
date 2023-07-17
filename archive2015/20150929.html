@@ -1,0 +1,87 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>利用C#透過HTTP取得即時時間資訊並回寫至本地端時間</h1><p>我們都知道，NTP透過UDP協定與Port 123來進行操作，而UDP本身機制實在是太弱了，非常容易遭受到DDoS阻斷式服務的攻擊，因此這個管道常常會被網管人員封鎖掉。這篇文章試著使用C#搭配InterOP與HTTP，來進行遠端的時間查詢（非透過NTP機制）與設定本地端的時間。</p><p><img src=https://content.slashview.com/img/2015/20150929_01.jpg alt="" /></p><p>我們這次使用的機制是採用<a href=http://goo.gl/DP6Ph>TimeAndDate TAIWAN TAIPEI</a>所提供的資訊，解析其網頁下，發現有一個WebRequest會傳送UTC資訊的時間，這就是我們採用的基礎啦！</p><h2>透過C#要求HTTP正確時間，並且寫入本地端</h2><p>有了正確的來源後，一切不再是問題，因此我們所需要的只剩將UTC轉GMT，並且轉換到+8時區（TimeZone: Taipei, Taiwan），然後去設定到本地端時間即可。程式碼如下:</p><pre><code class=language-cs>using System;
+using System.Runtime.InteropServices;
+using static System.Console;
+
+namespace SimplyConsole
+{
+  class Program
+  {
+    [DllImport("kernel32.dll")]
+    private extern static uint SetSystemTime(ref SYSTEMTIME lpSystemTime);
+
+    private struct SYSTEMTIME
+    {
+      public ushort wYear;
+      public ushort wMonth;
+      public ushort wDayOfWeek;
+      public ushort wDay;
+      public ushort wHour;
+      public ushort wMinute;
+      public ushort wSecond;
+      public ushort wMilliseconds;
+    }
+
+    static void Main(string[] args)
+    {
+      System.Timers.Timer oTimer = new System.Timers.Timer() { Interval = 1000 };
+      oTimer.Elapsed += OnRefresh;
+      Console.CursorVisible = false;
+      WriteLine();
+      WriteLine("Press any key to exit ...");
+      oTimer.Start();
+      ReadKey();
+      oTimer.Stop();
+      oTimer = null;
+    }
+
+    static void OnRefresh(Object sender, EventArgs args)
+    {
+      System.DateTime oUTC = new System.DateTime(1970, 1, 1, 0, 0, 0, System.DateTimeKind.Utc).AddSeconds(getUtcTimeStamp());
+      //如果年分是錯的，表示網路回應有問題，那就跳出不進行更新
+      if (oUTC.Year == 1970) { return; }
+      System.DateTime oGMT = System.TimeZoneInfo.ConvertTime(oUTC, System.TimeZoneInfo.FindSystemTimeZoneById("Taipei Standard Time"));
+      //設定
+      SYSTEMTIME oTime = new SYSTEMTIME();
+      oTime.wYear = System.Convert.ToUInt16(oUTC.Year);
+      oTime.wMonth = System.Convert.ToUInt16(oUTC.Month);
+      oTime.wDay = System.Convert.ToUInt16(oUTC.Day);
+      oTime.wHour = System.Convert.ToUInt16(oUTC.Hour);
+      oTime.wMinute = System.Convert.ToUInt16(oUTC.Minute);
+      oTime.wSecond = System.Convert.ToUInt16(oUTC.Second);
+      oTime.wMilliseconds = System.Convert.ToUInt16(oUTC.Millisecond);
+      SetSystemTime(ref oTime);
+      //輸出
+      Console.CursorTop = 0;
+      Console.CursorLeft = 0;
+      Write($"NowTime: {oGMT.ToString("yyyy-MM-dd HH:mm:ss")}");
+    }
+
+    static double getUtcTimeStamp()
+    {
+      System.Net.HttpWebRequest oWRq = (System.Net.HttpWebRequest)System.Net.WebRequest.Create("http://www.timeanddate.com/scripts/ts.php?ut=1443508040915");
+      //設定網路對接逾時秒數
+      oWRq.Timeout = 1000;
+      try
+      {
+        System.Net.HttpWebResponse oWRp = (System.Net.HttpWebResponse)oWRq.GetResponse();
+        using (System.IO.StreamReader oSR = new System.IO.StreamReader(oWRp.GetResponseStream(), System.Text.Encoding.UTF8))
+        {
+          string cUTC = oSR.ReadToEnd();
+          if (cUTC.IndexOf(".") != -1    cUTC.IndexOf(" ") != -1)
+          {
+            return System.Convert.ToDouble(cUTC.Split(' ')[0]);
+          }
+          else
+          {
+            return 0.0;
+          }
+        }
+      }
+      catch
+      {
+        return 0.0;
+      }
+    }
+  }
+}
+</code></pre><p>在這裡將檔案包裝成exe，放到網路上方便您使用。依存.NET Framework 4.6，執行時請使用系統管理權限（在該執行檔案上方按右鍵）。</p><p><a href=https://content.slashview.com/file/20150929/SyncTimeViaHTTP.exe>Sync System Time via HTTP (Taiwan, Taipei)</a></p><h6>C# SyncSystemTimeViaHTTP NTPClient NTPServer TimeSync</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

@@ -1,0 +1,22 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>SQL筆記：在使用SQL Parameter的情況下，進行可選擇化聯集條件（AND）的設計手法</h1><p>在資料庫程式設計時期，我們常常會遇到使用SQL Parameter的設計方式，又必須考量到可選擇性的聯集條件設計，常常會讓我們必須產生很多種IF判斷式，來視各種情況撰寫所適用的SQL，以利或者最佳化運行的效能。</p><p>在這邊分享一下一個SQL指令的小技巧，可以讓這種情境下的程式碼，可以更簡潔易讀。</p><h2>情境假設</h2><p>假設我們要在資料庫查詢一些資料，想要達到的動作條件是：</p><ol><li>查詢某些特定姓氏的員工（使用LIKE）。</li><li>如果有給予性別條件的話，那就再使用AND條件進行特定性別的聯集查詢，若沒有給予則忽略。</li><li>如果有給予年齡條件的話，那就再使用AND條件進行大於此年齡的聯集查詢，若沒有給予則忽略。</li></ol><p>在一般的SQL Parameter設計下，這樣的條件會讓我們可能要用一些IF的語句來切割SQL指令設計，但是事實上，我們可以用下方的設計來巧妙的規避。</p><pre><code class=language-cs>oCmd.CommandText = @"
+SELECT * FROM  Employee
+WHERE
+    cFirstName LIKE @cFirstName + '%'
+  AND 
+    (cSex = @cSex OR @cSex IS NULL)
+  AND
+    (iAge > @iAge OR @iAge IS NULL)
+";
+
+//加入參數
+oCmd.Parameters.Add("@cFirstName", System.Data.SqlDbType.NVarChar, 10).Value = cFirstName;
+oCmd.Parameters.Add("@cSex",       System.Data.SqlDbType.NVarChar,  1).Value = (string.IsNullOrEmpty(cSex)) ? (System.Object)System.DBNull.Value : cSex;
+oCmd.Parameters.Add("@iAge",       System.Data.SqlDbType.Int).Value          = (iAge == 0)                  ? (System.Object)System.DBNull.Value : iAge;
+</code></pre><p>從上面的程式碼，我們可以得知cFirstName是一個必要帶值的文字字串，然後我們再利用小技巧接續個'%'字串，來達成LIKE的模糊查詢，這點應該不需要再討論。而真正應該要關注的是，有可能我們在執行期時，並未對cSex、iAg進行賦值的動作，所以cSex有可能一開始為null或為空字串，而iAge有可能一開始就為整數實值型別的預設值，也就是0。</p><p>當我們並未對cSex給予任何字串，則SQL Parameter會被帶入System.DBNull.Value，而繞到SQL指令時，DBNull觸發到IS NULL，而基於OR邏輯，導致整段AND變成空判斷（相當於AND一個TRUE邏輯，等於被跳過），藉由這個技巧，前面的cSex = @cSex就直接被忽略掉了，也就是，這樣的寫法讓Parameter變得具備「可選擇性」。</p><p>同樣的道理，當我們並未對iAge給予任何數值，則SQL Parameter會被帶入System.DBNull.Value，而繞到SQL指令時，DBNull觸發到IS NULL，而基於OR邏輯，導致整段AND變成空判斷（相當於AND一個TRUE邏輯，等於被跳過），藉由這個技巧，前面的iAge > @iAge就直接被忽略掉了，也就是，這樣的寫法讓Parameter變得具備「可選擇性」。</p><p>而當我們可能對cSex或iAg進行賦值時，前面的cSex = @cSex、iAge > @iAge會被觸發，OR後面的條件也會被當然的否定掉（任何有值的東西都不可能等於NULL），因此在SQL的運行上，又可以巧妙的OR一個FALSE，等同於後面這個OR的條件被忽視掉了。</p><p>大家覺得這樣的語法，是不是一個很巧妙的設計呢？</p><h2>注意避免使用SQL ISNULL()函式</h2><p>網路上有一些文章教你使用ISNULL(xxx, ooo)來進行選擇性條件的替代，這種做法的思路跟上述的寫法大致上相同，但寫起來更簡潔容易閱讀，例如：</p><pre><code class=language-sql>SELECT * FROM  Employee
+WHERE
+    cFirstName LIKE @cFirstName + '%'
+  AND 
+    cSex = ISNULL(@cSex, cSex)
+  AND
+    iAge = ISNULL(@iAge, iAge)
+</code></pre><p>以cSex當作範例，主要的思路是當@cSex不是null的時候（例如：1），那麼相當於cSex = 1，如果@cSex為null則會使用後面的cSex參數來替代，也就是會形成cSex = cSex這種詭異的邏輯語法，網路上的文章認為這樣的寫法會等效「恆為true」，一般的情況「結果」的確是如此，But...世界上最重要的就是這個But...</p><p>結果正確，但你確定你對於SQL指令的理解是對的？</p><p>如果今天的cSex欄位裡面出現三態「0:10筆, 1:20筆, null:40筆」，那麼這樣的寫法就崩潰了，因為where cSex = cSex出來的筆數是30筆（0與1的總和），屬於null的40筆被拋棄了。所以在顧慮許多未知情況的條件下（例如你程式去讀別人產生的TABLE / VIEW，你根本無法掌控可能出現怎麼樣的情況？），我強烈建議不要利用ISNULL來進行選擇性條件的寫法。</p><h3>相關連結：</h3><p><a href=/archive2019/20190906.html>使用LINQ進行可選擇化聯集條件（AND）的設計手法</a></p><h6>選擇性條件 C# Database SqlParameter SqlCommand OptionalConditions AND OR</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

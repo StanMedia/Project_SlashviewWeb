@@ -1,0 +1,19 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>JWT從入門到放棄（一）：理論初體驗</h1><p>JWT即為JSON Web Token，是一個在網路存在很久的協議，最廣為流傳的應用就是拿來取代Session，近日有幸拿來研究一下，發現其實...還好吧？我個人不認為有像大家講得那麼神通廣大，甚至有很多網站對他的特色描述我都覺得非常詭異（例如可以抵擋CSRF），總之先一步步來慢慢看吧。</p><p><img src=https://content.slashview.com/img/2020/20200416_01.jpg alt="" /></p><h2>JWT三大區塊與編碼解析</h2><p>Step 1. Header 頭部：描述這是一個甚麼樣的JWT格式。</p><pre><code class=language-json>{
+  "typ": "JWT",  //這是JWT
+  "alg": "HS256" //採用HMAC-SHA256進行雜湊
+}
+</code></pre><p>Step 2. Payload 側載：最主要要放置、傳遞的資料。</p><p>其實規範中有許多JWT建議紀錄的東西，不過，這些資訊的提供取決於你。（詳見：<a href=https://en.wikipedia.org/wiki/JSON_Web_Token#Standard_fields>JWT Standard fields</a>）</p><pre><code class=language-json>{
+  "name": "John",
+  "id": "A123456789"
+}
+</code></pre><p>Step 3. 將Step 1與Step 2各自進行BASE64編碼（網路上的做法會把中間的換行跟空白去除掉，換取更精簡的bytes數）</p><pre><code class=language-txt>Step 1：ewogICJ0eXAiOiAiSldUIiwKICAiYWxnIjogIkhTMjU2Igp9
+Step 2：ewogICJuYW1lIjogIkpvaG4iLAogICJpZCI6ICJBMTIzNDU2Nzg5Igp9
+</code></pre><p>Step 4. Signature 簽章：可以使用單向雜湊或使用雙向加解密的機制來處理。</p><p>這邊以單向雜湊函數HS256，也就是HMAC-SHA256來進行運算，並以「secret」作為KEY，將下列的值代入：</p><pre><code class=language-txt>//格式：Step1Base64Value.Step2Base64Value
+HMAC-SHA256
+(
+  "ewogICJ0eXAiOiAiSldUIiwKICAiYWxnIjogIkhTMjU2Igp9.ewogICJuYW1lIjogIkpvaG4iLAogICJpZCI6ICJBMTIzNDU2Nzg5Igp9",
+  "secret"
+)
+</code></pre><p>HS256後的byte[]陣列直接再轉為BASE64編碼，假設為：27ed6a82994390c00669da66eb02110d9647638318f5bfda17cf0719dd2c0044</p><p>我們可以在這個步驟上面觀察到，JWT可藉由雜湊函數達到不可竄改的特性。</p><p>Step 5. 最後把Step 1、2、4得到的字串，中間用「.」串起來。</p><pre><code class=language-txt>ewogICJ0eXAiOiAiSldUIiwKICAiYWxnIjogIkhTMjU2Igp9.ewogICJuYW1lIjogIkpvaG4iLAogICJpZCI6ICJBMTIzNDU2Nzg5Igp9.27ed6a82994390c00669da66eb02110d9647638318f5bfda17cf0719dd2c0044
+</code></pre><p>編碼動作自此完成，接下來所有的操作就要靠你自己的想像力了。你可能會覺得蛤？就這樣？那我也可以自訂自己的格式啊，其實如果系統前後端你都可以掌控，本來就可以自訂格式了，所謂的標準就是不用太明講，所有的人都可以遵循制度去解析。</p><h2>JWT的缺點</h2><p>這是我反覆思索的數個考量點，也就是最後我認為JWT沒啥鳥用的原因，將其紀錄在這邊讓有看到的朋友也可以自己思考看看。</p><h3>取代Session</h3><p>有很多在談論JWT的人會講到Sesison的缺點，例如不能跨主機等之類的問題，這些人我也不知道該說甚麼，可以有空的時候去翻一下Redis好嗎？Web Farm架構已經十幾年有餘了，建議有空稍微了解一下。</p><h3>防止CSRF跨站請求偽造</h3><p>會出現CSRF就是因為連去調用HTTP GET方法都會順便把Cookie回傳，因此如果使用者還沒把瀏覽器關掉導致SessionID還存在時，就會變成去執行「非自我意志」下的動作。</p><p>那我問你，這一串資料<code>ewogICJ0eXAiOiAiSldUIiwKICAiYWxnIjogIkhTMjU2Igp9.ewogICJuYW1lIjogIkpvaG4iLAogICJpZCI6ICJBMTIzNDU2Nzg5Igp9.27ed6a82994390c00669da66eb02110d9647638318f5bfda17cf0719dd2c0044</code>你要放哪裡？</p><h3>Client端沒有辦法拿到Http Header</h3><p>怕CSRF不要放在Cookie，而選擇了放到HTTP Header裡面，那當你要在前端使用Javascript回傳資料時，你有本事拿到之前Server打給你的Header嗎？（Javascript只能組裝Http Header發送出去，根本拿不到當前（current）本頁打過來的Http Header，這點有很多篇JWT文章都犯了這個推論的錯誤，超無言。）要做到拿當下的Header唯一的途徑就是你在發送一次XMLHttpRequest AJAX，然後用getAllResponseHeaders()去汲取。</p><h3>LocalStorage安全嗎？</h3><p>接著JWT談論者會叫你往LocalStorage丟，這意味著你網站之後所有的動作只能放棄GET方法，因為只有Javascript才可以動態去LocalStorage撈資料，再往你的API拋資料。然而，你確定Browser對於LocalStorage的抵擋有比演化了超久的Cookie安全嗎？這個我打上問號。</p><h3>發出去的JWT有充分的回收機制嗎？</h3><p>一個JWT憑證發出去後，這串代碼就代表這個使用者，那麼你已經有充分的機制來阻擋或消除當使用者聲明這張JWT憑證失效了嗎？（例如透過某條路徑被盜走、被側錄走。）如果你想到的是每次又要回去資料庫看簽發出去的TOKEN是否被註記失效，那麼恕我再提醒你一次，所謂的拋棄Session達到無狀態，不就是為了要減少Server對於認證機制的負擔嗎？</p><h3>JWT的優點</h3><p>我認為JWT可以作為某一種一次性、短暫性、申明性的驗證。例如今天某廠商的使用者，去你的Server A頁面認證帳號密碼後，Server A給了一串JWT回應長的如下：</p><pre><code class=language-txt>Authorization: Bearer aaa.bbb.ccc
+</code></pre><p>這串一次性（或時間超級短暫）的資料透過廠商的主機回送給Server B，要求代表某使用者存取你主機的資源，這時候你就可以把「aaa.bbb.ccc」拿去拆解與驗證，我覺得這是一個蠻不錯、可橫向拓展驗證機制的一種方式。但說到底，這樣的環境下你也不一定要採用JWT的規範啊。</p><h3>結論</h3><p>我認為JWT在我目前的評估中，他並沒有辦法完美的取代Session，更精確地說，他或許解決了Session的一部分痛處，但留下更多漏洞更大的問題。JWT在我的心中只是一種思維，或許你可以用這樣的思維與可能傳遞資料的方法，在你認為某種程度上安全的環境下去實現你自己的驗證架構。</p><p>至於很多人說可以抵擋CSRF跨站請求偽造，我只能說這種東西還是從框架動手，乖乖產生單次拋棄式驗證碼才是王道吧。</p><h6>JWT JsonWebToken Session jQuery Javascript GetHttpHeader</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

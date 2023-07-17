@@ -1,0 +1,34 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>利用Magick.NET來進行圖片的重新採樣與壓縮</h1><p>最近因為工作的關係，研究了一下Magick.NET相關的程式碼，發現與GDI+（System.Drawing）比較起來，程式碼簡直簡單到爆，雖然到最後還是放棄採用，不過還是在此把研究結果記錄在此，以備不時之需。</p><p>Step 1. 先用nuget下載到現在最新的Magick.NET版本，Magick.NET其實有分成很多版本，一般來說網頁適用Q8版本（8 Bits）即可，在這裡我為了追求最大相容性，因此下載了x86、x64混合版本（AnyCPU）。</p><pre><code class=language-txt>nuget Magick.Net-Q8-AnyCPU
+</code></pre><p>Step 2. 程式碼超級簡單，不解釋。</p><pre><code class=language-cs>using (ImageMagick.MagickImage oImage = new ImageMagick.MagickImage("original.jpg"))
+{
+  oImage.Format = ImageMagick.MagickFormat.Pjpeg;   //漸進式JPEG
+  oImage.ColorSpace = ImageMagick.ColorSpace.sRGB;  //色盤採用sRGB
+  oImage.Quality = 85;    //JPEG壓縮率
+  oImage.Resize(500, 0);  //如果不需要重新指定Size可以不必寫這行，0代表依比例運算垂直高度
+  oImage.Write("target.jpg");
+}
+</code></pre><p>優點：</p><ul><li>程式碼封裝的超級簡單。</li><li>高品質的壓縮演算法（Lossy compression），在「90」以下品質有比GDI+好且檔案相較之下小非常多。</li><li>縮放採用不同的方法名稱（Resize是最佳方法），不會像GDI+在那邊自己囉嗦的列舉一堆設定。</li><li>支援無損壓縮（Lossless compression）。</li></ul><p>缺點：</p><ol><li>在超過「90」以上的JPG壓縮品質後，相較GDI+壓出來畫質沒有顯著的提升，甚至有時候檔案反而比較大。</li><li>用官方推薦的LosslessCompress壓縮方法丟到<a href=https://developers.google.com/speed/pagespeed/insights/>Google PageSpeed Insights</a>，會被嚴重的嫌棄圖形檔太大。（話說現在Google為最佳化網頁推行有損壓縮，我不知道到底在想甚麼，建議壓縮後的JPG檔案畫質跟屎一樣！）</li><li>若要使用需要外掛DLL，相較GDI+內建，部署上仍然有些不便。</li></ol><h2>結論</h2><p>壓縮與品質本來就是天秤的兩端，其實最後放棄採用的原因就是被Google嚴重嫌棄，這代表現階段Magick.NET仍然有很大的調整空間（諷刺的是PageSpeed Insights推薦的影像壓縮工具ImageMagick，竟然是Magick.NET的母產品啊！）在這邊仍然要幫Magick.NET講一句話，就是Google嫌棄的太無道理，假設PageSpeed Insights建議你這張壓縮後的圖片仍然可以減少32%的檔案大小量，當你真的去打開那張建議的JPG檔案觀看後，你就會吐血了。</p><p>若你真的要進行Magick.NET的解決方案，建議搭配「jpegtran.exe」這支EXE檔案一起運作，藉由Huffman table的最佳化，可以為你的檔案進一步的壓縮檔案大小。不過，你必須呼叫外部執行檔，這點得要小心斟酌了。</p><p>下面列出「jpegtran.exe」壓縮指令與呼叫外部執行檔案方法，幫大家減少一些survey時間。</p><pre><code class=language-txt>jpegtran.exe -copy none -optimize -progressive -outfile target.jpg original.jpg
+</code></pre><pre><code class=language-cs>private void optimizeJPEG(string file)
+{
+  string pathToExe = HostingEnvironment.MapPath("~\") + "jpegtran.exe";
+
+  var proc = new Process
+  {
+    StartInfo =
+    {
+      Arguments = "自己參考上面的引數去設計",
+      FileName = pathToExe,
+      UseShellExecute = false,
+      CreateNoWindow = false,
+      WindowStyle = ProcessWindowStyle.Hidden,
+      RedirectStandardError = true,
+      RedirectStandardOutput = true
+    }
+  };
+
+  Process jpegTranProcess = proc;
+
+  jpegTranProcess.Start();
+  jpegTranProcess.WaitForExit();
+}
+</code></pre><h3>相關連結</h3><ul><li><a href=/archive2020/20201111.html>用Magick.NET產生符合GooglePageSpeedInsights要求的圖片</a></li></ul><h6>System.Drawing GDI+ JpegTran LossyCompression LosslessCompression</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

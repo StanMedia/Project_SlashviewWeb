@@ -1,0 +1,41 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>解決AJAX Request沒有辦法收取檔案回應（檔案下載）的問題</h1><p>今天在開發網頁的遇到一個詭異的需求，就是需要使用XMLHttpRequest（也就是大家熟悉的AJAX）來進行POST，送出後的動作就是後端會因應要求吐出一個檔案給你，以往要不是收取XML就是收取JSON資料，這還是第一次遇到這樣的需求，沒想到劈哩趴啦寫完後發現：疑？啊瀏覽器怎麼都沒有顯示檔案下載？</p><p>按下F12除錯才發現，檔案其實是有Response回來，該設定的Http Header、Content-Type一個都沒少，但是瀏覽器就是不顯示成檔案下載。經過Google後發現，原來XMLHttpRequest（AJAX）無法接受檔案型的回傳資料，除非要無視IE瀏覽器，選擇新世代支援XMLHttpRequest的responseType: blob設定之瀏覽器。</p><h2>讓AJAX Request可以收到回傳檔案的正確解法</h2><p>StackOverflow上有一篇<a href=https://stackoverflow.com/questions/38192854/recieving-a-zip-file-as-response-on-ajax-request>Recieving a Zip file as response on AJAX request</a>文章討論到這種問題的解法，大致上就是用a標籤的新屬性（download）來進行，或是使用window.open()另開一個視窗來觸發，也是不錯的解法。</p><p>缺點就是太煩太囉嗦了，由於我不一定要採用AJAX非同步的方式來處理，因此我個人選擇回歸傳統。</p><h2>利用動態建立Form POST來解決</h2><p>正所謂山不轉路轉，既然要用AJAX回傳一個檔案，這代表按下按鈕後其實你的畫面也不會變動到啥，就是瀏覽器彈出檔案下載而已。操起熟悉的jQuery，在背景動態的建立一個表單，然後把表單POST出去，所有的畫面動作其實都是一樣的，但我用更簡單明瞭的程式碼來解決問題，符合我心中喜好的Style。</p><pre><code class=language-js>$("#downloadButton").click(function () {
+  event.preventDefault();
+  var oForm = jQuery("&lt;form>", {
+    "action": "/someBackend.aspx",
+    "method": "post"
+  }).append(jQuery("&lt;input>", {
+    "name": "cParameter",
+    "value": "ABCD",
+    "type": "hidden"
+  })).append(jQuery("&lt;input>", {
+    "name": "iParameter",
+    "value": 1234,
+    "type": "hidden"
+  })).appendTo("body");
+  oForm.submit();
+});
+</code></pre><p>寫一段你幾年後再回來依然能夠秒懂的程式碼，才是最好的程式碼。</p><h2>拋棄IE束縛，使用新世代瀏覽器XMLHttpRequest API / responseType: blob來解決AJAX二進制下載問題</h2><p>另外一種做法是變更XMLHttpRequest API的responseType，使之設定為blob，就可以進行二進制資料的回傳，這種做法的缺點在於你必須把IE瀏覽器升級到第10版，當然以時至今日（2020年）來說，這樣的抉擇並不困難。我把範例程式碼寫在下方，相信這段程式碼會隨著時間越來越久而越來越好用。（畢竟時間會推著瀏覽器前進）</p><pre><code class=language-js>$("#downloadButton").click(function () {
+  $.ajax(
+    "YourServicesURL",
+    { xhrFields: { responseType: "blob" } })
+    .then(function (oData, cStatus, oXHR) {
+      let cFileName = "";
+      let cContentDisposition = oXHR.getResponseHeader("Content-Disposition");
+      let cNameIndexStart = "filename\*=utf-8''";
+      let iNameIndexStart = cContentDisposition.indexOf(cNameIndexStart);
+      if (iNameIndexStart !== -1) {
+        cFileName = decodeURIComponent(cContentDisposition.substring(iNameIndexStart + cNameIndexStart.length));
+      }
+      let cURL = window.URL.createObjectURL(oData);
+      if (cFileName) {
+        $("&lt;a>")
+          .attr("href", cURL)
+          .attr("download", cFileName)
+          .get(0)
+          .click();
+      } else {
+        window.location.href = cURL;
+      }
+    });
+});
+</code></pre><p>註：Content-Disposition裡面的編碼機制請依據自己伺服器端的規範修正。</p><h3>相關參考</h3><ul><li><a href=/archive2020/20200210.html>解決AJAX Request沒有辦法收取檔案回應（檔案下載）的問題</a></li><li><a href=/archive2022/20220419.html>利用fetch來解決AJAX取得檔案型態（二進制）回傳資料</a></li></ul><h6>XMLHttpRequest AJAXRequest jQueryRequest SendJsonData CanNotSendFormData CanNotSubmitFormData GetFiles GetZipFiles GetExcelFiles GetResponseFiles GetBinaryFiles SaveNonTextData SaveFiles</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

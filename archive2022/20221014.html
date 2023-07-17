@@ -1,0 +1,7 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>在Windows直接使用指令查詢記憶體資訊</h1><p>每次要用到都要回去網路查找，乾脆記錄在此備用。</p><h2>利用wmic指令查找記憶體的完整資訊</h2><p>不用安裝任何軟體，請在Windows CMD下輸入列指令：</p><pre><code class=language-txt>wmic memorychip get BankLabel, Capacity, ConfiguredClockSpeed, DeviceLocator, Manufacturer, PartNumber, SerialNumber, Tag
+</code></pre><p>就可以得到下列輸出結果，當然這個結果一定是因電腦而異的啦！</p><pre><code class=language-txt>BankLabel  Capacity    ConfiguredClockSpeed  DeviceLocator   Manufacturer  PartNumber   SerialNumber  Tag
+BANK 0     XXX         1600                  ChannelA-DIMM0  XXX           XXX          XXX           Physical Memory 0
+BANK 1     XXX         1600                  ChannelA-DIMM1  XXX           XXX          XXX           Physical Memory 1
+BANK 2     XXX         1600                  ChannelB-DIMM0  XXX           XXX          XXX           Physical Memory 2
+BANK 3     XXX         1600                  ChannelB-DIMM1  XXX           XXX          XXX           Physical Memory 3
+</code></pre><h2>補充說明</h2><ol><li>如果喜歡看HTML格式，可以在尾端添加「/format:hform > spec.html」，就會在執行目錄處寫入指定的HTML檔案，但我覺得大可不必。</li><li>如果要知道屬於哪種DDR規格，可以把PartNumber丟去Google就可以看到很多資料了。</li></ol><h6>Windows10 CMD Command Query Memory Type Manufacturer DDR</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

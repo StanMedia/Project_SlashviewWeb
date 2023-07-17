@@ -1,0 +1,4 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>SQL筆記：Microsoft SQL server在不重開機的情況下釋放記憶體和清除暫存</h1><p>Microsoft SQL server 在不重開機（reboot）的情況下釋放記憶體和清除cache，請依下列的指令執行即可：</p><pre><code class=language-sql>DBCC FREESYSTEMCACHE ('ALL');
+DBCC FREESESSIONCACHE;
+DBCC FREEPROCCACHE;
+</code></pre><h6>Microsoft SQLServer Reboot Release Memory Clear Cache</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

@@ -1,0 +1,12 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>Microsoft Edge有可能封鎖Javascript動態載入的問題</h1><p>今天在使用Microsoft Edge測試網頁的Javascript時發現，我有一個延遲載入Javascript的機制，但是怎麼嘗試都沒有起作用，已經排除語法與同源政策（CORS, Cross-Origin Resource Sharing）的問題，也消除了Ad-Block的可能性，但是還是久久無法排除這樣的錯誤。</p><p>我使用的語法如下：</p><pre><code class=language-js>$.ajax({
+  url: "YourJavascriptFile.js",
+  dataType: "script",
+  crossorigin: "anonymous",
+  success: function () {
+    console.log("Dynamic load JS success!");
+  }
+});
+</code></pre><p>再怎麼嘗試，瀏覽器的console還是會出現這樣的錯誤訊息：</p><pre><code class=language-txt>GET YourJavascriptFile.js net::ERR_BLOCKED_BY_CLIENT
+</code></pre><p>由於使用的是jQuery提供的函式來載入，所以一度以為是jQuery ajax還需要特定的設定，所以改採用下列的寫法：</p><pre><code class=language-js>$("head").append(`&lt;script async crossorigin="anonymous" src="YourJavascriptFile.js" >&lt;/script>`);
+</code></pre><p>依然是拿到這個錯誤：</p><pre><code class=language-txt>GET YourJavascriptFile.js net::ERR_BLOCKED_BY_CLIENT
+</code></pre><h2>有可能是Microsoft Edge封鎖掉動態載入JS行為</h2><p>排除掉所有錯誤的可能性後，我開始把調查的矛頭指向瀏覽器（Microsoft Edge），原來是內建的<code>防止追蹤</code>在搞鬼，請進入「設定＞隱私權、搜尋與服務」，如下圖：</p><p><img src=https://content.slashview.com/img/2023/20230309_01.jpg alt="" /></p><h3>調整選項</h3><p>理論上只要把防止追蹤的選項降低成基本就可以動了，但這樣做的缺點是對所有網站的防護反而都失效了，因此我的建議是點選<code>例外</code>選項，進入後將<code>localhost</code>加入到排除名單中即可。</p><p><img src=https://content.slashview.com/img/2023/20230309_02.jpg alt="" /></p><p>設定後再去執行動態載入Javascript的程式碼，應該就可以看到可順利的引入JS了。</p><h6>Browser MicrosoftEdge Dynamic Dynamically Load Include Javascript JS Fail Error ERR_BLOCKED_BY_CLIENT BUG</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

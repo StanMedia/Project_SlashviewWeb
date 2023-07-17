@@ -1,0 +1,56 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>建立一個可以讀寫自定義屬性（Attribute）列舉（Enum）的擴充方法</h1><p>之前的文章（<a href=/archive2014/20140319.html>Enumeration（Enum）列舉型別之可用性增強</a>）有介紹過，Enum可以透過System.ComponentModel.Description來定義一個延伸的字串屬性，讓你可以擴充紀錄（描述）一些你想要描述的事物，但有時候我們要的不只是這些而已，甚至想要使用一些自定義的型別來表述資料，這篇文章就是在教你怎麼將其實作出來。</p><p><img src=https://content.slashview.com/img/2018/20180425_01.jpg alt="" /></p><p>Step 1. 創造一個自定義的屬性類別</p><pre><code class=language-cs>public class IdAttribute : System.Attribute
+{
+  public string cId { get; private set; }
+  public IdAttribute(string cTemp)
+  { cId = cTemp; }
+}
+</code></pre><p>Step 2. 建立一個示範用的列舉，並將自定義的屬性加入。（在這裡為了延伸之前文章中介紹的擴充方法，因此也將System.ComponentModel.Description的寫法一併加入以利測試）</p><pre><code class=language-cs>public enum People
+{
+  [System.ComponentModel.Description("王約翰"), Id("A123456789")]
+  John   = 0,
+  [System.ComponentModel.Description("陳瑪莉")]
+  Marry  = 1,
+  Tom    = 2,
+  Sherry = 4
+}
+</code></pre><p>Step 3. 把之前文章使用的擴充方法，拿來修改成新的泛型取用版本。</p><pre><code class=language-cs>using System.Linq;
+namespace Hello.ExtensionMethod
+{
+  //相容之前的Description擴充方法取用名稱
+  public static string ToExtensionString(this System.Enum oTemp)
+  {
+    try
+    { return oTemp.GetAttribute&lt;System.ComponentModel.DescriptionAttribute>().Description; }
+    catch
+    { return oTemp.ToString(); }
+  }
+
+  //泛型版本的屬性取用擴充方法
+  public static T GetAttribute&lt;T>(this System.Enum oTemp) where T : System.Attribute
+  {
+    var oType = oTemp.GetType();
+    var cName = System.Enum.GetName(oType, oTemp);
+    var TResult = oType.GetField(cName).GetCustomAttributes(false).OfType&lt;T>().SingleOrDefault();
+    if (TResult == null)
+    { throw new System.Exception($"取出列舉屬性值的過程出現錯誤，請確定指定的屬性是否存在？"); }
+    return TResult;
+  }
+}
+</code></pre><h2>從Enum取出自定義類別的值</h2><p>廢話不多說，先看程式碼。</p><pre><code class=language-cs>&lt;%@ Import Namespace="Hello.ExtensionMethod" %>
+protected void Page_Load(object sender, EventArgs e)
+{
+  //狀況A
+  Response.Write($"&lt;p>{People.John.ToExtensionString()}&lt;/p>");
+  //狀況B
+  Response.Write($"&lt;p>{People.John.GetAttribute&lt;IdAttribute>().cId}&lt;/p>");
+  //狀況C
+  Response.Write($"&lt;p>{People.Marry.ToExtensionString()}&lt;/p>");
+  //狀況D
+  Response.Write($"&lt;p>{People.Tom.ToExtensionString()}&lt;/p>");
+  //狀況E
+  try
+  { Response.Write($"&lt;p>{People.Sherry.GetAttribute&lt;IdAttribute>().cId}&lt;/p>"); }
+  catch (Exception oEx)
+  { Response.Write($"&lt;p>{oEx.Message}&lt;/p>"); }
+}
+</code></pre><p>接著是說明：</p><ol><li>狀況A：輸出「王約翰」，這不用多說。</li><li>狀況B：輸出「A123456789」，這不用多說。</li><li>狀況C：輸出「陳瑪莉」，這行單純只是要展示Attribute可以0~多個。</li><li>狀況D：輸出「Tom」，理論上Tom列舉並沒有設定System.ComponentModel.Description，但因為ToExtensionString我們有進行錯誤捕捉，當取Attribute發生錯誤時，程式碼會選擇把enum轉字串丟出，所以會丟出列舉本身的名稱，亦即為Tom。</li><li>狀況E：輸出「取出列舉屬性值的過程出現錯誤，請確定指定的屬性是否存在？」，我們Sherry列舉裡面根本沒有設定任何屬性，而卻要進行自定義屬性的取出，因此最終的結果是null，而程式碼中有進行簡單的檢查，當為null時候就拋出Exception，所以自然就是這個文字輸出了。</li></ol><p>※ 值得一提的是，若在GetAttribute擴充方法中不進行null的檢查，直接回傳T泛型型別預設值是沒問題的（不會出現錯誤），但錯誤點會發生在最終的應用端。試想：如果People.Sherry.GetAttribute()是null，那麼你竟然要去對這個null調用其null.cId屬性？（這會觸發NullReferenceException！）</p><p>相關文章：<a href=/archive2014/20140319.html>Enumeration（Enum）列舉型別之可用性增強</a></p><h6>System.Enum System.Attribute GetCustomAttributes TAttribute Enumeration</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

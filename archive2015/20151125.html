@@ -1,0 +1,99 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>利用委派（delegate）進行WinForm表單之間的傳值動作</h1><p>這篇老實說，算是思考KIOSK螢幕鍵盤時所發展出來的探討，在前一篇<a href=/archive2015/20151124.html>CNS11643中文全字庫轉換Unicode注音字碼表之實作</a>我們談到了要自建注音輸入法的文字對照表，那麼在這一篇中，我們要談的是如何在單一文件介面（SDI）中，進行有如多重文件介面（MDI）般的，在表單之間拋轉文字或數值等有用的資料。話說我的SDI與MDI的觀念是在VB4還是VB5的時候建立的，時至2015年，吾人還在寫Win32 - Windows Form的相關程式，實在有一種時光倒流的即視感啊！</p><p><img src=https://content.slashview.com/img/2015/20151125_01.jpg alt="" /></p><p>廢話不多說了，話說在SDI的環境中，所有的表單都是一個獨立自主的類別，也就是說，表單之間要交換資料的方式，無非就是在Ａ表單設定一個公用的欄位，然後Ｂ表單去動態改變Ａ表單的此欄位，如此一來即可達到資料的拋轉，這也是你在網路上看到絕大部分的人給你的答案。但是，這種方式的缺點程式碼看起來有夠蠢，也不夠自動化，因此我才會想用委派（delegate）的方式來進行交換資料的行為。</p><p>我們的期望目標就是建立起兩個表單，其中輸入表單Ａ肩負著當使用者點選按鈕時，他要把應該送出的字串自動地送到接收表單Ｂ，而當整個程式一起始時，輸入表單Ａ是不可視的，當使用者點選接收表單Ｂ中的文字方框（表示使用者有意願要輸入資料），程式會自動觸發顯示輸入表單Ａ，進而完成這一整個循環動作。話不多說，馬上看程式碼：</p><h2>輸入表單Ａ程式碼</h2><p>在輸入表單Ａ中，我們佈署了兩顆按鈕，用來作為文字輸出用，另外有一顆按鈕用來模擬鍵盤的倒退鈕，最後一顆按鈕，只是用來單純的關閉表單，並用來觸發 System.Windows.Forms.DialogResult.OK。在輸入表單中，我們也設計了Form2EventHandler的委派器，並設計了一個公開的OnSending事件，這些東西將被用來與接收表單Ｂ進行互動。而設計this.Close()而非完整消滅掉Form2表單實體，也是基於躲避重建Form2時的效能考量。</p><p>此外，我也特別設計了_bIAmAlive參數來進行防止表單重複被執行Form_Load事件，如果重複執行的話，那麼每一顆按鈕的事件將會堆疊很多次，造成錯誤的運行並嚴重降低效能。。</p><p><img src=https://content.slashview.com/img/2015/20151125_02.jpg alt="" /></p><pre><code class=language-cs>namespace FormDataTranslation
+{
+  public delegate void Form2EventHandler(string cText);
+  public partial class Form2 : System.Windows.Forms.Form
+  {
+    private bool _bIAmAlive = false;
+    public event Form2EventHandler OnSending;
+    public Form2()
+    {
+      InitializeComponent();
+    }
+    private void Form2_Load(System.Object sender, System.EventArgs e)
+    {
+      //實作類似IsPostBack，只有表單初次建立才會進入，避免事件被重複掛載，並增強效能
+      if (!_bIAmAlive)
+      {
+        //綁定送訊息觸發事件
+        button1.Click += TextButtonClick;
+        button2.Click += TextButtonClick;
+        button3.Click += TextButtonClick;
+        //Button2設定成對話框的OK回覆鈕
+        button4.DialogResult = System.Windows.Forms.DialogResult.OK;
+        button4.Click += (oS, oE) => { this.Close(); };
+        //將自己標示為正活著
+        _bIAmAlive = true;
+      }
+    }
+    private void TextButtonClick(System.Object sender, System.EventArgs e)
+    {
+      if (OnSending != null) { OnSending(((System.Windows.Forms.Button)sender).Text); }
+    }
+  }
+}
+</code></pre><h2>接收表單Ｂ程式碼</h2><p>在接收表單Ｂ中，我們針對TextBox1設計了GotFocus得到焦點、LostFocus失去焦點事件內文，用來自動啟動輸入表單Ａ之顯示，此外，我們在GotFocus中的內文，掛載了剛才設計的OnSending事件，讓輸入表單Ａ中如果有事件被觸發，會同時通知接收表單Ｂ進行我們想要進行的動作，也就是去動態修改文字方框的內容。</p><p><img src=https://content.slashview.com/img/2015/20151125_03.jpg alt="" /></p><pre><code class=language-cs>namespace FormDataTranslation
+{
+  public partial class Form1 : System.Windows.Forms.Form
+  {
+    public Form1()
+    {
+      InitializeComponent();
+    }
+    private void Form1_Load(object sender, System.EventArgs e)
+    {
+      //這裡不用實作表初次被建立時（避免重複掛載事件）的檢查機制，因為如果此表單一關閉，那麼全部的程式也都結束了
+      //當焦點到文字框時，要進行什麼樣的處理
+      textBox1.GotFocus += (oS, oE) => {
+        if (Global.bHasBeenShowedForm2) { return; }
+        if (Global.oForm2 == null)
+        {
+          //建立輸入表單
+          Global.oForm2 = new Form2();
+          Global.oForm2.ClientSize = new System.Drawing.Size(210, 150);
+          Global.oForm2.StartPosition = System.Windows.Forms.FormStartPosition.Manual;
+          Global.oForm2.Location = new System.Drawing.Point(this.Location.X + this.ClientSize.Width + 2, this.Location.Y + 1);
+          //為輸入表單綁上事件
+          Global.oForm2.OnSending += (cTemp) => {
+            switch (cTemp)
+            {
+              case "← 倒退鍵":
+                if (textBox1.Text.Length > 0)
+                { textBox1.Text = textBox1.Text.Substring(0, textBox1.Text.Length - 1); }
+                break;
+              default:
+                textBox1.Text += cTemp;
+                break;
+            }
+          };
+        }
+        //如果輸入表單沒有顯示，那就顯示它
+        if (!Global.oForm2.Visible)
+        {
+          Global.bHasBeenShowedForm2 = true;
+          if (Global.oForm2.ShowDialog() == System.Windows.Forms.DialogResult.OK)
+          {
+            textBox1.Text += System.Environment.NewLine + "輸入視窗已經被關閉。";
+            //退回後文字方框的文字狀態會呈現被全選，以下的程式碼用來消除此現象
+            textBox1.SelectionStart = textBox1.Text.Length;
+            textBox1.Select();
+          }
+        }
+      };
+      //當焦點離開文字框時，要進行什麼樣的處理
+      textBox1.LostFocus += (oS, oE) => {
+        if (!Global.oForm2.Visible) { Global.bHasBeenShowedForm2 = false; }
+      };
+      //按下按鈕清除文字
+      button1.Click += (oS, oE) => { textBox1.Text = ""; };
+    }
+  }
+}
+</code></pre><h2>共用全域變數程式碼</h2><p>至於判斷顯示輸入表單Ａ之時機點（避免重複建立多個輸入表單Ａ實例、或者是顯示）這些問題，我們採用了一個公用的靜態類別Global.cs來存放，這一點有點像以前在寫VB時，會把全域變數等設定放在Module.vb的感覺，因為我已經不太碰Win32的東西，所以沒有深入地去探討應該放在哪裡最恰當，總之這不是重點，大家看得懂就好</p><pre><code class=language-cs>namespace FormDataTranslation
+{
+  class Global
+  {
+    public static Form2 oForm2;
+    public static bool bHaveBeenShowForm2;
+  }
+}
+</code></pre><h2>執行期的畫面</h2><p>當然，經過我們的事件委派設計，功能運行的非常的順暢啦！</p><p><img src=https://content.slashview.com/img/2015/20151125_04.jpg alt="" /></p><p>這篇文章比較像概念的展示，而不是在探討程式碼的寫法，會找到這篇文章的人應該不是不懂程式的人，比較可能是概念還沒有暢通但想找解法的人，因此我的程式碼並沒有寫上大量的註解。所有的程式碼在此提供ZIP壓縮下載：</p><p><a href=https://content.slashview.com/file/20151125/FormDataTranslation.zip>Windows SDI Form Data Translation Source Code</a></p><h6>Win32 WindowsForm SDI MDI DataTransmit DataTransfer DataTranslation DataDelivery</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

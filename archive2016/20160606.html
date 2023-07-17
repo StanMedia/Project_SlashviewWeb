@@ -1,0 +1,19 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>反轉RFID/Mifare 14443之UID內的Byte列舉（位元陣列反轉）</h1><p>今天遇到一個CASE，就是要反轉Mifare內的UID（Unique Identifier、UUID、唯一識別碼）內部的字串，例如讀卡機輸出給你的是「1A2B3C4D」，那麼你要反轉成「4D3C2B1A」，也就是LSB與MSB的對轉，不知道訊息的人可以參考<a href=https://goo.gl/2z8f9z>Most significant bit</a>、<a href=https://goo.gl/4s8xdd>Least significant bit</a>。這些觀念對我來說很自然，但是這些都是數位電子學裡面的東西，其實正在讀這篇文章的你並非真的一定要懂。</p><p><img src=https://content.slashview.com/img/2016/20160606_01.jpg alt="" /></p><p>一開始遇到這個CASE，我的直覺當然是想這簡單啊！以前在8051 MCU（Microcontroller Unit）就在那邊用組合語言位移得不亦樂乎，在高階的C#裡面那有甚麼困難之處？於是馬上劈哩啪啦地寫完一個位移的版本。</p><h2>RFID UID反轉：BIT位移版本</h2><pre><code class=language-cs>//準備堆疊
+System.Collections.Stack oStack = new System.Collections.Stack();
+//定義反轉處理函式
+System.Action&lt;uint> SetProcess = x => { oStack.Push(((byte)x).ToString("X").ToUpper().PadLeft(2, '0')); };
+//轉換至實值型別uInt
+uint uTemp = System.Convert.ToUInt32(cTemp, 16);
+//遮罩解析
+SetProcess( uTemp             >> 24);
+SetProcess((uTemp &amp; 0xFFFFFF) >> 16);
+SetProcess((uTemp &amp; 0xFFFF)   >> 8);
+SetProcess( uTemp &amp; 0xFF);
+//回傳列舉結果
+return string.Concat(oStack.ToArray());
+</code></pre><h2>RFID UID反轉：System.BitConverter位移版本</h2><p>寫到快完成的時候，突然想到.NET有一個類別正在跟我招手，說：嘿！不要再自己造輪子啦。正所謂程式碼越精簡越好，於是我就改採用BitConverter來幫我轉換這些煩人的Bits啦！</p><p>程式碼如下：</p><pre><code class=language-cs>//利用BitConverter類別來運作
+byte[] bytTemp = System.BitConverter.GetBytes(System.Convert.ToUInt32(cTemp, 16));
+if (!System.BitConverter.IsLittleEndian) { System.Array.Reverse(bytTemp); }
+return System.BitConverter.ToString(bytTemp).Replace("-", "");
+</code></pre><p>※ 註1：BitConverter.IsLittleEndian代表的是，如果架構是位元組由小到大這個值為 true；如果是位元組由大到小則為 false。一般x86架構來說，這個IsLittleEndian大都為true居多。</p><p>※ 註2：如果你是真心想要不顧一切反轉，其實可以省略掉IsLittleEndian的判斷，直接調用陣列反向。</p><h2>UInt32小教室</h2><p>因為我個人喜歡精簡，因此使用UInt32來儲存。在Mifare卡片中UID的觀念裡面並沒有負數，也就是說，我們可以把最高位元丟棄掉正負表示，這樣可以讓Int32的儲存空間翻倍，也就是可以儲存到4,294,967,295這個數值的資料，詳見<a href=https://goo.gl/NUylYd>UInt32.MaxValue</a>。</p><p>接著我們可以驗證，一個普通的RFID讀卡機傳回來的卡號是8個字元，也就是4 Bytes的資訊量，因此最高的情況就是傳回8個F，而這8個F換算成整數剛好就是UInt32的最大值（32 Bits），因此確認安全。</p><pre><code class=language-txt>0xFFFFFFFF = 4,294,967,295
+</code></pre><h6>Mifare RDIF 14443A 14443B UID UUID GUID BytesReverse</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

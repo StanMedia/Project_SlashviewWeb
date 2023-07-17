@@ -1,0 +1,8 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>Wildcard Mask網路遮罩的意義與計算</h1><p>有一些情況下，子網路遮罩的格式會用Wildcard來表示。例如我們要表示一個合法的IP網段可能會寫為「192.168.1.0/24」，這代表Subnet Mask的Address prefix（IP prefix、Network prefix）是24，而用Netmask（Decimal）來看，就是255.255.255.0。</p><p>這樣表示方式的意義為，網段中所有的IP的前24位元是相同的，後面剩下的8位元就是屬於真正的主機部份，也就是合法的IP，以上述「192.168.1.0/24」為例子來說，合法的IP即為192.168.1.1～192.168.1.254。</p><h2>判斷某IP是否合乎某Subnet Mask（子網路遮罩）的計算方式</h2><p>有一個IP為「192.168.1.3」的IP，是否符合「192.168.1.0/24」，手動的計算方式如下：</p><pre><code class=language-txt>    11000000.10101000.00000001.00000011
+AND 11111111.11111111.11111111.00000000（24個1）
+---------------------------------------
+    11000000.10101000.00000001.00000000（192.168.1.0）
+</code></pre><h2>Wildcard Mask與Subnet Mask的計算方式</h2><p>Wildcard Mask與Subnet Mask其實是同樣的意思，只是剛好是位元的反向。也就是說，你把Subnet Mask的Netmask（Binary）格式取1的補數（ones' complement），就可以得到Wildcard Mask了。計算方式如下：</p><pre><code class=language-txt>NOT 11111111.11111111.11111111.00000000（255.255.255.0）
+---------------------------------------
+    00000000.00000000.00000000.11111111（0.0.0.255）
+</code></pre><p>知道了上述的原理就可以自己手動計算，甚至是寫出程式了，如果仍然不太會計算的人，可以參考這個外部連結：<a href=http://goo.gl/spt6>Wildcard Mask Calculator</a></p><p>※ 20160729：特別感謝網友「001 TSS」的來信指教，並已經進行內文的修正。</p><h6>WildcardMask Process Program Calculate</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

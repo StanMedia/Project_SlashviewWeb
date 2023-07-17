@@ -1,0 +1,18 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>Json.Net進行序列化物件後的屬性更名</h1><p>前陣子在網路上看到某程式設計師為了要讓輸出JSON的屬性符合他想要的定義，進而採用C#的關鍵字當作屬性名稱的爭議，覺得這事情有這麼固執嗎？隨便翻了一下JOSN.NET，果然這種想像中的事情人家早就支援了。</p><h2>利用JsonPropertyAttribute來輕鬆完成</h2><p>Step 1. 假設有一個ORM物件如下，但我們不滿意他將被輸出JSON格式的屬性名稱，因此建立屬性描述如下：</p><pre><code class=language-cs>public class ORM
+{
+  [JsonProperty("cAliasName")]
+  public string cName { get; set; }
+  [JsonProperty("iAliasMoney")]
+  public int iMoney { get; set; }
+}
+</code></pre><p>Step 2. 回到Main Console測試一下：</p><pre><code class=language-cs>ORM oTest = new ORM() { cName = "john", iMoney = 99999 };
+Console.WriteLine(JsonConvert.SerializeObject(oTest, Formatting.Indented));
+</code></pre><p>當ORM類別沒有附掛屬性時輸出：</p><pre><code class=language-json>{
+  "cName": "john",
+  "iMoney": 99999
+}
+</code></pre><p>當ORM類別附掛屬性時輸出：</p><pre><code class=language-json>{
+  "cAliasName": "john",
+  "iAliasMoney": 99999
+}
+</code></pre><p>最後想對那位不知名的程式設計師說：「施主！何苦執著啊～轉個念頭豈不輕鬆乎？」就算退後一萬步沒有JsonPropertyAttribute，宣告個匿名型別（AnonymousType）包皮後在網外丟不也到達一樣的效果嗎？</p><h3>相關參考</h3><ul><li><a href=/archive2018/20180514.html>Json.Net輸出合約實作：將資料物件中某些欄位動態隱藏，不進行序列化</a></li></ul><h6>Newtonsoft.Json JsonConvert.SerializeObject ClassProperty ORMProperties JSON ChangePropertyName ModifyPropertiesName</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

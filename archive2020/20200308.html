@@ -1,0 +1,61 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>LinqToXml簡介2：加入Namespace命名空間</h1><p>在真實的世界裡面，XML往往會被加入一大堆Namespace命名空間來進行特性的描述，這些名稱空間一旦用上LINQ to XML後，語法就沒有那麼的簡單了。</p><h2>靜態方式加入Namespace（XmlNS）</h2><p>請直接看程式碼，語法如下：</p><pre><code class=language-cs>System.Xml.Linq.XDocument oXml = new System.Xml.Linq.XDocument(
+  new System.Xml.Linq.XDeclaration("1.0", "UTF-8", "yes"),
+  new System.Xml.Linq.XElement("Employees",
+    new System.Xml.Linq.XAttribute(System.Xml.Linq.XNamespace.Xmlns + "AAA", "urn:SomeDescribe:xmlns:slashviewA:1.0"),
+    new System.Xml.Linq.XAttribute(System.Xml.Linq.XNamespace.Xmlns + "BBB", "http://www.w3.org/"),
+    new System.Xml.Linq.XAttribute(System.Xml.Linq.XNamespace.Xmlns + "CCC", "SomethiongICanNotTellYou"),
+    new System.Xml.Linq.XElement("Person",
+      new System.Xml.Linq.XAttribute("ID", "A1234"),
+      new System.Xml.Linq.XElement("Name", "王小明"),
+      new System.Xml.Linq.XElement("Address", "台北市OOO路")
+    ),
+    new System.Xml.Linq.XElement("Person",
+      new System.Xml.Linq.XAttribute("ID", "A5678"),
+      new System.Xml.Linq.XElement("Name", "李小華"),
+      new System.Xml.Linq.XElement("Address", "高雄市OOO路")
+    )
+  )
+);
+</code></pre><p>輸出的XML已經有看到諸多的XML Namespace被加入了，例如：AAA、BBB...</p><pre><code class=language-xml>&lt;?xml version="1.0" encoding="utf-8" standalone="yes"?>
+&lt;Employees xmlns:AAA="urn:SomeDescribe:xmlns:slashviewA:1.0" xmlns:BBB="http://www.w3.org/" xmlns:CCC="SomethiongICanNotTellYou">
+  &lt;Person ID="A1234">
+    &lt;Name>王小明&lt;/Name>
+    &lt;Address>台北市OOO路&lt;/Address>
+  &lt;/Person>
+  &lt;Person ID="A5678">
+    &lt;Name>李小華&lt;/Name>
+    &lt;Address>高雄市OOO路&lt;/Address>
+  &lt;/Person>
+&lt;/Employees>
+</code></pre><h2>動態的方式加入Namespace（XmlNS）</h2><p>有時候我們不可能只會在根元素裡面添加XML Namespace而已，有很多情況是子元素也要添加Namesapce，甚至XML的屬性（Attributes）也逃不了。因此下列程式來示範LINQ to XML如何進行動態元素之名稱空間添加。</p><pre><code class=language-cs>System.Xml.Linq.XNamespace oXmlNsAAA = "這完全是我亂打的一個字串";
+System.Xml.Linq.XNamespace oXmlNsBBB = "http://www.foo.com/";
+
+System.Xml.Linq.XDocument oXml = new System.Xml.Linq.XDocument(
+  new System.Xml.Linq.XDeclaration("1.0", "UTF-8", "yes"),
+  new System.Xml.Linq.XElement(oXmlNsAAA + "Employees",
+    new System.Xml.Linq.XAttribute(System.Xml.Linq.XNamespace.Xmlns + "AAA", "這完全是我亂打的一個字串"),
+    new System.Xml.Linq.XAttribute(System.Xml.Linq.XNamespace.Xmlns + "BBB", "http://www.foo.com/"),
+    new System.Xml.Linq.XElement(oXmlNsAAA + "Person",
+      new System.Xml.Linq.XAttribute(oXmlNsBBB + "ID", "A1234"),
+      new System.Xml.Linq.XElement(oXmlNsAAA + "Name", "王小明"),
+      new System.Xml.Linq.XElement(oXmlNsAAA + "Address", "台北市OOO路")
+    ),
+    new System.Xml.Linq.XElement(oXmlNsAAA + "Person",
+      new System.Xml.Linq.XAttribute(oXmlNsBBB + "ID", "A5678"),
+      new System.Xml.Linq.XElement(oXmlNsAAA + "Name", "李小華"),
+      new System.Xml.Linq.XElement(oXmlNsAAA + "Address", "高雄市OOO路")
+    )
+  )
+);
+</code></pre><h2>XNamespace使用要點如下：</h2><ol><li>利用靜態的方式，宣告一個Xml Namespace，且給定一個獨一無二的字串（Key）。</li><li>利用XNamespace類別以變數的方式動態宣告，並給定在XDocument靜態宣告的一致性獨一無二的字串（Key）。若不一致會造成XDocument識別錯誤，認為這是兩個不一樣的Namespace，進而幫你進行補充添加，出來的結果一定不會如你所想像（會有垃圾資料）。</li><li>使用XNamespace與＋這個操作子，進行XElement類別的命名空間添加。</li><li>XDocument有很強的命名空間整理功能，你利用動態方法使用到到沒有宣告過的命名空間，在輸出時期他會幫你利用xmlns補宣告。設計時期重複宣告引入宣告過的命名空間，在輸出時期他會幫你去除重複。</li></ol><p>最後產生出來的XML文件：</p><pre><code class=language-xml>&lt;?xml version="1.0" encoding="utf-8" standalone="yes"?>
+&lt;AAA:Employees xmlns:AAA="這完全是我亂打的一個字串" xmlns:BBB="http://www.foo.com/">
+  &lt;AAA:Person BBB:ID="A1234">
+    &lt;AAA:Name>王小明&lt;/AAA:Name>
+    &lt;AAA:Address>台北市OOO路&lt;/AAA:Address>
+  &lt;/AAA:Person>
+  &lt;AAA:Person BBB:ID="A5678">
+    &lt;AAA:Name>李小華&lt;/AAA:Name>
+    &lt;AAA:Address>高雄市OOO路&lt;/AAA:Address>
+  &lt;/AAA:Person>
+&lt;/AAA:Employees>
+</code></pre><h3>相關連結</h3><ul><li><a href=/archive2020/20200307.html>LinqToXml簡介1：建立並儲存XML</a></li><li><a href=/archive2020/20200308.html>LinqToXml簡介2：加入Namespace命名空間</a></li><li><a href=/archive2020/20200309.html>LinqToXml簡介3：利用LINQ找到正確的XElement並插入資料</a></li></ul><h6>XmlDocument System.Xml XDocument System.Xml.Linq LambdaExpressions Namespace 名稱空間 命名空間 LinqSelect LinqWhere XElementInsert XElementDelete</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

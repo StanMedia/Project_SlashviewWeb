@@ -1,0 +1,30 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>CSS筆記：讓SVG的鈴鐺圖示搖擺起來（swing）</h1><p>臨時有一個需求需要讓SVG鈴鐺圖示左右擺動起來，但因為fontawesome轉SVG寫好的動畫範本只有簡單的旋轉，先前寫的<a href=/archive2017/20171222.html>CSS筆記：CSS動畫的使用方式</a>的動畫也因為關鍵影格數太少而顯得不太流暢，因此把解決辦法筆記在此供日後快速參考取得。</p><h2>通知震動鈴鐺</h2><p>因為沒有現成的SVG鈴鐺圖示，所以我直接去fontawesome網站上把鈴鐺的SVG資料拿下來。</p><pre><code class=language-html>&lt;svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512">&lt;path d="M256 32V51.2C329 66.03 384 130.6 384 208V226.8C384 273.9 401.3 319.2 432.5 354.4L439.9 362.7C448.3 372.2 450.4 385.6 445.2 397.1C440 408.6 428.6 416 416 416H32C19.4 416 7.971 408.6 2.809 397.1C-2.353 385.6-.2883 372.2 8.084 362.7L15.5 354.4C46.74 319.2 64 273.9 64 226.8V208C64 130.6 118.1 66.03 192 51.2V32C192 14.33 206.3 0 224 0C241.7 0 256 14.33 256 32H256zM224 512C207 512 190.7 505.3 178.7 493.3C166.7 481.3 160 464.1 160 448H288C288 464.1 281.3 481.3 269.3 493.3C257.3 505.3 240.1 512 224 512z"/>&lt;/svg>
+</code></pre><p>因為直接把複製下來的SVG顯示出來太大，因此我在這SVG XML裡面加上WIDTH屬性把他稍微縮小一下，如下圖：</p><p><svg xmlns=http://www.w3.org/2000/svg viewBox="0 0 448 512" width=50px><path d="M256 32V51.2C329 66.03 384 130.6 384 208V226.8C384 273.9 401.3 319.2 432.5 354.4L439.9 362.7C448.3 372.2 450.4 385.6 445.2 397.1C440 408.6 428.6 416 416 416H32C19.4 416 7.971 408.6 2.809 397.1C-2.353 385.6-.2883 372.2 8.084 362.7L15.5 354.4C46.74 319.2 64 273.9 64 226.8V208C64 130.6 118.1 66.03 192 51.2V32C192 14.33 206.3 0 224 0C241.7 0 256 14.33 256 32H256zM224 512C207 512 190.7 505.3 178.7 493.3C166.7 481.3 160 464.1 160 448H288C288 464.1 281.3 481.3 269.3 493.3C257.3 505.3 240.1 512 224 512z" /></svg></p><p>接下來添加兩個CSS組態檔案：</p><pre><code class=language-css>.swing {
+  animation: custom-swing 3s;
+  -webkit-animation: custom-swing 3s;
+  animation-iteration-count: infinite;
+  -webkit-animation-iteration-count: infinite;
+}
+
+@keyframes custom-swing {
+   8% { transform: rotate3d(0, 0, 1, 20deg); }
+  16% { transform: rotate3d(0, 0, 1, -15deg); }
+  24% { transform: rotate3d(0, 0, 1, 10deg); }
+  32% { transform: rotate3d(0, 0, 1, -5deg); }
+  40% { transform: rotate3d(0, 0, 1, 0deg); }
+}
+</code></pre><p>然後再SVG XML CLASS屬性裡面套用這個swing就可以啦！</p><style>.swing{animation:custom-swing 3s;-webkit-animation:custom-swing 3s;animation-iteration-count:infinite;-webkit-animation-iteration-count:infinite}@keyframes custom-swing{8%{transform:rotate3d(0,0,1,20deg)}16%{transform:rotate3d(0,0,1,-15deg)}24%{transform:rotate3d(0,0,1,10deg)}32%{transform:rotate3d(0,0,1,-5deg)}40%{transform:rotate3d(0,0,1,0deg)}}</style><p><svg xmlns=http://www.w3.org/2000/svg viewBox="0 0 448 512" width=50px class=swing><path d="M256 32V51.2C329 66.03 384 130.6 384 208V226.8C384 273.9 401.3 319.2 432.5 354.4L439.9 362.7C448.3 372.2 450.4 385.6 445.2 397.1C440 408.6 428.6 416 416 416H32C19.4 416 7.971 408.6 2.809 397.1C-2.353 385.6-.2883 372.2 8.084 362.7L15.5 354.4C46.74 319.2 64 273.9 64 226.8V208C64 130.6 118.1 66.03 192 51.2V32C192 14.33 206.3 0 224 0C241.7 0 256 14.33 256 32H256zM224 512C207 512 190.7 505.3 178.7 493.3C166.7 481.3 160 464.1 160 448H288C288 464.1 281.3 481.3 269.3 493.3C257.3 505.3 240.1 512 224 512z" /></svg></p><p>如果嫌動畫太柔和，可以加快CSS的animation秒數或者keyframes的百分率，例如下列：</p><pre><code class=language-css>.swing {
+  animation: custom-swing 2s;
+  -webkit-animation: custom-swing 2s;
+  animation-iteration-count: infinite;
+  -webkit-animation-iteration-count: infinite;
+}
+
+@keyframes custom-swing {
+   2% { transform: rotate3d(0, 0, 1, 20deg); }
+   4% { transform: rotate3d(0, 0, 1, -15deg); }
+   6% { transform: rotate3d(0, 0, 1, 10deg); }
+   8% { transform: rotate3d(0, 0, 1, -5deg); }
+  10% { transform: rotate3d(0, 0, 1, 0deg); }
+}
+</code></pre><style>.swing2{animation:custom-swing2 2s;-webkit-animation:custom-swing2 2s;animation-iteration-count:infinite;-webkit-animation-iteration-count:infinite}@keyframes custom-swing2{2%{transform:rotate3d(0,0,1,20deg)}4%{transform:rotate3d(0,0,1,-15deg)}6%{transform:rotate3d(0,0,1,10deg)}8%{transform:rotate3d(0,0,1,-5deg)}10%{transform:rotate3d(0,0,1,0deg)}}</style><p><svg xmlns=http://www.w3.org/2000/svg viewBox="0 0 448 512" width=50px class=swing2><path d="M256 32V51.2C329 66.03 384 130.6 384 208V226.8C384 273.9 401.3 319.2 432.5 354.4L439.9 362.7C448.3 372.2 450.4 385.6 445.2 397.1C440 408.6 428.6 416 416 416H32C19.4 416 7.971 408.6 2.809 397.1C-2.353 385.6-.2883 372.2 8.084 362.7L15.5 354.4C46.74 319.2 64 273.9 64 226.8V208C64 130.6 118.1 66.03 192 51.2V32C192 14.33 206.3 0 224 0C241.7 0 256 14.33 256 32H256zM224 512C207 512 190.7 505.3 178.7 493.3C166.7 481.3 160 464.1 160 448H288C288 464.1 281.3 481.3 269.3 493.3C257.3 505.3 240.1 512 224 512z" /></svg></p><h3>相關連結</h3><ul><li><a href=/archive2017/20171222.html>CSS筆記：CSS動畫的使用方式</a></li><li><a href=/archive2022/20220325.html>CSS筆記：讓SVG的鈴鐺圖示搖擺起來（swing）</a></li><li><a href=https://l-lin.github.io/font-awesome-animation/>font-awesome-animation</a>裡面有將很多日常會用到的動畫整理在裡面，如果有需要可以直接引入。</li><li><a href=https://unused-css.com/blog/css-shake-animation/>CSS Shake Animation</a>裡面有很多震動類型的動畫，有需要的人也可以參考。</li></ul><h6>Fontawesome SVG Icon Bell Swing Shake Animation</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

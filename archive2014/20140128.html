@@ -1,0 +1,71 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>SQL筆記：取得SQL Server當前連線數、死結與踢除會話細節（SQL Issues）</h1><p>有時候我們會需要觀察資料庫現在的總連線數，來評估一些硬體的負載能力問題，這時候我們可以使用下列的T-SQL指令。</p><h2>查詢當前的連線細節與總連線數（SQL Connection Session）</h2><pre><code class=language-sql>USE master
+--查詢Session總量；查詢當前連線數
+SELECT cntr_value AS User_Connections FROM sys.sysperfinfo AS sp
+WHERE sp.object_name = 'SQLServer:General Statistics'
+AND sp.counter_name = 'User Connections'
+GO
+
+--查詢Session細節；查詢當前連線細節，包含SessionId、登入時間、連線時間、連線位址、登入帳號、連線狀態...
+SELECT c.session_id, c.connect_time, s.login_time, c.client_net_address, s.login_name, s.status ,s.host_name,s.program_name
+FROM sys.dm_exec_connections c left join sys.dm_exec_sessions s on c.session_id = s.session_id
+ORDER BY s.login_time DESC
+GO
+</code></pre><h2>查詢資料庫死結細節</h2><p>如果死結是發生在資料庫的關鍵資料表，會造成整個資料庫貌似當機的問題，不可不慎。因此，及時找出問題並先快速排除是很重要的，下面的指令可以幫到你。</p><pre><code class=language-sql>SELECT 
+  L.request_session_id AS SPID, 
+  DB_NAME(L.resource_database_id) AS DatabaseName, 
+  O.Name AS LockedObjectName, 
+  P.object_id AS LockedObjectId, 
+  L.resource_type AS LockedResource, 
+  L.request_mode AS LockType, 
+  ST.text AS SqlStatementText, 
+  ES.login_name AS LoginName, 
+  ES.host_name AS HostName, 
+  TST.is_user_transaction as IsUserTransaction, 
+  AT.name as TransactionName, 
+  CN.auth_scheme as AuthenticationMethod, 
+  L.request_status AS RequestStatus 
+FROM 
+  sys.dm_tran_locks L 
+  INNER JOIN sys.partitions P ON P.hobt_id = L.resource_associated_entity_id 
+  INNER JOIN sys.objects O ON O.object_id = P.object_id 
+  INNER JOIN sys.dm_exec_sessions ES ON ES.session_id = L.request_session_id 
+  INNER JOIN sys.dm_tran_session_transactions TST ON ES.session_id = TST.session_id 
+  INNER JOIN sys.dm_tran_active_transactions AT ON TST.transaction_id = AT.transaction_id 
+  INNER JOIN sys.dm_exec_connections CN ON CN.session_id = ES.session_id CROSS APPLY sys.dm_exec_sql_text(CN.most_recent_sql_handle) AS ST 
+WHERE 
+  resource_type &lt;> 'DATABASE' 
+ORDER BY 
+  L.request_session_id
+</code></pre><h2>強制移除某個Session，將其剔除</h2><p>執行的過程中若還在存取階段，可能會出現失敗的訊息，可以再多執行幾次即可。</p><pre><code class=language-sql>sp_lock
+dbcc inputbuffer(YourSessionID)
+kill YourSessionID
+</code></pre><p>也可以用這個方式來手動砍對話連線...</p><pre><code class=language-sql>EXEC('KILL YourSessionID')
+EXEC('KILL YourSessionID')
+EXEC('KILL YourSessionID')
+...
+</code></pre><h2>刪除SQL當前正處於睡眠（Sleeping）狀態的連線</h2><p>範例中設定只要是非工作中狀態且超過一個小時沒有下指令，就把連線移除掉，使用者自己可以調整iHours參數。</p><pre><code class=language-sql>DECLARE @user_spid INT
+
+DECLARE @iHours INT
+SET @iHours = 1  -- DELETE thread sleeping for N hours
+
+DECLARE curspid CURSOR fast_forward FOR
+  SELECT spid
+  FROM   master.dbo.sysprocesses (nolock)
+  WHERE  spid > 50  -- avoid system threads
+         AND status = 'sleeping'  -- only sleeping threads
+         AND Datediff(hour, last_batch, Getdate()) >= @iHours
+         AND spid &lt;> @@spid  -- ignore current spid
+
+OPEN curspid
+FETCH next FROM curspid INTO @user_spid
+
+WHILE (@@FETCH_STATUS = 0)
+  BEGIN
+      PRINT 'Killing ' + CONVERT(VARCHAR, @user_spid)
+      EXEC('KILL ' + @user_spid)
+      FETCH next FROM curspid INTO @user_spid
+  END
+
+CLOSE curspid
+DEALLOCATE curspid
+</code></pre><h6>SQL Connectivity Connection Lock DeadLock Kick Remove Session Count T-SQL</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

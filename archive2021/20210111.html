@@ -1,0 +1,72 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>利用委派讓List(T)可以使用Lambda運算式寫法</h1><p>在網路上看到越來越的開源程式碼範例，拐彎抹角的使用了一大堆委派的寫法來展現出自己高超過人的程式設計技巧，從來沒想過會有人把委派塞入到<code>System.Collections.Generic.List&lt;T></code>再跑迴圈讓這個集合運作起來，初次遇見算是增長見識了。</p><h2>傳統delegate簽名的寫法</h2><p>這個寫法巧妙的利用泛型的機制，將delegate myWork()塞入到<code>System.Collections.Generic.List&lt;T></code>，這麼一來就可以在List.Add()時期快樂的使用黏巴達（Lambda）來寫程式了。</p><pre><code class=language-cs>class Program
+{
+  public delegate void myWork();
+  public static void Main()
+  {
+    System.Collections.Generic.List&lt;myWork> oList = new System.Collections.Generic.List&lt;myWork>();
+
+    //此處不可使用 For-Next 迴圈，不然會引爆C#閉包（Closure）區域參數問題
+    foreach (var i in new int[] { 1, 2, 3, 4, 5, 6, 7, 8, 9 })
+    { //將自建函式封裝進去
+      oList.Add(() =>
+      {
+        for (int j = 1; j &lt; 10; j++)
+        {
+          Console.WriteLine($"{i} X {j} = {i * j}");
+        }
+      });
+    }
+
+    foreach (var oItem in oList)
+    { //全部叫出來執行
+      oItem();
+    }
+
+    Read();
+  }
+}
+</code></pre><h2>使用System.Action或System.Func的寫法</h2><p>這種寫法算是C#後期大家都採用的寫法，可以省略掉delegate簽名的宣告（程式設計師可以少想一個變數名稱），由於這次的DEMO是99乘法表，並沒有任何的傳入傳出值，因此採用<code>System.Action&lt;T></code>來示範即可。</p><pre><code class=language-cs>class Program
+{
+  public static void Main()
+  {
+    System.Collections.Generic.List&lt;System.Action> oList = new System.Collections.Generic.List&lt;Action>();
+
+    //此處不可使用 For-Next 迴圈，不然會引爆C#閉包（Closure）區域參數問題
+    foreach (var iItem in new int[] { 1, 2, 3, 4, 5, 6, 7, 8, 9 })
+    { //將自建函式封裝進去
+      oList.Add(() => {
+        for (int i = 0; i &lt; 10; i++)
+        {
+          Console.WriteLine($"{iItem} X {i} = {iItem * i}");
+        }
+      });
+    }
+
+    foreach (var oItem in oList)
+    { //全部叫出來執行
+      oItem();
+    }
+
+    Read();
+  }
+}
+</code></pre><h2>補充：改用更精簡的事件疊加掛載寫法</h2><pre><code class=language-cs>public class Program
+{
+  public static void Main()
+  {
+    System.Action fAction = null;
+    //此處不可使用 For-Next 迴圈，不然會引爆C#閉包（Closure）區域參數問題
+    foreach (var iItem in new int[] { 1, 2, 3, 4, 5, 6, 7, 8, 9 })
+    { //將自建函式封裝進去
+      fAction += new Action(() => {
+        for (int i = 0; i &lt; 10; i++)
+        {
+          Console.WriteLine($"{iItem} X {i} = {iItem * i}");
+        }
+      });
+    }
+    //叫出來執行10個匿名函式
+    fAction();
+  }
+}
+</code></pre><p>目前職業生涯中還沒有遇過這樣的寫法適用的情境，先備份起來日後若有用途可以拿出來參考。另外有關於「引爆C#閉包（Closure）區域參數問題」可參考<a href=https://www.dotblogs.com.tw/billchung/2015/05/25/151399>匿名函式陷阱</a></p><h3>相關連結：</h3><ul><li><a href=/archive2014/20140514.html>C#之委派之演進史與匿名函式之應用</a></li><li><a href=/archive2014/20141117.html>泛型委派（General Delegates）之研究</a></li><li><a href=/archive2014/20141201.html>利用Predicate泛型委派，進行類別方法委派之實作</a></li><li><a href=/archive2019/20190111.html>新舊委派的撰寫與呼叫方式：以購物車折扣為例</a></li></ul><h6>System.Collections.Generic.List List(T) Delegate Lambada</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

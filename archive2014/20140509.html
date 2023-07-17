@@ -1,0 +1,78 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>有關ToString、String.Format的相關資料</h1><p>在.NET Framework中，一直覺得最強的類別就是String，好像你永遠也摸不清這個方法到底有多少的本事一樣。如果有一個人跟你說，ToString()就是轉成字串啊，以啥了不起的，那麼他肯定很自大並不熟String類別。</p><p>在這邊僅些微的列出一些sample code，詳細還是要看官方MSDN，因為實在是太強大了。</p><pre><code class=language-cs>前面補0的數字字串
+String.Format("{0:0000}", 157);  //輸出 0157
+
+前後都補0的數字字串
+String.Format("{0:0000.0000}", 157.42);  //輸出 0157.4200
+
+格式化電話號碼
+String.Format("{0:(###) ###-####}", 8005551212);  //輸出 (800) 555-1212
+
+不滿特定長度的字串，後面補空白
+String.Format("{0,-10}", "Hello");  //「Hello     」
+
+不滿特定長度的字串，前面補空白
+String.Format("{0,10}", "Hello");  //「     Hello」
+
+前面補0的數字字串
+String.Format("{0:0000}", 157);  //輸出 0157
+
+前後都補0的數字字串
+String.Format("{0:0000.0000}", 157.42);  //輸出 0157.4200
+
+金額的表示：每3位數加逗號
+String.Format("{0:n}",  123456789);  //輸出 123,456,789.00
+String.Format("{0:n0}", 123456789);  //輸出 123,456,789
+
+金額的表示
+String.Format("{0:$#,##0.00;($#,##0.00);Zero}", 0); // 這個會顯示 Zero
+String.Format("{0:$#,##0.00;($#,##0.00);Zero}", 1243.50); // 這個會顯示 $1,243.50
+
+金額的表示\_改良\_取到小數2位
+String.Format("{0:$###,###,###,##0.00}", 0);  //$0.00
+String.Format("{0:$###,###,###,##0.00}", 12.5);  //$12.50
+String.Format("{0:$###,###,###,##0.00}", 3456234532);  //$3,456,234,532.0
+
+金額的表示\_改良2\_取到個位
+String.Format("{0:$#,0}", 0);  //$0
+String.Format("{0:$#,0}", 12.5);  //$13,四拾五入到個位
+String.Format("{0:$#,0}", 3456234532);  //$3,456,234,532
+
+格式化電話號碼
+String.Format("{0:(###) ###-####}", 8005551212); //輸出 (800) 555-1212
+
+百分比
+String.Format("{0:0%}", 17 / (float)60);  //輸出 28%
+
+到小數2位的百分比
+String.Format("{0:0.00%}", 17 / (float)60);  //輸出 28.33%
+
+取小數點4位，並對第5位做四捨五入
+String.Format("{0:#,0.####}", 1234.56789);  //1,234.5679
+
+小數點不足4位不補0
+String.Format("{0:0.####}", 1234.567);  //1234.567
+
+年/月/日 時:分:秒 毫秒
+DateTime.Now.ToString("yyyy/MM/dd HH:mm:ss ffff");
+
+C貨幣
+2.5.ToString("C")  //￥2.50
+
+D十進位數字
+25.ToString("D5")  //00025
+
+E科學型
+25000.ToString("E")  //2.500000E+005
+
+F固定點
+25.ToString("F2")  //25.00
+
+G常規
+2.5.ToString("G")  //2.5
+
+N數字
+2500000.ToString("N")  //2,500,000.00
+
+X十六進位
+255.ToString("X")  //FF
+</code></pre><p>以下是MSDN官網中，對於ToString()下涉汲的相關格式化類行，進行「稍微」完整的敘述，有用到的人請自行翻閱吧！</p><ul><li><a href=http://goo.gl/sHHmqG>Formatting Types 總述</a></li><li><a href=http://goo.gl/yCD6tV>Standard Numeric Format Strings</a></li><li><a href=http://goo.gl/ekMnzD>Custom Numeric Format Strings</a></li><li><a href=http://goo.gl/YkkEXa>Standard Date and Time Format Strings</a></li><li><a href=http://goo.gl/B5JhW>Custom Date and Time Format Strings</a></li><li><a href=http://goo.gl/p8GV5u>Standard TimeSpan Format Strings</a></li><li><a href=http://goo.gl/O9IVbY>Custom TimeSpan Format Strings</a></li><li><a href=http://goo.gl/UxJXmw>Enumeration Format Strings</a></li><li><a href=http://goo.gl/QDgGxR>Composite Formatting</a></li><li><a href=http://goo.gl/7SCuQv>Performing Formatting Operations</a>（這裡面藏有大量的格式化資訊，例如轉換地區型日期，或者是對文字輸出預做空白Padding之類的，都會有讓你耳目一新的感受！）</li></ul><p>最後加碼附上一位英國C#程式設計師Dylan Beattie寫的Cheat Sheet：<a href=https://content.slashview.com/file/20140509/.Net%20String%20Format%20Cheat%20Sheet.pdf>.Net String Format Cheat Sheet</a></p><h6>.NET ToString String.Format FormattingTypes</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

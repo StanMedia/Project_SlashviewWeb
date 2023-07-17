@@ -1,0 +1,44 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>利用C#呼叫Skype來進行訊息傳遞</h1><p>Skype被微軟買下來後，Skype URIs API的發展就確定了，也就是SKYPE4COMLib這個COM元件要被放棄掉了，但截至撰寫日期前，你想要在用第三方程式在Skype上面進行Bot等級的互動，沒有SKYPE4COMLib這個COM是行不通的，也就是說Skype URIs API上面的JavaScript最多只能讓你弄弄花拳繡腿的東西，例如點個Call Me按鈕，然後Browser會去把Skype開起來動作之類的，我個人認為是很蠢啦！</p><p>總之，趁終結前記錄一下如何使用吧！</p><p>Step 1. 要在本機灌SKYPE，並且Login好你的帳號，不要懷疑！寫作當下的版本是SKYPE ver. 6.21.85.140。</p><p>Step 2. 下載官網已經不再發展與提供的SKYPE4COMLib ver. 1.0.38.0。</p><p><a href=https://content.slashview.com/file/20141113/Skype4COM_1.0.38.0.zip>SKYPE4COMLib 1.0.38.0</a></p><p>Step 3. 複製「Skype4COM.dll」到「C:\Program Files (x86)\Common Files\Skype」，並開cmd切換到該目錄下輸入「regsvr32 Skype4COM.Dll」。</p><p>※ 在64 Bit的作業系統下，要切到「C:\Windows\sysWOW64\regsvr32.exe」下跑，如果你是用「C:\Windows\system32\regsvr32.exe」可能會吐這個錯誤給你：</p><pre><code class=language-txt>無法載入模組"SKYPE4COM.DLL"。
+請確定二進位檔儲存於指定的路徑，或進行偵測以檢查二進位檔或相依.DLL檔是否發生問題。
+找不到指定的模組。
+</code></pre><p>Step 4. 參考下列的程式碼，可以讓你自由的利用第三方程式，自由的跟Skype的群組或使用者聊天。（第一次使用需要切換到Skype程式下點選授權警告按鈕）</p><pre><code class=language-cs>using System;
+using SKYPE4COMLib;
+
+namespace Skype
+{
+  class Program
+  {
+    static void Main(string[] args)
+    {
+      SKYPE4COMLib.SkypeClass oSkype = new SkypeClass();
+      System.Collections.ArrayList oAL = new System.Collections.ArrayList();
+
+      Console.Write("有效聊天狀態列表:\n--------\n");
+      foreach (Chat items in oSkype.Chats)
+      {
+        oAL.Add(items.Name);
+        Console.WriteLine("聊天對象編號: " + oAL.Count);
+        Console.WriteLine("Name: " + items.Name);
+        Console.WriteLine("Topic: " + items.Topic);
+        Console.WriteLine("FriendlyName: " + items.FriendlyName);
+        Console.WriteLine("--------");
+      }
+
+      Console.Write("請輸入要聊天的對象編號: ");
+      int iTemp = Convert.ToInt32(Console.ReadLine()) - 1;
+
+      while(true)
+      { 
+        Console.Write("請輸入文字（輸入quit離開）：");
+        string cTemp = Console.ReadLine();
+        if (cTemp == "quit") { break; }
+        oSkype.SendChatMessage(oAL[iTemp].ToString(), cTemp);
+      }
+
+      Console.WriteLine("程式即將關閉！");
+      Console.Read();
+
+    }
+  }
+}
+</code></pre><p>Step 5. 執行期若有錯誤的話，記得去把平台目標改成「x86」就可以了。（因為這個COM的支援度就到這邊為止）</p><p><img src=https://content.slashview.com/img/2014/20141113_01.jpg alt="" /></p><p>SKYPE4COMLib功能非常的強大，上面的程式碼只是我隨便牛刀小試而已，更進階的功能（例如掛事件確認狀態等）請自己網路爬文吧！</p><h6>Skype DLL COM .NETFramework C# Chats GroupChats</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

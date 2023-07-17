@@ -1,0 +1,459 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>統計：獨立樣本T檢定的C#類別實作</h1><p>因為工作上的因素，必須實作獨立樣本T檢定的自動化檢測方法，因為自己並不是屬於這個領域的專家，因此在研讀了許多維基百科與網路文章，總算把這方面的演算實作出來了，另外也要感謝微軟在.NET Framework 4所提供的相關類別方法支援，讓我可以不必自己實作曲線積分相關的程式碼。透過這篇文章將相關的知識記錄下來，供給也有這方面需求的人員參考。</p><h2>基礎統計類別（Slashview.Statistics.Base）</h2><p>這個類別作為基礎統計用，基本上以箱型圖（盒鬚圖）要繪製所需要的參數為主，另外常見的樣本變異數、樣本標準差、樣本平均標準誤等也視為基礎統計參數來同步進行運算。</p><pre><code class=language-cs>using System.Linq;
+
+namespace Slashview.Statistics
+{
+  /// &lt;summary>
+  /// 統計類別：基本統計運算
+  /// &lt;/summary>
+  public class Base
+  { //傳入等待計算的樣本物件
+    private Slashview.Statistics.Sample _oSample;
+
+    /// &lt;summary>
+    /// 建構子
+    /// &lt;/summary>
+    /// &lt;param name="oSample">樣本物件&lt;/param>
+    public Base(Slashview.Statistics.Sample oSample)
+    { //設定預設參數
+      if (oSample == null || oSample.oList == null || oSample.oList.Count == 0)
+      { setException("統計起始參數輸入錯誤！請檢查樣本是否為空值或樣本參數是否正確傳入。"); }
+      _oSample = oSample;
+    }
+
+    /// &lt;summary>
+    /// 計算相關參數並回寫至物件
+    /// &lt;/summary>
+    public Slashview.Statistics.Sample GetCalculate()
+    { //樣本排序
+      _oSample.oList = _oSample.oList.OrderBy(x => x).ToList();
+      //樣本個數
+      _oSample.iSize = _oSample.oList.Count();
+      //樣本平均數
+      _oSample.iAverage = _oSample.oList.Average();
+
+      /* 箱型圖參數
+       * 1. 中位數運算公式比較有統一的說法，可參考：https://zh.wikipedia.org/wiki/中位數
+       * 2. 第一四分位數（Q1）與第三四分位數（Q3）各學派有不同的解釋，一般學論說的使用位置求取方法，得到的數值跟實際上統計（例如Excel的QUARTILE函數）完全不一樣。
+       * 3. 基於上述的問題，因此放棄傳統排序後直接看位置的作法，使用查詢到的函式來手動運算。*/
+      //樣本最小值
+      _oSample.iMinimum = BoxPlotCalculator(_oSample.oList.ToArray(), 0);
+      //樣本第一四分位數（Q1）
+      _oSample.iQuartile1 = BoxPlotCalculator(_oSample.oList.ToArray(), 25);
+      //樣本中位數
+      _oSample.iMedian = BoxPlotCalculator(_oSample.oList.ToArray(), 50);
+      //樣本第三四分位數（Q3）
+      _oSample.iQuartile3 = BoxPlotCalculator(_oSample.oList.ToArray(), 75);
+      //樣本最大值
+      _oSample.iMaximum = BoxPlotCalculator(_oSample.oList.ToArray(), 100);
+
+      //樣本變異數
+      var iSumOfSD = _oSample.oList
+        .Select(x => System.Math.Pow(x - _oSample.iAverage, 2))
+        .Sum();
+      _oSample.iS = iSumOfSD * (1d / (_oSample.iSize - 1));
+      //樣本標準差
+      _oSample.iSD = System.Math.Pow(_oSample.iS, 0.5);
+      //樣本平均值的標準誤差
+      _oSample.iSEM = _oSample.iSD / System.Math.Pow(_oSample.iSize, 0.5);
+
+      //回傳物件
+      return _oSample;
+    }
+
+    /// &lt;summary>
+    /// 箱型圖數值計算機（盒鬚圖）
+    /// 出處：https://www.codeproject.com/Articles/27340/A-User-Friendly-C-Descriptive-Statistic-Class
+    /// &lt;/summary>
+    /// &lt;param name="aryList">排序過的陣列&lt;/param>
+    /// &lt;param name="iPercentile">百分位位置&lt;/param>
+    /// &lt;returns>對應數值&lt;/returns>
+    private double BoxPlotCalculator(double[] aryList, double iPercentile)
+    {
+      if (iPercentile >= 100.0d) return aryList[aryList.Length - 1];
+      double position = (aryList.Length + 1) * iPercentile / 100.0;
+      double leftNumber = 0.0d, rightNumber = 0.0d;
+      double n = iPercentile / 100.0d * (aryList.Length - 1) + 1.0d;
+      if (position >= 1)
+      {
+        leftNumber = aryList[(int)System.Math.Floor(n) - 1];
+        rightNumber = aryList[(int)System.Math.Floor(n)];
+      }
+      else
+      {
+        leftNumber = aryList[0];
+        rightNumber = aryList[1];
+      }
+      if (Equals(leftNumber, rightNumber))
+      { return leftNumber; }
+      double part = n - System.Math.Floor(n);
+      return leftNumber + part * (rightNumber - leftNumber);
+    }
+  }
+
+  /// &lt;summary>
+  /// 統計類別：統計樣本物件
+  /// &lt;/summary>
+  public class Sample
+  {  //樣本名稱
+    public string cName { get; set; }
+    //樣本集合
+    public System.Collections.Generic.List&lt;double> oList { get; set; }
+    //樣本個數（n）
+    public int iSize { get; set; } = 0;
+    //樣本最大值
+    public double iMaximum { get; set; } = 0;
+    //樣本最小值
+    public double iMinimum { get; set; } = 0;
+    //樣本平均數（x̄；X Bar）
+    public double iAverage { get; set; } = 0;
+    //樣本中位數（第二四分位數）
+    public double iMedian { get; set; } = 0;
+    //樣本第一四分位數（Q1）
+    public double iQuartile1 { get; set; } = 0;
+    //樣本第三四分位數（Q3）
+    public double iQuartile3 { get; set; } = 0;
+    //樣本變異數（S^2）
+    public double iS { get; set; } = 0;
+    //樣本標準差（S）（Standard Deviation、標準偏差、均方差）
+    public double iSD { get; set; } = 0;
+    //樣本平均值的標準誤差（Standard Error of Mean）
+    public double iSEM { get; set; } = 0;
+  }
+}
+</code></pre><h2>獨立樣本T檢定類別（Slashview.Statistics.IndependentSampleTTest）</h2><p>這個類別作為獨立樣本T檢定類別主要工作類別，裡面最主要用來產生所有SPSS在進行獨立樣本T檢定報告中所有的關鍵數據，也就是說，用這個類別你也可以在後端自動化的產生出跟IBM SPSS相同的獨立樣本T檢定報告。</p><p>此外，受到網友「布丁」的相關統計文章啟發，我也依樣畫葫蘆實作了自動化報告方法，可用來自動化產生報告供給使用者進行初步判讀。</p><pre><code class=language-cs>using System.Linq;
+
+namespace Slashview.Statistics
+{
+  /// &lt;summary>
+  /// 統計類別：獨立樣本T檢定
+  /// &lt;/summary>
+  public class IndependentSampleTTest
+  { //調用System.Web.UI.DataVisualization類別進行後續的統計調查
+    private System.Web.UI.DataVisualization.Charting.Chart _oStatistics = new System.Web.UI.DataVisualization.Charting.Chart();
+    //用來比較的ＡＢ群組
+    private Slashview.Statistics.Sample _oGroupA;
+    private Slashview.Statistics.Sample _oGroupB;
+    //考量到使用者可能會調用自動產生報告，因此將計算後的T檢定結果物件進行暫存
+    private Slashview.Statistics.TTestResult _oTTestResult = null;
+    //顯著水準α
+    public double _iSignificantLevel = 0.05;
+
+    /// &lt;summary>
+    /// 建構子
+    /// &lt;/summary>
+    /// &lt;param name="oGroupA">統計群組Ａ&lt;/param>
+    /// &lt;param name="oGroupB">統計群組Ｂ&lt;/param>
+    /// &lt;param name="iSignificantLevel">顯著水準α（預設：0.05）&lt;/param>
+    public IndependentSampleTTest(Slashview.Statistics.Sample oGroupA, Slashview.Statistics.Sample oGroupB, double iSignificantLevel = 0.05)
+    {
+      int iSampleSizeLimit = 5;
+      if
+      (
+        oGroupA == null || oGroupA.iSize &lt;= iSampleSizeLimit
+        ||
+        oGroupB == null || oGroupB.iSize &lt;= iSampleSizeLimit
+      )
+      { setException($"統計起始參數輸入錯誤！請檢查樣本是否為空值，另每組樣本數量亦不可低於{iSampleSizeLimit}組。"); }
+      _oGroupA = oGroupA;
+      _oGroupB = oGroupB;
+      _iSignificantLevel = iSignificantLevel > 1 ? 0.05 : iSignificantLevel;
+    }
+
+    /// &lt;summary>
+    /// 計算相關參數並回寫至物件
+    /// &lt;/summary>
+    /// &lt;returns>T檢定結果物件&lt;/returns>
+    public Slashview.Statistics.TTestResult GetCalculate()
+    { //定義最終回傳物件
+      var oResult = new Slashview.Statistics.TTestResult();
+      //設定顯著性程度
+      oResult.iSignificantLevel = _iSignificantLevel;
+
+      /* F-TEST計算（採用Levene's Test；樣本變異數同質性檢定）
+       * 演算法定義參考：https://en.wikipedia.org/wiki/Levene%27s_test */
+
+      //計算自由度
+      oResult.iFDf1 = 1;  //為（樣本群組數目-1），因為此方法假定測試樣本群組永遠為AB兩個群組，因此值固定為1
+      oResult.iFDf2 = (_oGroupA.iSize + _oGroupB.iSize) - 2;
+      //各群組加總
+      var iGroupASum = _oGroupA.oList
+        .Select(x => System.Math.Abs(x - _oGroupA.iAverage))
+        .Sum();
+      var iGroupBSum = _oGroupB.oList
+        .Select(x => System.Math.Abs(x - _oGroupB.iAverage))
+        .Sum();
+      //各群組平均
+      var iGroupAAverage = iGroupASum / _oGroupA.iSize;
+      var iGroupBAverage = iGroupBSum / _oGroupB.iSize;
+      //兩群組總平均：如果把個別平均拿來加總除２，會有精度流失的問題，因此不建議這麼做
+      var iGroupTotalAverage = (iGroupASum + iGroupBSum) / (_oGroupA.iSize + _oGroupB.iSize);
+      //F-Test（分子數）
+      var iFTestA =
+        (_oGroupA.iSize * System.Math.Pow(iGroupAAverage - iGroupTotalAverage, 2)) +
+        (_oGroupB.iSize * System.Math.Pow(iGroupBAverage - iGroupTotalAverage, 2));
+      var iGroupSubSum = _oGroupA.oList
+        .Select(x => System.Math.Pow(System.Math.Abs(x - _oGroupA.iAverage) - iGroupAAverage, 2))
+        .Sum();
+      iGroupSubSum += _oGroupB.oList
+        .Select(x => System.Math.Pow(System.Math.Abs(x - _oGroupB.iAverage) - iGroupBAverage, 2))
+        .Sum();
+      //F-Test（分母數）
+      var iFTestB = iGroupSubSum / oResult.iFDf2;
+      //F-Statistics
+      oResult.iFValue = iFTestA / iFTestB;
+      //F-Statistics in p-Value
+      oResult.iFPValue = _oStatistics.DataManipulator.Statistics.FDistribution(oResult.iFValue, (int)oResult.iFDf1, (int)oResult.iFDf2);
+
+      /* F-Test顯著性判定
+       * 按照統計學上面的論述都是 p &lt; α，鮮少看到 p &lt;= α 的論述，因此在這邊還是用小於來判定，日後有問題的話再回來修正。*/
+      if (oResult.iFPValue &lt; oResult.iSignificantLevel)
+      { //已達顯著差異，因此可判定樣本變異數不相等
+        oResult.bIsVarianceEquals = false;
+      }
+      else
+      { //未達顯著差異，因此可判定樣本變異數相等
+        oResult.bIsVarianceEquals = true;
+      }
+
+      /* T-TEST計算（樣本平均數差異T檢定）
+       * 這個檢定某些參數的計算公式，將基於F-TEST的「樣本變異數同質性之相同與否」而有所不同。
+       * 最終報告要取用哪一種計算結果，基本上是依據「bIsVarianceEquals」來進行最終判讀（當然也不能排除人類介入解讀的可能性）。
+       * 演算法定義參考（Equal or unequal sample sizes, similar variances／Equal or unequal sample sizes, unequal variances）：
+       * https://en.wikipedia.org/wiki/Student%27s_t-test */
+
+      //T檢定細部結果
+      Slashview.Statistics.TTestResultDetail oDetail;
+      //信賴區間臨界值（https://people.richland.edu/james/lecture/m170/tbl-t.html）
+      double iCriticalValues;
+
+      /* ***** 變異數相同計算 ***** */
+      oDetail = new Slashview.Statistics.TTestResultDetail()
+      {
+        bVarianceEquals = true,  //變異數相同
+        iDifferenceBetweenMeans = _oGroupA.iAverage - _oGroupB.iAverage
+      };
+      //合併標準差
+      var iSDCombine = System.Math.Pow
+      (
+        (
+          ((_oGroupA.iSize - 1) * System.Math.Pow(_oGroupA.iSD, 2)) +
+          ((_oGroupB.iSize - 1) * System.Math.Pow(_oGroupB.iSD, 2))
+        ) /
+        (
+          _oGroupA.iSize + _oGroupB.iSize - 2
+        ),
+        0.5
+      );
+      //平均數差異標準誤
+      oDetail.iStandardErrorOfDifferenceBetweenMeans = System.Math.Pow
+      ( 
+        System.Math.Pow(iSDCombine, 2) *
+        ((1d / _oGroupA.iSize) + (1d / _oGroupB.iSize)),
+        0.5
+      );
+      //T-Statistics
+      oDetail.iTValue = oDetail.iDifferenceBetweenMeans / oDetail.iStandardErrorOfDifferenceBetweenMeans;
+      //自由度（Degree of Freedom）
+      oDetail.iTDf = oResult.iFDf2;
+      //T-Statistics in p-Value
+      oDetail.iTPValue = _oStatistics.DataManipulator.Statistics.TDistribution(oDetail.iTValue, (int)oDetail.iTDf, false);
+      //求取在指定顯著性下的T分布表之臨界值
+      iCriticalValues = _oStatistics.DataManipulator.Statistics.InverseTDistribution(oResult.iSignificantLevel, (int)oDetail.iTDf);
+      //信賴區間下限
+      oDetail.iConfidenceLowerLimit = oDetail.iDifferenceBetweenMeans - (iCriticalValues * oDetail.iStandardErrorOfDifferenceBetweenMeans);
+      //信賴區間上限
+      oDetail.iConfidenceUpperLimit = oDetail.iDifferenceBetweenMeans + (iCriticalValues * oDetail.iStandardErrorOfDifferenceBetweenMeans);
+      //存回結果集合
+      oResult.oDetail.Add(oDetail);
+
+      /* ***** 變異數不相同之計算 ***** */
+      oDetail = new Slashview.Statistics.TTestResultDetail()
+      {
+        bVarianceEquals = false,  //變異數不相同
+        iDifferenceBetweenMeans = _oGroupA.iAverage - _oGroupB.iAverage
+      };
+      //平均數差異標準誤
+      oDetail.iStandardErrorOfDifferenceBetweenMeans = System.Math.Pow
+      (
+        (_oGroupA.iS * (1d / _oGroupA.iSize)) + (_oGroupB.iS * (1d / _oGroupB.iSize)),
+        0.5
+      );
+      //T-Statistics
+      oDetail.iTValue = oDetail.iDifferenceBetweenMeans / oDetail.iStandardErrorOfDifferenceBetweenMeans;
+      //自由度（Degree of Freedom）
+      oDetail.iTDf = System.Math.Pow
+      (
+        (_oGroupA.iS * (1d / _oGroupA.iSize)) +
+        (_oGroupB.iS * (1d / _oGroupB.iSize)),
+        2
+      ) /
+      (
+        (System.Math.Pow(_oGroupA.iS / _oGroupA.iSize, 2) / (_oGroupA.iSize - 1d)) +
+        (System.Math.Pow(_oGroupB.iS / _oGroupB.iSize, 2) / (_oGroupB.iSize - 1d))
+      );
+      //T-Statistics in p-Value
+      oDetail.iTPValue = _oStatistics.DataManipulator.Statistics.TDistribution(oDetail.iTValue, (int)oDetail.iTDf, false);
+      //求取在指定顯著性下的T分布表之臨界值
+      iCriticalValues = _oStatistics.DataManipulator.Statistics.InverseTDistribution(oResult.iSignificantLevel, (int)oDetail.iTDf);
+      //信賴區間下限
+      oDetail.iConfidenceLowerLimit = oDetail.iDifferenceBetweenMeans - (iCriticalValues * oDetail.iStandardErrorOfDifferenceBetweenMeans);
+      //信賴區間上限
+      oDetail.iConfidenceUpperLimit = oDetail.iDifferenceBetweenMeans + (iCriticalValues * oDetail.iStandardErrorOfDifferenceBetweenMeans);
+      //存回結果集合
+      oResult.oDetail.Add(oDetail);
+
+      //暫存結果並回傳
+      _oTTestResult = oResult;
+      return oResult;
+    }
+
+    /// &lt;summary>
+    /// 獨立樣本T檢定報告產生器
+    /// 此方法一定要銜接與統計運算後方能呼叫產生報告，否則將因為缺乏參考物件導致報告內容殘缺或錯誤。
+    /// &lt;/summary>
+    /// &lt;param name="cObjective">檢測目標詞句（預設：平均數）&lt;/param>
+    /// &lt;returns>獨立樣本T檢定文字報告&lt;/returns>
+    public string GetReport(string cObjective = "平均數")
+    { //檢查文件論述目標
+      if (string.IsNullOrEmpty(cObjective))
+      { cObjective = "平均數"; }
+      //檢查必要參數是否為空值
+      if (_oGroupA == null ||  _oGroupB == null || _oTTestResult == null)
+      { return "必要的統計結果為空值，請先進行實質統計運算後再調用此報告。"; }
+      //開始作文
+      var oRightResult = _oTTestResult.oDetail.Where(x => x.bVarianceEquals == _oTTestResult.bIsVarianceEquals).FirstOrDefault();
+      return $@"
+此獨立樣本T檢定用來比較{_oGroupA.cName}與{_oGroupB.cName}的{cObjective}是否有所差異。其中{_oGroupA.cName}的樣本數為{_oGroupA.iSize}個，{cObjective}平均數為{_oGroupA.iAverage}，而{_oGroupB.cName}的樣本數為{_oGroupB.iSize}個，{cObjective}平均數為{_oGroupB.iAverage}。
+
+在樣本變異數同質性檢定（F-Test）中採用Levene's test方法來進行，檢定統計量𝐹值為{_oTTestResult.iFValue}、𝑝值為{_oTTestResult.iFPValue}，{(_oTTestResult.bIsVarianceEquals ? "尚未" : "已經")}到達顯著水準（𝛼={_oTTestResult.iSignificantLevel}），代表所檢測的兩組樣本變異數{(_oTTestResult.bIsVarianceEquals ? "並無" : "具備")}顯著差異，因此在後續的獨立樣本T檢定中將採用「樣本變異數{(_oTTestResult.bIsVarianceEquals ? "相同" : "不同")}」的檢定方式來統計𝑇值。
+
+在獨立樣本T檢定（Independent Samples T-Test）中，檢定統計量𝑇值為{oRightResult.iTValue}、𝑝值為{oRightResult.iTPValue}，{(oRightResult.iTPValue &lt; _oTTestResult.iSignificantLevel ? "已經" : "尚未")}到達顯著水準（𝛼={_oTTestResult.iSignificantLevel}），因此{(oRightResult.iTPValue &lt; _oTTestResult.iSignificantLevel ? "拒絕虛無假設（𝐻₀）接受對立假設（𝐻₁）" : "無法拒絕虛無假設（𝐻₀）")}，這代表著{_oGroupA.cName}與{_oGroupB.cName}的{cObjective}之間{(oRightResult.iTPValue &lt; _oTTestResult.iSignificantLevel ? "存在" : "不存在")}顯著差異{(oRightResult.iTPValue &lt; _oTTestResult.iSignificantLevel ? $"，亦即{_oGroupA.cName}的{cObjective}{(_oGroupA.iAverage >= _oGroupB.iAverage ? "顯著大於" : "顯著小於")}{_oGroupB.cName}" : string.Empty)}。
+".Trim();
+    }
+  }
+
+  /// &lt;summary>
+  /// 物件類別：T檢定最終回傳值
+  /// &lt;/summary>
+  public class TTestResult
+  {
+    /* ***** F-Test（Levene's Test；樣本變異數同質性檢定） ***** */
+    //分子自由度（Degree of Freedom）；群組數
+    public double iFDf1 { get; set; }
+    //分母自由度（Degree of Freedom）；統計樣本數
+    public double iFDf2 { get; set; }
+    //F-Statistics
+    public double iFValue { get; set; }
+    //F-Statistics in p-Value
+    public double iFPValue { get; set; }
+    //顯著水準α
+    public double iSignificantLevel { get; set; }
+    //變異數是否相等
+    public bool bIsVarianceEquals { get; set; } = false;
+
+    /* ***** T-Test Detail Data Object ***** */
+    public System.Collections.Generic.List&lt;Slashview.Statistics.TTestResultDetail> oDetail = new System.Collections.Generic.List&lt;Slashview.Statistics.TTestResultDetail>();
+  }
+
+  /// &lt;summary>
+  /// 物件類別：T檢定細部資料
+  /// &lt;/summary>
+  public class TTestResultDetail
+  { //本計算是否採用「樣本變異數同質」運算
+    public bool bVarianceEquals { get; set; }
+    //自由度（Degree of Freedom）
+    public double iTDf { get; set; }
+    //T-Statistics
+    public double iTValue { get; set; }
+    //T-Statistics in p-Value
+    public double iTPValue { get; set; }
+    //平均數差異
+    public double iDifferenceBetweenMeans { get; set; }
+    //平均數差異標準誤
+    public double iStandardErrorOfDifferenceBetweenMeans { get; set; }
+    //信賴區間下限
+    public double iConfidenceLowerLimit { get; set; }
+    //信賴區間上限
+    public double iConfidenceUpperLimit { get; set; }
+  }
+}
+</code></pre><h2>獨立樣本T檢定類別運作後產生的結果</h2><p>如果讀者有把上面的程式碼讀懂，那麼應該已經對於類別調用的方法了然於心，故以下僅列舉出計算結果（物件序列化後的JSON）供給參考：</p><p>Ａ標準統計結果：</p><pre><code class=language-json>{
+  "cName": "Ａ",
+  "oList": [
+    240.0,
+    245.0,
+    249.0,
+    260.0,
+    260.0,
+    268.0,
+    270.0,
+    280.0,
+    290.0,
+    300.0
+  ],
+  "iSize": 10,
+  "iMaximum": 300.0,
+  "iMinimum": 240.0,
+  "iAverage": 266.2,
+  "iMedian": 264.0,
+  "iQuartile1": 251.75,
+  "iQuartile3": 277.5,
+  "iS": 380.62222222222215,
+  "iSD": 19.509541825020445,
+  "iSEM": 6.1694588273382784
+}
+</code></pre><p>Ｂ標準統計結果：</p><pre><code class=language-json>{
+  "cName": "Ｂ",
+  "oList": [
+    178.0,
+    190.0,
+    200.0,
+    210.0,
+    211.0,
+    222.0,
+    247.0,
+    250.0,
+    270.0
+  ],
+  "iSize": 9,
+  "iMaximum": 270.0,
+  "iMinimum": 178.0,
+  "iAverage": 219.77777777777777,
+  "iMedian": 211.0,
+  "iQuartile1": 200.0,
+  "iQuartile3": 247.0,
+  "iS": 922.19444444444434,
+  "iSD": 30.367654575953743,
+  "iSEM": 10.122551525317915
+}
+</code></pre><p>Ｔ檢定結果：</p><pre><code class=language-json>{
+  "oDetail": [
+    {
+      "bVarianceEquals": true,
+      "iTDf": 17.0,
+      "iTValue": 4.0079244493543822,
+      "iTPValue": 0.00091142287238465958,
+      "iDifferenceBetweenMeans": 46.422222222222217,
+      "iStandardErrorOfDifferenceBetweenMeans": 11.582609105743037,
+      "iConfidenceLowerLimit": 21.985053321423912,
+      "iConfidenceUpperLimit": 70.859391123020515
+    },
+    {
+      "bVarianceEquals": false,
+      "iTDf": 13.403312191728338,
+      "iTValue": 3.9160125396727836,
+      "iTPValue": 0.0017717046784679891,
+      "iDifferenceBetweenMeans": 46.422222222222217,
+      "iStandardErrorOfDifferenceBetweenMeans": 11.854462096819841,
+      "iConfidenceLowerLimit": 20.812213918531334,
+      "iConfidenceUpperLimit": 72.032230525913093
+    }
+  ],
+  "iFDf1": 1.0,
+  "iFDf2": 17.0,
+  "iFValue": 2.1377069035541596,
+  "iFPValue": 0.16195698208001097,
+  "iSignificantLevel": 0.05,
+  "bIsVarianceEquals": true
+}
+</code></pre><h2>Ｔ檢定自動化報告：</h2><p>此獨立樣本T檢定用來比較Ａ與Ｂ的期中成績是否有所差異。其中Ａ的樣本數為10個，期中成績平均數為266.2，而Ｂ的樣本數為9個，期中成績平均數為219.777777777778。</p><p>在樣本變異數同質性檢定（F-Test）中採用Levene's test方法來進行，檢定統計量𝐹值為2.13770690355416、𝑝值為0.161956982080011，尚未到達顯著水準（𝛼=0.05），代表所檢測的兩組樣本變異數並無顯著差異，因此在後續的獨立樣本T檢定中將採用「樣本變異數相同」的檢定方式來統計𝑇值。</p><p>在獨立樣本T檢定（Independent Samples T-Test）中，檢定統計量𝑇值為4.00792444935438、𝑝值為0.00091142287238466，已經到達顯著水準（𝛼=0.05），因此拒絕虛無假設（𝐻₀）接受對立假設（𝐻₁），這代表著Ａ與Ｂ的期中成績之間存在顯著差異，亦即Ａ的期中成績顯著大於Ｂ。</p><h3>獨立樣本T檢定相關參考</h3><ul><li><a href=http://homepage.ntu.edu.tw/%7Eclhsieh/biostatistic/e-index/e4.htm>入門概念：統計名詞縮寫表</a></li><li><a href="https://www.youtube.com/watch?v=lKo0fTmDyQI">入門概念：獨立樣本t檢定</a></li><li><a href=https://blog.pulipuli.info/2017/09/t-testing-differences-between-means.html>入門概念：連續變項的差異檢定：獨立樣本t檢定 / Testing Differences Between Means: Independent t-test</a></li><li><a href="https://www.youtube.com/watch?v=TvlCucfigT4">計算過程：獨立樣本T檢定</a></li><li><a href="https://www.youtube.com/watch?v=4pw6W-EnqUo">計算過程：尤其是母體（樣本）變異數相等或不相等的公式</a></li><li><a href=http://www.people.vcu.edu/%7Ewsstreet/courses/314_20033/Handout.Levene.pdf>計算過程：Levene’s Test for Equality of Variances</a></li><li><a href=https://content.slashview.com/file/20220101/20220101.zip>計算過程：Levene變異數相等檢定法F值、效果量與區間估計之計算（以獨立樣本T檢定為例）</a></li><li><a href=https://pulipulichen.github.io/HTML5-t-test-calculator/>計算驗證：獨立樣本t檢定計算器</a></li><li><a href=http://www.cust.edu.tw/mathmet/stat66f.pdf>計算驗證：假設檢定例題(雙母體變異數)</a></li><li><a href=https://www.socscistatistics.com/tests/levene/default.aspx>計算驗證：F檢定計算機（Levene's Test）</a></li></ul><h6>.NETFramewrok Statistics F-Test Levene-Test T-Test Walkthrough HandByHand CSharpSourceCode Implement IndependentSamplesTTest</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

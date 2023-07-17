@@ -1,0 +1,80 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>Java初探：介面（interface）之繼承與實作</h1><p>Java不像C++擁有多重繼承的能力，而多重繼承也不見得是一件好事，往往讓事情複雜化。但是，有很多時刻我們會需要使用多重繼承來設計我們所看到的東西，舉例來說：超人＝人＋超凡能力，在這樣的情況下你就需要多重繼承。</p><p>介面的產生就是為了不能夠多重的繼承某一個類別而出現，介面的概念有一點像是在制定一個標準，類似在規劃思考時期時留下的規範。承超人這個例子，你就好好的定義「人」這個介面，只要是人就會作ＯＯ，再去好好的定義「超凡能力」這個介面，只要是超凡能力泛指會作ＸＸ的動作，這樣一來，你就可以好好的操控你的類别去「實作」（implements）這些介面啦！</p><h2>介面之宣告、資料成員與方法成員</h2><ol><li>介面基本上就是抽象的一種形態，因此宣告時加與不加abstract關鍵字都可以，但是一定要加上interface關鍵字。</li><li>所有介面裡面的資料成員，一律都是public static final，因此一旦宣告就必須馬上給定值。</li><li>所有介面裡面的方法成員，一律都是public abstract，且因為是abstract，所以結尾一定要加上分號。</li></ol><h2>介面與類別之間的關係##</h2><ol><li>一個介面，可以繼承（extends）多個介面。</li><li>一個類別，可以實作（implements）多個介面。</li><li>一個類別，只可以繼承（extends）一個類別</li><li>介面永遠不可能被實例化（instances），你只能去實作（implements）它。</li><li>類別只能繼承（extends）類別，介面只能繼承介面。</li></ol><p>下面，我們來實作介面多重繼承介面，並套用到類別實作的範例。</p><pre><code class=language-java>//動物介面 IAnimal.java
+public interface IAnimal
+{
+  //資料成員一定是public、static、final（一定要一開始就給值）
+  public String Name = "Animal";  //只要是動物，都會有名字
+}
+</code></pre><p>※ 當在別的類别實作IAnimal介面時，你甚至可以使用IAnimal.Name直接取用"Animal"這個字串，因為所有介面中的資料成員，都是static修飾詞，所以可以直接取用！也因為這個特性，因此在實作覆寫（Overridding）時要特別小心。</p><pre><code class=language-java>//人類介面 IPeople.java
+public interface IPeople
+{
+  public int Age = 0;  //只要是人都有年紀
+  //方法成員一定是public、abstract（不可以被預設寫入任何程式碼）
+  public String Talk();  //只要是人都會講話
+}
+</code></pre><pre><code class=language-java>//嬰兒介面 IBaby.java
+public interface IBaby extends IAnimal, IPeople
+{
+  //嬰兒繼承了動物跟人類
+  public boolean Cry();  //只要是嬰兒都會哭
+}
+</code></pre><pre><code class=language-java>//新生兒類別 NewBorn.java 實作 IBaby
+public class NewBorn implements IBaby
+{
+  public int Age = 1;  //出生就算1歲，將0歲洗掉
+  public String Name = "Human";  //將預設值"Animal"洗掉
+  
+  public boolean Cry()
+  {
+    return true;  //新生兒都會哭
+  }
+  
+  public String Talk()
+  {
+    return "BraBra...";  //新生兒講話不清楚
+  }
+  
+  public static void main(String[] args)
+  {
+    NewBorn oTemp = new NewBorn();
+    System.out.println(oTemp.Name);  //Human
+    System.out.println(oTemp.Age);  //1
+    System.out.println(oTemp.Cry());  //true
+    System.out.println(oTemp.Talk());  //BraBra...
+    //由於NewBorn物件已經沒存取限制，因此可以任意覆寫資料成員
+    oTemp.Age = 2;
+    oTemp.Name = "John";  
+    System.out.println(oTemp.Name);  //John
+    System.out.println(oTemp.Age);  //2
+  }
+}
+</code></pre><p>當然，如果你嫌麻煩的話，也可以直接實現「一個類別，可以實作（implements）多個介面。」這句話，也就是說你可以少寫IBaby.java這個介面，直接把類別改成這樣也是可以完全相容的，怎麼做就見人見智了。感覺我們省掉了一個介面的撰寫時間，但是另外一方面，我們也失去了IBaby介面的完整視別度（規範），從下面的例子我們可以發現，Cry()方法彷彿橫空出世的蹦出來，假設NewBorn跟Cry的關係很不絕對的情況下，這在大型專案的維護上是很傷腦筋的。</p><pre><code class=language-java>public class NewBorn implements IAnimal, IPeople
+{
+  public int Age = 1;
+  public String Name = "Human";
+  
+  public String Talk()
+  {
+    return "BraBra...";
+  }
+  
+  //因為已經沒有IBaby介面來規範了，而下方的main又要存取到Cry()這個方法
+  //所以Cry在這裡相當於NewBorn自己新增的方法成員
+  public boolean Cry()
+  {
+    return true;
+  }
+  
+  public static void main(String[] args)
+  {
+    NewBorn oTemp = new NewBorn();
+    System.out.println(oTemp.Name);
+    System.out.println(oTemp.Age);
+    System.out.println(oTemp.Cry());
+    System.out.println(oTemp.Talk());
+    oTemp.Age = 2;
+    oTemp.Name = "John";    
+    System.out.println(oTemp.Name);
+    System.out.println(oTemp.Age);
+  }
+}
+</code></pre><h6>Java SCJP Class Multi Interfaces Extends</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

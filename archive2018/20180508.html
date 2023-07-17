@@ -1,0 +1,69 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>System.Collections的快速賦值方式</h1><p>今天突然發現System.Collections的各式類別，可以用跟陣列初始化相同的賦值方式，以後就不需要在那邊不斷Add作假資料，對很多人來說可能是習以為常，可是我到今天才發現心底還是有一點激動的。</p><p><img src=https://content.slashview.com/img/2018/20180508_01.jpg alt="" /></p><h2>Array初始化賦值的方式</h2><p>我們都知道，一個簡單的陣列，我們可以給予初始化的賦值方式。</p><pre><code class=language-cs>string[] testArray = { "aaa", "bbb" };
+</code></pre><h2>System.Collectios初始化賦值的方式</h2><p>以往我在建立一些測試資料時，只會用Add的方式逐一個增補資料。但其實我們可以使用跟Array一樣的方式去進行System.Collections預設值的賦予。程式碼如下列：</p><pre><code class=language-cs>var oCollection1 = new System.Collections.ArrayList()
+{
+  "EEE",
+  "FFF"
+};
+Console.WriteLine(string.Join("／", oCollection1.ToArray().Select(x => $"{x}")));
+
+var oCollection2 = new System.Collections.Generic.List&lt;string>()
+{
+  "GGG",
+  "HHH"
+};
+Console.WriteLine(string.Join("／", oCollection2.ToArray().Select(x => $"{x}")));
+
+var oCollection3 = new System.Collections.Generic.Dictionary&lt;string, int>()
+{
+  { "CCC", 3333 },
+  { "DDD", 4444 }
+};
+Console.WriteLine(string.Join("／", oCollection3.Keys.Select(x => $"{x}：{oCollection3[x]}")));
+
+var oCollection4 = new System.Collections.Specialized.NameValueCollection()
+{
+  { "AAA", "1111" },
+  { "BBB", "2222" }
+};
+Console.WriteLine(string.Join("／", oCollection4.AllKeys.Select(x => $"{x}：{oCollection4[x]}")));
+</code></pre><p>從上面的程式碼，我隨意的測試幾乎所有常用的System.Collections類別，都可以支援這樣子的快速賦值的寫法，程式碼裡面我順便也補上了利用LINQ來尋訪System.Collections的寫法，讓大家可以參考。</p><h2>用於集合資料包裡面為類別（自訂型別）時的快速賦值精簡寫法</h2><p>有時我們會在System.Collectios集合中塞入一個自訂的ORM型別，例如下列：</p><pre><code class=language-cs>public class Student
+{
+  public int Id { get; set; }
+  public string Name { get; set; }
+}
+</code></pre><p>而依據上面的快速賦值撰寫方式，我們可以用這樣的方式來進行：</p><pre><code class=language-cs>var oSource = new System.Collections.Generic.List&lt;Student>()
+{
+  new Student { Id = 1, Name = "John"},
+  new Student { Id = 2, Name = "Marry"},
+};
+</code></pre><p>但其實可以靠編譯器來進行更偷懶的精簡寫法，以括號來直接替換掉類別名稱，這種寫法是C# 9.0之後所支援的Target Typed New Expressions寫法，這個方法的延伸應用，亦可參考這篇「<a href=/archive2022/20221023.html>System.ValueTuple使用大全</a>」文章內容。</p><pre><code class=language-cs>var oSource = new System.Collections.Generic.List&lt;Student>()
+{
+  new () { Id = 1, Name = "John"},
+  new () { Id = 2, Name = "Marry"},
+};
+</code></pre><h2>用於類別裡面的「屬性」賦值時的精簡寫法</h2><p>應該要再說明確一點，這個初始化賦值的是C# 3.0時期（2007）引入的「Object and Collection Initializers」的寫法，也就是類似與VB針對類別給予的With運算子一樣的運作方式，可以被簡單初始化賦值。我們直接來看一下Console程式碼：</p><pre><code class=language-cs>public System.Collections.Specialized.NameValueCollection oData { get; set;} = new System.Collections.Specialized.NameValueCollection();
+  
+public static void Main()
+{
+  //進行物件快速初始化
+  Program oTemp = new Program()
+  {
+    //只能說這種超精簡的初始化賦值的超級深得我心
+    oData =
+    {
+      {"aaa", "111"},
+      {"bbb", "222"}
+    }
+  };
+    
+  /* 但是下面這種寫法卻不被C#編譯器接受，除非與上一段程式碼一樣，在等號後面補上「new System.Collections.Specialized.NameValueCollection()」才可以運作
+  oTemp.oData =
+  {
+    {"aaa", "111"},
+    {"bbb", "222"}
+  };
+  */
+    
+  Console.WriteLine(string.Join("\n", oTemp.oData.AllKeys.Select(x => $"{x}、{oTemp.oData[x]}")));
+}
+</code></pre><h3>相關參考</h3><ul><li><a href=/archive2018/20181225.html>C# out與ref的回憶</a></li><li><a href=/archive2022/20221023.html>System.ValueTuple使用大全</a></li><li><a href=/archive2018/20180508.html>System.Collections的快速賦值方式</a></li></ul><h6>陣列快速初始化 陣列快速賦值 ArrayInitializer 集合快速初始化 集合快速賦值 CollectionInitializer 物件快速初始化 物件快速賦值 ObjectIntializer System.Collections Array Declaration Initialization</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

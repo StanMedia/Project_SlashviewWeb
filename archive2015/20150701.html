@@ -1,0 +1,25 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>Image.Save();時出現「在GDI+中發生泛型錯誤」</h1><p>今天處理一件突發狀況，就是在System.Drawing.Image實體去呼叫Save()方法時，發生了「在GDI+中發生泛型錯誤」（A generic error occurred in GDI+）。這個很明顯的已經不是.NET Framework本身的問題了，於是到網路上去查，果然一堆然有相同的慘狀。</p><p>查詢一下錯誤訊息，Exception是發生在.NET這兩個方法被呼叫時。</p><pre><code class=language-cs>System.Drawing.Image.Save(String filename, ImageCodecInfo encoder, EncoderParameters encoderParams)
+System.Drawing.Image.Save(String filename, ImageFormat format)
+</code></pre><p>會出錯的程式碼如下：</p><pre><code class=language-cs>using (System.Drawing.Image oOrgImg = System.Drawing.Image.FromFile(cFilePath)
+{
+  using (System.Drawing.Image oTarImg = new System.Drawing.Bitmap(iTarWidth, iTarHeight, oOrgImg.PixelFormat))
+  {
+    //Exception: A generic error occurred in GDI+    
+    oTarImg.Save(cFilePathSomewhere, System.Drawing.Imaging.ImageFormat.Jpeg);
+  }
+}
+</code></pre><p>發生問題的原因，是因為Image.Save()有極大的權限限制，例如一定要有完整的目錄路徑存取權，另外Image物件的來源，也不可以有檔案被開啟的狀況（咬檔）。這對於一般來說，要進行開啟、修改、覆寫的人來說，很容易就踩中雷了。因此，解決的方式就是掛上System.IO.MemoryStream再去寫入（或直接掛上System.IO.FileStream類別也可），讓串流來充當中繼層再寫入會比較好。（有點無言，但真的有效。）</p><pre><code class=language-cs>using (System.Drawing.Image oOrgImg = System.Drawing.Image.FromFile(cFilePath)
+{
+  using (System.Drawing.Image oTarImg = new System.Drawing.Bitmap(iTarWidth, iTarHeight, oOrgImg.PixelFormat))
+  {
+    using (System.IO.MemoryStream oMS = new System.IO.MemoryStream())
+    {
+      //將oTarImg儲存（指定）到記憶體串流中
+      oTarImg.Save(oMS, System.Drawing.Imaging.ImageFormat.Jpeg);
+      //將串流整個讀到陣列中，寫入某個路徑中的某個檔案裡
+      using (System.IO.FileStream oFS = System.IO.File.Open(cFilePathSomewhere, System.IO.FileMode.OpenOrCreate))
+      { oFS.Write(oMS.ToArray(), 0, oMS.ToArray().Length); }
+    }
+  }
+}
+</code></pre><p>這樣做的缺點，就是你不可以快快樂樂的將原開啟的檔案，透過單一行程式呼叫.Save()進行檔案儲存了，實在很不方便，但是沒辦法，只能老實接受。與原本MSDN上面寫的那種<a href=https://goo.gl/iXFHzV>快感</a>，差很多啊！</p><h3>Update 20171123：</h3><p>另外再補充說明一下，有關於Image.FromFile出現記憶體不足的問題真的非常的嚴重，隨便打一下關鍵字都有上千篇的疑問再問這個問題，可是都沒有一個比較令人滿意的完整解答。有一派的人說改採用System.Drawing.Image.FromStream會好很多，事實上親自測試過後，半斤八兩並沒有好到哪裡去（但是採用FileStream來讀檔案的效能會好很多），偶爾還是會發生記憶體不足的Exception，故在此紀錄。</p><h6>System.Drawing.Image.Save System.Exception AGenericErrorOccurredInGDI+</h6></main><footer></footer><script src=/.file/site.js></script></body></html>
