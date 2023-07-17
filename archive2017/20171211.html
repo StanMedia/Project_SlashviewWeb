@@ -4,9 +4,14 @@
     &lt;compiler language="c#;cs;csharp" extension=".cs" type="Microsoft.CodeDom.Providers.DotNetCompilerPlatform.CSharpCodeProvider, Microsoft.CodeDom.Providers.DotNetCompilerPlatform, Version=1.0.8, Culture=neutral, PublicKeyToken=31bf3856ad364e35" warningLevel="4" compilerOptions="/langversion:default /nowarn:1659;1699;1701"/>
   &lt;/compilers>
 &lt;/system.codedom>
-</code></pre><h3>2021-01-14 補充說明：</h3><p>來到了VisualStudio 2019時代，Microsoft.CodeDom.Providers.DotNetCompilerPlatform也輾轉的來到了3.6.0版本，當DLL被複製進bin資料夾下，以下分享web.config的撰寫方法：</p><pre><code class=language-xml>&lt;system.codedom>
+</code></pre><p>大功告成，Happy Coding！</p><h3>2021-01-14 補充說明：</h3><p>來到了VisualStudio 2019時代，Microsoft.CodeDom.Providers.DotNetCompilerPlatform也輾轉的來到了3.6.0版本，當DLL被複製進bin資料夾下，以下分享web.config的撰寫方法：</p><pre><code class=language-xml>&lt;system.codedom>
   &lt;compilers>
     &lt;compiler extension=".cs" language="c#;cs;csharp" warningLevel="4" compilerOptions="/langversion:default /nowarn:1659;1699;1701;612;618" type="Microsoft.CodeDom.Providers.DotNetCompilerPlatform.CSharpCodeProvider, Microsoft.CodeDom.Providers.DotNetCompilerPlatform, Version=3.6.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35" />
   &lt;/compilers>
 &lt;/system.codedom>
-</code></pre><p>大功告成，Happy Coding！</p><h3>相關連結</h3><ul><li><a href=/archive2021/20210114.html>在ASP.NET WSP模式中，啟用C# 8.0（Roslyn）編譯器</a></li><li><a href=/archive2017/20170817.html>在ASP.NET WSP模式中，啟用C# 7.0（Roslyn）編譯器</a></li><li><a href=/archive2016/20160617.html>在ASP.NET WSP模式中，啟用C# 6.0（Roslyn）編譯器</a></li><li><a href=/archive2017/20171212.html>快速進行WSP網站之C#（Roslyn）編譯器相關檔案覆蓋作業</a></li></ul><p>VisualStudio WSP WebSiteProject C#6.0 C#7.0 C#7.1 Debug Enable</p></main><footer></footer><script src=/.file/site.js></script></body></html>
+</code></pre><h3>2023-07-17 補充說明：</h3><p>來到了VisualStudio 2022時代，Microsoft.CodeDom.Providers.DotNetCompilerPlatform也輾轉的來到了3.11.0版本（因為我想停留在C# 9.0版的語法，如果<code>想要使用C# 10.0的話，其實當前的DotNetCompilerPlatform最新版本是4.1.0</code>），當DLL被複製進bin資料夾下，以下分享web.config的撰寫方法：</p><pre><code class=language-xml>&lt;system.codedom>
+  &lt;compilers>
+    &lt;compiler extension=".cs" language="c#;cs;csharp" warningLevel="4" compilerOptions="/langversion:default /nowarn:1659;1699;1701;612;618" type="Microsoft.CodeDom.Providers.DotNetCompilerPlatform.CSharpCodeProvider, Microsoft.CodeDom.Providers.DotNetCompilerPlatform, Version=3.11.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35" />
+  &lt;/compilers>
+&lt;/system.codedom>
+</code></pre><h3>相關連結</h3><ul><li><a href=/archive2021/20210114.html>在ASP.NET WSP模式中，啟用C# 8.0（Roslyn）編譯器</a></li><li><a href=/archive2017/20170817.html>在ASP.NET WSP模式中，啟用C# 7.0（Roslyn）編譯器</a></li><li><a href=/archive2016/20160617.html>在ASP.NET WSP模式中，啟用C# 6.0（Roslyn）編譯器</a></li><li><a href=/archive2017/20171212.html>快速進行WSP網站之C#（Roslyn）編譯器相關檔案覆蓋作業</a></li></ul><p>VisualStudio WSP WebSiteProject C#6.0 C#7.0 C#7.1 Debug Enable</p></main><footer></footer><script src=/.file/site.js></script></body></html>
