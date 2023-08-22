@@ -1,0 +1,39 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>利用動態型別與匿名型別來記錄、描述資料</h1><p>前陣子經手一個與自己毫不相關的案子，裡面有一個需求是必須在運作過程中建立可查詢的物件列表，例如：</p><pre><code>鍵值：王小明
+資料：該員英文姓名、戶籍地址...
+鍵值：李小華
+資料：該員英文姓名、戶籍地址...
+</code></pre><p>依據正規的作法應該是建立一個集合物件，然後定義成員資料DTO，接著逐一添加進入這個集合物件。但，由於這不是一個後續會永久維護的案子，我也不想在這個案子中貢獻過多的程式碼，因此思考著如何在不建立Model Class的狀態，也不考慮效能的狀態下，來撰寫這些程式碼。</p><h2>透過動態型別與匿名型別來儲存資料至記憶體</h2><p>先說好，這裡不考慮效能，只考慮以最短的時間內將資料以可查詢的型態記錄在記憶體中，供給後續查詢或輸出利用。</p><pre><code class=language-cs>//宣告一個動態物件
+var oDynamic = new System.Dynamic.ExpandoObject();
+//製作資料
+for (int i = 0; i &lt; 5; i++)
+{ //宣告動態物件是字典介面，並利用Add方法推入鍵值與資料包
+  (oDynamic as System.Collections.Generic.IDictionary&lt;string, object>)
+    .Add($"cKey{i}", new { cId = $"User{i}", iMoney = i });
+}
+</code></pre><h2>序列化輸出成JSON</h2><p>透過Json.NET驗證資料是否可以序列化輸出，丟給外部處理：</p><pre><code class=language-cs>Console.WriteLine(Newtonsoft.Json.JsonConvert.SerializeObject(oDynamic, Newtonsoft.Json.Formatting.Indented));
+</code></pre><p>答案是可以的：</p><pre><code class=language-txt>{
+  "cKey0": {
+    "cId": "User0",
+    "iMoney": 0
+  },
+  "cKey1": {
+    "cId": "User1",
+    "iMoney": 1
+  },
+  "cKey2": {
+    "cId": "User2",
+    "iMoney": 2
+  },
+  "cKey3": {
+    "cId": "User3",
+    "iMoney": 3
+  },
+  "cKey4": {
+    "cId": "User4",
+    "iMoney": 4
+  }
+}
+</code></pre><h2>在程式碼中動態取值</h2><p>假設我們要針對cKey2拿出裡面的資料包與值，那麼我們可以反宣告回dynamic型別，就可以順利的轉型回來，超爽的。</p><pre><code class=language-cs>dynamic oTemp = (oDynamic as System.Collections.Generic.IDictionary&lt;string, object>)["cKey2"];
+Console.WriteLine(oTemp.cId);
+Console.WriteLine(oTemp.iMoney);
+</code></pre><p>上面描述的做法其實並不正規，對於效能的損耗也很大（效能超低），閱讀者可以發現其實在「動態取值」階段程式碼已經開始變得失控（會有一種乾脆把資料類別定義好不是比較乾脆嗎？的想法），使用者請自己視情況判斷是否採用之。對於我來說，應用其實到輸出階段就終止了，所以我還蠻偏好這種寫法的。</p><h6>C# 動態型別 匿名型別 免定義類別 免宣告資料模型 動態轉換 動態取值</h6></main><footer></footer><script src=/.file/site.js></script></body></html>
