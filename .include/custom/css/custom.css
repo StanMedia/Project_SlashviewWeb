@@ -83,7 +83,7 @@ main p {
 /* 醒目標註樣式 */
 main code {
   font-size: 1rem;
-  font-weight:  lighter;
+  font-weight: bolder;
   color: #c7254e;
   background-color: #f9f2f4;
   border-radius: 0.375rem;
@@ -109,6 +109,7 @@ main pre code {
   color: initial;
   background-color: initial;
   font-size: .95rem;
+  font-weight: lighter;
   white-space: pre-wrap;   /* 強制換行 */
   tab-size: 2;  /* TAB以兩個字元顯示 */
 }
