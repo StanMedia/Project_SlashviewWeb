@@ -116,6 +116,7 @@ main pre code {
 .hljs-copy {
   float: right;
   cursor: pointer;
+  margin-left: .5rem;
 }
 
 /* 圖片樣式 */
