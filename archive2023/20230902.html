@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>消除Decimal型別尾數多餘的補零</h1><p>Decimal型別用來處理數值好處多多，但是有一個有可能不太適用正常眼光的特性，就是.ToString()後會幫忙補足該數值的浮點位數，這點有時候還蠻惱人的。</p><h2>Decimal型別遇到浮點型態尾數會自動補零的特性</h2><p>假設我們有一個decimal型別的程式碼被這樣寫：</p><pre><code class=language-cs>var fTest = 1.000001m;
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>消除Decimal型別尾數多餘的補零</h1><p>Decimal型別用來處理數值好處多多，但是有一個有可能不太適用於真實社會上的處理特性，那就是當你對decimal進行ToString()後，輸出會幫忙補足該數值的浮點位數，這點有時候還蠻惱人的。（會計酸：謝謝你幫我補那堆無意義的零喔！）</p><h2>Decimal型別遇到浮點型態尾數會自動補零的特性</h2><p>假設我們有一個decimal型別的程式碼這樣寫：</p><pre><code class=language-cs>var fTest = 1.000001m;
 Console.WriteLine(fTest);
 fTest += 0.999999m;
 Console.WriteLine(fTest);
