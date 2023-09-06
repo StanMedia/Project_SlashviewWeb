@@ -54,7 +54,7 @@
 <div class="container pt-5 pb-4">
   <div class="row">
     <div class="col-7 col-sm-8 text-white">
-      <p><strong>Copyright &copy; since 2013 by SlashView, All Rights Reserved.</strong></p>
+      <p><strong>Copyright &copy; since 2013 by SlashView, All Rights Reserved. <i class="fa-solid fa-user-shield fa-fw"></i> <a href="/privacy.html">Privacy Policy</a></strong></p>
     </div>
     <div class="col-5 col-sm-4 text-end">
       <button class="btn btn-outline-light" id="uBackToTop"><i class="fa-solid fa-angles-up me-2"></i>Back to top</button>
