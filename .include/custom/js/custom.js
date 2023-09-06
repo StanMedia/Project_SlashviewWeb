@@ -40,7 +40,7 @@
     <nav class="d-inline-flex align-items-center">
       <a class="text-white text-decoration-none me-4" href="/"><i class="fa-solid fa-bookmark text-info"></i><span class="d-none d-md-inline ms-2">articles</span></a>
       <a class="text-white text-decoration-none me-4" href="/about.html"><i class="fa-solid fa-envelope text-info"></i><span class="d-none d-md-inline ms-2">about &amp; contact</span></a>
-      <a class="text-white text-decoration-none" href="/privacy.html"><i class="fa-solid fa-user-shield fa-fw"></i><span class="d-none d-md-inline ms-2">privacy</span></a>
+      <a class="text-white text-decoration-none" href="/privacy.html"><i class="fa-solid fa-user-shield text-info"></i><span class="d-none d-md-inline ms-2">privacy</span></a>
       <a class="text-white text-decoration-none" href="/search.html"><i class="fa-solid fa-magnifying-glass text-info"></i><span class="d-none d-md-inline ms-2">search</span></a>
     </nav>
   </div>
