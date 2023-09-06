@@ -40,6 +40,7 @@
     <nav class="d-inline-flex align-items-center">
       <a class="text-white text-decoration-none me-4" href="/"><i class="fa-solid fa-bookmark text-info"></i><span class="d-none d-md-inline ms-2">articles</span></a>
       <a class="text-white text-decoration-none me-4" href="/about.html"><i class="fa-solid fa-envelope text-info"></i><span class="d-none d-md-inline ms-2">about &amp; contact</span></a>
+      <a class="text-white text-decoration-none" href="/privacy.html"><i class="fa-solid fa-user-shield fa-fw"></i><span class="d-none d-md-inline ms-2">privacy</span></a>
       <a class="text-white text-decoration-none" href="/search.html"><i class="fa-solid fa-magnifying-glass text-info"></i><span class="d-none d-md-inline ms-2">search</span></a>
     </nav>
   </div>
@@ -54,7 +55,7 @@
 <div class="container pt-5 pb-4">
   <div class="row">
     <div class="col-7 col-sm-8 text-white">
-      <p><strong>Copyright &copy; since 2013 by SlashView, All Rights Reserved. <i class="fa-solid fa-user-shield fa-fw"></i> <a href="/privacy.html">Privacy Policy</a></strong></p>
+      <p><strong>Copyright &copy; since 2013 by SlashView, All Rights Reserved.</strong></p>
     </div>
     <div class="col-5 col-sm-4 text-end">
       <button class="btn btn-outline-light" id="uBackToTop"><i class="fa-solid fa-angles-up me-2"></i>Back to top</button>
