@@ -12,7 +12,7 @@ DTEND;VALUE=DATE:{cEnd}
 END:VEVENT
 END:VCALENDAR
 `,r=new Date(`${n.slice(0,4)}-${n.slice(4,6)}-${n.slice(6,8)}`);r.setDate(r.getDate()+1);let f=r.toISOString().split("T")[0].replace(/-/g,""),e=new Blob([u.replace(/{cStart}/g,n).replace(/{cEnd}/g,f).replace(/{cSubject}/g,t)],{type:"text/plain"}),i=document.createElement("a");i.href=URL.createObjectURL(e);i.download=`${n}_${t}祭祖.ics`;i.click();URL.revokeObjectURL(i.href)}function padNum(n){return String(n).padStart(2,"0")}function bIsLeapYear(n){return n%4==0&&n%100!=0||n%400==0}function calcDate(n){let i=[],r=[31,bIsLeapYear(n)?29:28,31,30,31,30,31,31,30,31,30,31];for(let u=1;u<=12;u++)for(let f=1;f<=r[u-1];f++){var t=calendar.solar2lunar(n,u,f);(t.lMonth===12&&t.lDay===30||t.Term==="清明"||t.lMonth===5&&t.lDay===5||t.lMonth===7&&t.lDay===15||t.lMonth===9&&t.lDay===9)&&(t.lunarFestival=t.Term==="清明"?t.Term:t.lunarFestival.replace(/節/g,""),i.push(t))}return i}function generateTable(n){var i=`
-<table class="table table-responsive">
+<table class="table table-hover">
   <thead>
     <tr>
       <th scope="col">祭祖日</th>
