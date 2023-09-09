@@ -12,13 +12,13 @@ DTEND;VALUE=DATE:{cEnd}
 END:VEVENT
 END:VCALENDAR
 `,r=new Date(`${n.slice(0,4)}-${n.slice(4,6)}-${n.slice(6,8)}`);r.setDate(r.getDate()+1);let f=r.toISOString().split("T")[0].replace(/-/g,""),e=new Blob([u.replace(/{cStart}/g,n).replace(/{cEnd}/g,f).replace(/{cSubject}/g,t)],{type:"text/plain"}),i=document.createElement("a");i.href=URL.createObjectURL(e);i.download=`${n}_${t}祭祖.ics`;i.click();URL.revokeObjectURL(i.href)}function padNum(n){return String(n).padStart(2,"0")}function bIsLeapYear(n){return n%4==0&&n%100!=0||n%400==0}function calcDate(n){let i=[],r=[31,bIsLeapYear(n)?29:28,31,30,31,30,31,31,30,31,30,31];for(let u=1;u<=12;u++)for(let f=1;f<=r[u-1];f++){var t=calendar.solar2lunar(n,u,f);(t.lMonth===12&&t.lDay===30||t.Term==="清明"||t.lMonth===5&&t.lDay===5||t.lMonth===7&&t.lDay===15||t.lMonth===9&&t.lDay===9)&&(t.lunarFestival=t.Term==="清明"?t.Term:t.lunarFestival.replace(/節/g,""),i.push(t))}return i}function generateTable(n){var i=`
-<table class="table table-hover">
+<table class="table table-responsive">
   <thead>
     <tr>
-      <th scope="col">祭祖節日</th>
+      <th scope="col">祭祖日</th>
       <th scope="col">農曆日期</th>
       <th scope="col">西元日期</th>
-      <th scope="col">行事曆下載</th>
+      <th scope="col">行事曆</th>
     </tr>
   </thead>
   <tbody>
@@ -30,6 +30,6 @@ END:VCALENDAR
   <td>${i.lunarFestival}</td>
   <td>${i.lYear}-${padNum(i.lMonth)}-${padNum(i.lDay)}</td>
   <td>${i.cYear}-${padNum(i.cMonth)}-${padNum(i.cDay)}</td>
-  <td><button class="btn btn-warning btn-sm" onclick="iCalFile('${i.cYear}${padNum(i.cMonth)}${padNum(i.cDay)}', '${i.lunarFestival}')">Download</button></td>
+  <td><button class="btn btn-outline-secondary btn-sm" onclick="iCalFile('${i.cYear}${padNum(i.cMonth)}${padNum(i.cDay)}', '${i.lunarFestival}')"><i class="fa-solid fa-cloud-arrow-down fa-fw"></i><span class="d-none d-sm-inline"> Download</span></button></td>
 </tr>
 `)}),i.replace("{content}",t.join(""))}let oNow=new Date,iYear=oNow.getFullYear(),iMonth=padNum(oNow.getMonth()+1),iDay=padNum(oNow.getDate());$("#uToday").html(`<i class="fa-solid fa-clock fa-fw"></i> 現在時間：${iYear}-${iMonth}-${iDay}`);$("h2:eq(1)").text(iYear+$("h2:eq(1)").text());$("h2:eq(2)").text(iYear+1+$("h2:eq(2)").text());$("#uYearNow").html(generateTable(calcDate(iYear)));$("#uYearNext").html(generateTable(calcDate(iYear+1)))</script><h6>今年祭祖 明年祭祖 農曆日期 陰曆日期 全部 列表 快速 線上 查詢 五大節日 除夕 春節 清明節 端午節 中元節 重陽節 行事曆 下載</h6></main><footer></footer><script src=/.file/site.js></script></body></html>
