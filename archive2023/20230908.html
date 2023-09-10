@@ -30,6 +30,6 @@ END:VCALENDAR
   <td>${i.lunarFestival}</td>
   <td>${i.lYear}-${padNum(i.lMonth)}-${padNum(i.lDay)}</td>
   <td>${i.cYear}-${padNum(i.cMonth)}-${padNum(i.cDay)}</td>
-  <td><button class="btn btn-outline-secondary btn-sm" onclick="iCalFile('${i.cYear}${padNum(i.cMonth)}${padNum(i.cDay)}', '${i.lunarFestival}')"><i class="fa-solid fa-cloud-arrow-down fa-fw"></i><span class="d-none d-sm-inline"> Download</span></button></td>
+  <td><button class="btn btn-outline-success btn-sm" onclick="iCalFile('${i.cYear}${padNum(i.cMonth)}${padNum(i.cDay)}', '${i.lunarFestival}')"><i class="fa-solid fa-cloud-arrow-down fa-fw"></i><span class="d-none d-sm-inline"> Download</span></button></td>
 </tr>
 `)}),i.replace("{content}",t.join(""))}let oNow=new Date,iYear=oNow.getFullYear(),iMonth=padNum(oNow.getMonth()+1),iDay=padNum(oNow.getDate());$("#uToday").html(`<i class="fa-solid fa-clock fa-fw"></i> 現在時間：${iYear}-${iMonth}-${iDay}`);$("h2:eq(1)").text(iYear+$("h2:eq(1)").text());$("h2:eq(2)").text(iYear+1+$("h2:eq(2)").text());$("#uYearNow").html(generateTable(calcDate(iYear)));$("#uYearNext").html(generateTable(calcDate(iYear+1)))</script><h6>今年祭祖 明年祭祖 農曆日期 陰曆日期 全部 列表 快速 線上 查詢 五大節日 除夕 春節 清明節 端午節 中元節 重陽節 行事曆 下載</h6></main><footer></footer><script src=/.file/site.js></script></body></html>
