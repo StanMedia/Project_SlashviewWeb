@@ -6,13 +6,13 @@
     <div class="text-success m-0 mt-1">${o}</div>
   </div>
 </td>
-`;(t+1)%7==0&&(r+=`<tr name="CalendarRow">${i}</tr>`,i="");n.setDate(n.getDate()+1)}$("tr.table-light").nextAll().remove();$("table.table").append(r);let e=$("#uTaiwanYear").offset().top-70;$("html, body").animate({scrollTop:e},100)}function generateCalendarDetail(n){let t=calendar.solar2lunar(n.getFullYear(),n.getMonth()+1,n.getDate()),i=[],r="";t.Term==="清明"&&i.push("清明節");t.lunarFestival&&i.push(t.lunarFestival);t.festival&&i.push(t.festival);r=i.join("")?`<span class="text-info">${i.join("、")}</span>`:`<i class='fa-solid fa-ban text-secondary'></i>`;$("#uCalendarDetail").html(`
+`;(t+1)%7==0&&(r+=`<tr name="CalendarRow">${i}</tr>`,i="");n.setDate(n.getDate()+1)}$("tr.table-light").nextAll().remove();$("table.table").append(r);let e=$("#uTaiwanYear").offset().top-70;$("html, body").animate({scrollTop:e},100)}function generateCalendarDetail(n){let t=calendar.solar2lunar(n.getFullYear(),n.getMonth()+1,n.getDate()),i=[],r="";t.Term==="清明"&&i.push("清明節");t.lunarFestival&&i.push(t.lunarFestival);t.festival&&i.push(t.festival);r=i.join("")?`<span class="text-info">${i.join("、")}</span>`:`<i class='fa-solid fa-ban text-secondary opacity-25'></i>`;$("#uCalendarDetail").html(`
       <p>西曆：${n.getFullYear()}-${padNum(n.getMonth()+1)}-${padNum(n.getDate())}</p>
       <p>國曆：${n.getFullYear()-1911}-${padNum(n.getMonth()+1)}-${padNum(n.getDate())}</p>
       <p>農曆：${t.IMonthCn}${t.IDayCn}</p>
       <hr class="bg-secondary">
       <p class="lh-sm">歲次：<span class="text-warning">${t.gzYear}</span>年<span class="text-warning">${t.gzMonth}</span>月<span class="text-warning">${t.gzDay}</span>日</p>
-      <p>節氣：<span class="text-success">${t.Term?t.Term:"<i class='fa-solid fa-ban text-secondary'><\/i>"}</span></p>
+      <p>節氣：<span class="text-success">${t.Term?t.Term:"<i class='fa-solid fa-ban text-secondary opacity-25'><\/i>"}</span></p>
       <hr class="bg-secondary">
       <p>生肖：屬${t.Animal}</p>
       <p>星座：${t.astro}</p>
