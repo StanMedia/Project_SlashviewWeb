@@ -1,0 +1,26 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>透過Windows BAT批次查詢大量檔案是否存在</h1><p>我有一個檔案列表，裡面完整地羅列出檔案完整的路徑與檔名，那麼要用怎樣的方式才能確認這些檔案分別是否存在與否呢？</p><h2>透過Windows .BAT來確認大量檔案存在與否</h2><p>坦白說這種東西用C#寫，也沒幾行就完成了。但這一點小小的工作也要透過C#來開發console應用程式就真的殺雞用牛刀了。其實這種小需求透過古老的bat script寫一下，跑一跑批次就解決了。</p><p>首先，請準備一個文字檔案名為<code>list.txt</code>，裡面的內容如下：</p><pre><code class=language-txt>C:\Windows\System32\aadauthhelper.dll
+C:\Windows\System32\BamSettingsClient.dll
+C:\Program Files\7-Zip\7z.dll
+C:\Program Files\Brabra\test.exe
+D:\Something\ApacheBench\ab.exe
+D:\Something\ApacheBench\cd.exe
+</code></pre><p>然後請在這個<code>list.txt</code>同目錄下開啟一個文字檔案，將下列的程式碼貼上，並將檔案取名為<code>FindFile.bat</code>。</p><pre><code class=language-bat>@echo off
+setlocal enabledelayedexpansion
+
+set "inputFile=list.txt"
+for /f "delims=" %%a in (%inputFile%) do (
+  set "file=%%a"
+  if exist "!file!" (
+    echo ^|O^|    !file!
+  ) else (
+    echo ^|X^|    !file!
+  )
+)
+</code></pre><p>接下來就是去<code>cmd</code>命令模式下跑這隻<code>FindFile.bat</code>批次檔案，如果需要<code>最高管理者權限</code>的話就請適度開啟，以免無法存取到某些機敏目錄，輸出結果如下：</p><pre><code class=language-txt>|O|    C:\Windows\System32\aadauthhelper.dll
+|O|    C:\Windows\System32\BamSettingsClient.dll
+|O|    C:\Program Files\7-Zip\7z.dll
+|X|    C:\Program Files\Brabra\test.exe
+|O|    D:\Something\ApacheBench\ab.exe
+|X|    D:\Something\ApacheBench\cd.exe
+</code></pre><p>結果就會如上面所呈現，<code>|O|</code>代表這個檔案是存在的，而<code>|X|</code>就代表這個檔案不存在嘍。</p><p>若想要保存的話可以使用輸出導向成檔案即可，下面範例就是把輸出導向到<code>CheckList.txt</code>檔案保存下來：</p><pre><code class=language-txt>C:\>FindFil.bat > CheckList.txt
+</code></pre><h6>Windows CommandMode ConsoleMode BAT BatchFile CheckFilesExist FileList</h6></main><footer></footer><script src=/.file/site.js></script></body></html>
