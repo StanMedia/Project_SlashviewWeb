@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>SQL筆記：透過觸發Trigger進行資料表新增、修改、刪除之自動化LOG</h1><p>簡單的說，這篇文章就是在描述如何從一張資料表中，不透過應用程式端監控的方式，使用純粹SQL Server的觸發事件功能，去監控並記錄某張資料表的新增、修改、刪除等動作，並自動化的紀錄（LOG）在另外一張資料表中。</p><h2>建立主要監控的資料表</h2><p>其實任何一張資料表都可以被監控，但是一定會損耗效能的，以下是我們要建立的資料表指令，其中的iAutoIndex是主索引鍵（Primary Key），並設為自動增量（Auto Increment），這邊命令這張資料表的名稱是<code>zTable</code>。</p><pre><code class=language-sql>USE [Catalog_資料桶名稱]
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>SQL筆記：透過觸發Trigger進行資料表新增、修改、刪除之自動化LOG</h1><p>簡單的說，這篇文章就是在描述如何從一張資料表中，不透過應用程式端監控再分別寫入的方式，使用純粹SQL Server的觸發事件功能，去監控並記錄某張資料表的新增、修改、刪除等動作，並自動化的紀錄（LOG）在另外一張資料表中。</p><h2>建立主要監控的資料表</h2><p>其實任何一張資料表都可以被監控，但是一定會損耗效能的，以下是我們要建立的資料表指令，其中的iAutoIndex是主索引鍵（Primary Key），並設為自動增量（Auto Increment），這邊命令這張資料表的名稱是<code>zTable</code>。</p><pre><code class=language-sql>USE [Catalog_資料桶名稱]
 GO
 SET ANSI_NULLS ON
 GO
@@ -20,7 +20,7 @@ CREATE TABLE [dbo].[zTable]
   ) ON [PRIMARY]
 ) ON [PRIMARY]
 GO
-</code></pre><h2>建立監控紀錄的LOG資料表</h2><p>接下來就是建立監控主資料表所記錄的Log資料表，其中比較重要的欄位<code>iMap2AutoIndex</code>對應的是<code>zTable</code>的<code>iAutoIndex</code>，另外的<code>cOldData</code>與<code>cNewData</code>最後將以XML RAW型態被記錄成檔案備查，所以這邊將欄位型別設定成<code>NVARCHAR(MAX)</code>。</p><pre><code class=language-sql>USE [Catalog_資料桶名稱]
+</code></pre><h2>建立監控紀錄的LOG資料表</h2><p>接下來就是建立監控主資料表所記錄的Log資料表<code>zTable_Log</code>，其中比較重要的欄位<code>iMap2AutoIndex</code>對應的是<code>zTable</code>的<code>iAutoIndex</code>，另外的<code>cOldData</code>與<code>cNewData</code>最後將以XML RAW型態被記錄成檔案備查，所以這邊將欄位型別設定成<code>NVARCHAR(MAX)</code>。</p><pre><code class=language-sql>USE [Catalog_資料桶名稱]
 GO
 SET ANSI_NULLS ON
 GO
@@ -44,7 +44,7 @@ CREATE TABLE [dbo].[zTable_Log]
   )	ON [PRIMARY]
 ) ON [PRIMARY] TEXTIMAGE_ON [PRIMARY]
 GO
-</code></pre><h2>設計資料表觸發程序</h2><p>這個步驟是實際的將<code>zTable</code>與<code>zTable_Log</code>進行實際的綁定，日後進行的<code>INSERT</code>, <code>UPDATE</code>, <code>DELETE</code>所有歷程都會被記錄在這張<code>zTable_Log</code>表中。值得一提的是，因為是採用<code>XML RAW</code>的方式被SELECT出來，所以日後<code>zTable</code>若有欄位異動增刪也沒有關係。</p><pre><code class=language-sql>-- 建立資料表觸發程序
+</code></pre><h2>設計資料表觸發程序</h2><p>這個步驟是實際的將<code>zTable</code>與<code>zTable_Log</code>進行實際的觸發綁定，日後進行的<code>INSERT</code>, <code>UPDATE</code>, <code>DELETE</code>所有歷程都會被記錄在這張<code>zTable_Log</code>表中。值得一提的是，因為是採用<code>XML RAW</code>的方式被SELECT出來，所以日後<code>zTable</code>若有欄位異動增刪也沒有關係，不用再特地回來修改觸發程序的程式碼。</p><pre><code class=language-sql>-- 建立資料表觸發程序
 CREATE
   TRIGGER zTable自動觸發紀錄
   ON      zTable
