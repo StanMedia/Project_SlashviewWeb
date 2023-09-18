@@ -1,0 +1,54 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>在C#中的checked與unchecked關鍵字用法</h1><p>在瀏覽StackOverflow的文章中看到的C#語法，由於工作中比較少處理到超大量（或者應該說巨量才對）的數值，所以對這個關鍵字比較陌生，筆記在此供日後參考。</p><h2>溢位是怎麼產生的</h2><p>也就是說，其實C#的數值計算中，有關於溢位的問題是不會拋出exception的，以下面為例子：</p><pre><code class=language-cs>static void Main(string[] args)
+{
+  uint uMax = System.UInt32.MaxValue;
+  uint uMin = System.UInt32.MinValue;
+  uint u100 = 100;
+      
+  Console.WriteLine(uMax + u100);
+  Console.WriteLine(uMin - u100);
+}
+</code></pre><p>上面例子來說，uint是一個32Bit的正整數型別，數值區間是<code>0</code>到<code>4,294,967,295</code>，也就是說這種型別不存在負值。那麼上面的運算都將會觸發溢位（最大值加100、最小值減100），輸出答案如下：</p><pre><code class=language-txt>99
+4294967196
+</code></pre><p>這樣的運算編譯器過的了，運算卻與預期中不符。這時候會區分成兩個狀況：</p><p>一、感謝C#幫我自動溢位，保持程式可以正常運作。（如果這是你心底的聲音，那麼這一篇不用再看下去了）</p><p>二、明顯已經溢位，C#竟然還幫我執行完成拋一個錯誤的數值給我？（三小？）</p><p>對了補充一下，上面那兩行數值運算就算包上<code>try...catch</code>也是攔截不到的喔，因為壓根兒就沒有<code>exception</code>拋出。</p><h2>C#怎麼攔截數值運算產生的溢位問題</h2><p>答案很簡單，就是包一個<code>checked</code> block來進行檢查：</p><pre><code class=language-cs>static void Main(string[] args)
+{
+  uint uMax = System.UInt32.MaxValue;
+  uint uMin = System.UInt32.MinValue;
+  uint u100 = 100;
+
+  try
+  {
+    checked //強制檢查是否溢位
+    {
+      Console.WriteLine(uMax + u100);
+      Console.WriteLine(uMin - u100);
+    }
+  }
+  catch (Exception oEx)
+  {
+    Console.WriteLine(oEx.Message);
+  }
+}
+</code></pre><p>經過這樣的設計，運行到<code>Console.WriteLine(uMax + u100);</code>就會拋出錯誤：</p><pre><code class=language-txt>Arithmetic operation resulted in an overflow.
+算術運算導致溢位
+</code></pre><p>而如果你想要在某些很重要的運算中捕捉溢位錯誤，某些不重要的運算中想承認這種錯誤的結果直接by pass，那麼請為不重要的運算補上<code>unchecked</code>block即可。例如：</p><pre><code class=language-cs>static void Main(string[] args)
+{
+  uint uMax = System.UInt32.MaxValue;
+  uint uMin = System.UInt32.MinValue;
+  uint u100 = 100;
+
+  try
+  {
+    checked
+    {
+      unchecked { Console.WriteLine(uMax + u100); } //我不重要請忽略我
+      Console.WriteLine(uMin - u100);
+    }
+  }
+  catch (Exception oEx)
+  {
+    Console.WriteLine(oEx.Message);
+  }
+}
+</code></pre><p>輸出就會變成：</p><pre><code class=language-txt>99  //在被強制檢查裡面又被拋棄了
+Arithmetic operation resulted in an overflow.
+</code></pre><h3>感想</h3><p>感覺上.NET這樣設計應該是為了效能導向（整體政策性問題），不然大可在程式碼中判斷溢位就拋錯誤即可，不過這個效能導向可能會害慘一堆認為<code>程式語言應該會對溢位報錯吧！？</code>的程式設計師（等到運行到會產生溢位時，都是上線Ｎ年後的事情了）。話說回來，處理大型數值或精密浮點數我早已內化到一律以<code>decimal</code>優先，這樣把話說回來應該也不關<code>checked</code>或<code>unchecked</code>啥事了。畢竟等到連decimal都有溢位的問題，那問題就更大條到不行啦...</p><h6>C# CSharp Keywords Checked Unchecked ArithmeticOperation Overflow</h6></main><footer></footer><script src=/.file/site.js></script></body></html>
