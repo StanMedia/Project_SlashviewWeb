@@ -1,0 +1,104 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>SQL筆記：透過Trigger進行資料表新增、修改、刪除之自動化LOG</h1><p>簡單的說，這篇文章就是在描述如何從一張資料表中，不透過應用程式端監控的方式，使用純粹SQL Server的事件功能，去監控並記錄某張資料表的新增、修改、刪除等動作，並自動化的紀錄（LOG）在另外一張資料表中。</p><h2>建立主要監控的資料表</h2><p>其實任何一張資料表都可以被監控，但是一定會損耗效能的，以下是我們要建立的資料表指令，其中的iAutoIndex是主索引鍵（Primary Key），並設為自動增量（Auto Increment），這邊命令這張資料表的名稱是<code>zTable</code>。</p><pre><code class=language-sql>USE [Catalog_資料桶名稱]
+GO
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+
+CREATE TABLE [dbo].[zTable](
+	[iAutoIndex] [int] IDENTITY(1,1) NOT NULL,
+	[cName] [nvarchar](50) NOT NULL,
+	[dDate] [nvarchar](50) NOT NULL,
+	[cNote] [nvarchar](50) NULL,
+ CONSTRAINT [PK_zTable] PRIMARY KEY CLUSTERED 
+(
+	[iAutoIndex] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON) ON [PRIMARY]
+) ON [PRIMARY]
+GO
+</code></pre><h2>建立監控紀錄的LOG資料表</h2><p>接下來就是建立監控主資料表所記錄的Log資料表，其中比較重要的欄位<code>iMap2AutoIndex</code>對應的是<code>zTable</code>的<code>iAutoIndex</code>，另外的<code>cOldData</code>與<code>cNewData</code>最後將以XML RAW型態被記錄成檔案備查，所以這邊將欄位型別設定成<code>NVARCHAR(MAX)</code>。</p><pre><code class=language-sql>USE [Catalog_資料桶名稱]
+GO
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+
+CREATE TABLE [dbo].[zTable_Log]
+(
+  [iAutoIndex] [int] IDENTITY(1,1) NOT NULL,
+  [cAction] [nvarchar](10) NOT NULL,
+  [dAction] [datetime] NOT NULL,
+  [iMap2AutoIndex] [int] NOT NULL,
+  [cOldData] [nvarchar](max) NULL,
+  [cNewData] [nvarchar](max) NULL,
+  PRIMARY KEY CLUSTERED 
+  (
+	  [iAutoIndex] ASC
+  ) WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON)
+	ON [PRIMARY]
+)
+ON [PRIMARY] TEXTIMAGE_ON [PRIMARY]
+GO
+</code></pre><h2>設計資料表觸發程序</h2><p>這個步驟是實際的將<code>zTable</code>與<code>zTable_Log</code>進行實際的綁定，日後進行的<code>INSERT</code>, <code>UPDATE</code>, <code>DELETE</code>所有歷程都會被記錄在這張<code>zTable_Log</code>表中。值得一提的是，因為是採用<code>XML RAW</code>的方式被SELECT出來，所以日後<code>zTable</code>若有欄位異動增刪也沒有關係。</p><pre><code class=language-sql>-- 建立資料表觸發程序
+CREATE
+  TRIGGER zTable自動觸發紀錄
+  ON      zTable
+  AFTER   INSERT, UPDATE, DELETE
+AS
+BEGIN
+  -- 創建游標，用於遍歷每一條操作
+  DECLARE @iCursor CURSOR
+  DECLARE @cAction NVARCHAR(10)
+  DECLARE @dAction DATETIME
+  DECLARE @iMap2AutoIndex INT
+  SET @dAction = GETDATE()
+  IF EXISTS (SELECT * FROM inserted) AND NOT EXISTS (SELECT * FROM deleted)
+  BEGIN
+      SET @iCursor = CURSOR FOR SELECT [iAutoIndex] FROM inserted
+      SET @cAction = '新增' -- INSERT
+  END
+  ELSE IF EXISTS (SELECT * FROM inserted) AND EXISTS (SELECT * FROM deleted)
+  BEGIN
+      SET @iCursor = CURSOR FOR SELECT [iAutoIndex] FROM inserted
+      SET @cAction = '修改' -- UPDATE
+  END
+  ELSE IF EXISTS (SELECT * FROM deleted) AND NOT EXISTS (SELECT * FROM inserted)
+  BEGIN
+      SET @iCursor = CURSOR FOR SELECT [iAutoIndex] FROM deleted
+      SET @cAction = '刪除' -- DELETE
+  END
+  -- 遍歷操作
+  OPEN @iCursor
+  FETCH NEXT FROM @iCursor INTO @iMap2AutoIndex
+  WHILE @@FETCH_STATUS = 0
+  BEGIN
+    -- 紀錄數據
+    DECLARE @cOldData NVARCHAR(max)
+    DECLARE @cNewData NVARCHAR(max)
+    IF @cAction = '新增'
+    BEGIN
+        SET @cOldData = NULL
+        SET @cNewData = (SELECT * FROM inserted WHERE [iAutoIndex] = @iMap2AutoIndex FOR XML RAW)
+    END
+    ELSE IF @cAction = '修改'
+    BEGIN
+        SET @cOldData = (SELECT * FROM deleted WHERE [iAutoIndex] = @iMap2AutoIndex FOR XML RAW)
+        SET @cNewData = (SELECT * FROM inserted WHERE [iAutoIndex] = @iMap2AutoIndex FOR XML RAW)
+    END
+    IF @cAction = '刪除'
+    BEGIN
+        SET @cOldData = (SELECT * FROM deleted WHERE [iAutoIndex] = @iMap2AutoIndex FOR XML RAW)
+        SET @cNewData = NULL
+    END
+    -- 插入數據
+    INSERT INTO zTable_Log
+    VALUES (@cAction, @dAction, @iMap2AutoIndex, @cOldData, @cNewData)
+
+    FETCH NEXT FROM @iCursor INTO @iMap2AutoIndex
+  END
+
+  CLOSE @iCursor
+  DEALLOCATE @iCursor
+END
+GO
+</code></pre><p>這個SQL指令執行完成後，沒有意外的話就可以在SSMS的管理介面中，在<code>zTable</code>下面的<code>觸發程序</code>，找到名為<code>zTable自動觸發紀錄</code>這個trigger。</p><p><img src=https://content.slashview.com/img/2023/20230919_01.jpg alt="" /></p><h2>執行後的效果</h2><p><img src=https://content.slashview.com/img/2023/20230919_02.jpg alt="" /></p><p>透過資料表中的<code>iAutoIndex</code>看圖說故事：</p><ul><li>編號1 新增王小明</li><li>編號2 新增李小華</li><li>編號3 新增陳大英</li><li>編號4. 將王小明修改成王小美</li><li>編號5、6 將名字出現<code>小</code>的人，日期都改成2022-12-31</li><li>編號7 將李小華改名為陳小華</li><li>編號8 將陳大英的註解改成空字串</li><li>編號9 將陳大英的註解改成NULL</li><li>編號10、11 將名字出現<code>陳</code>的人全部刪除</li></ul><p>由上面的效果可以得知，無論是新增、修改、刪除所有的動作以及欄位值，都有完整的被記錄下來，日後可以用來稽查用途。但是特別要注意的是，因為所有的歷程都被保留下來，所以增刪資料的速度效能可能會大幅地降低，例如：單次要砍一萬筆資料，請想想背後資料庫會多忙碌了。</p><h6>Microsoft SqlServer TABLE Trigger Log AutoLog CRUD Create Insert Update Delete</h6></main><footer></footer><script src=/.file/site.js></script></body></html>
