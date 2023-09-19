@@ -1,0 +1,99 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>SQL筆記：自動產生資料表觸發CRUD紀錄的SQL語法</h1><p>簡單的說，這篇文章就是將上篇：<a href=/archive2023/20230919.html>SQL筆記：透過觸發Trigger進行資料表新增、修改、刪除之自動化LOG</a>的心得結果，透過Javascript做成工具，當我們需要針對某資料表進行自動化LOG的紀錄時，就可以透過這個網頁來快速產生相關語法。</p><h2>透過交談產生Trigger並監控資料表CRUD歷程之SQL語法</h2><p>請填妥下列表格對應內容，並點擊<code>Generate SQL</code>自動產生對應的SQL語法。</p><div class="mb-3 row"><label for=uCatalog class="col-md-4 col-lg-3 col-form-label"><i class="fa-solid fa-database fa-fw"></i> 資料庫目錄名稱</label><div class="col-md-8 col-lg-9"><input type=text class=form-control id=uCatalog value=tempDB /></div></div><div class="mb-3 row"><label for=uTable class="col-md-4 col-lg-3 col-form-label"><i class="fa-solid fa-table fa-fw"></i> 監控資料表名稱</label><div class="col-md-8 col-lg-9"><input type=text class=form-control id=uTable value=Employee /></div></div><div class="mb-3 row"><label for=uIndex class="col-md-4 col-lg-3 col-form-label"><i class="fa-solid fa-table fa-fw"></i> 監控資料表PK名稱</label><div class="col-md-8 col-lg-9"><input type=text class=form-control id=uIndex value=iAutoIndex /></div></div><div class="mb-3 row"><label for=uTrigger class="col-md-4 col-lg-3 col-form-label"><i class="fa-solid fa-bolt-lightning fa-fw"></i> 監控觸發程序名稱</label><div class="col-md-8 col-lg-9"><input type=text class=form-control id=uTrigger value=trg_EmployeeAutoLog /></div></div><div class="mb-3 row"><label for=uLog class="col-md-4 col-lg-3 col-form-label"><i class="fa-solid fa-scroll fa-fw"></i> 紀錄Log資料表名稱</label><div class="col-md-8 col-lg-9"><input type=text class=form-control id=uLog value=Employee_Log /></div></div><div class="mb-3 row"><div class="offset-md-4 offset-lg-3"><button id=uGenerate type=button class="btn btn-outline-success btn-lg me-2"><i class="fa-solid fa-check me-2"></i>產生SQL指令</button></div></div><h2>建立紀錄Log資料表之SQL語法</h2><pre><code class=language-sql>-- 這裡將會產生紀錄Log資料表之SQL語法
+</code></pre><h2>建立觸發並自動記錄CRUD異動之SQL語法</h2><pre><code class=language-sql>-- 這裡將會產生觸發並自動記錄CRUD異動之SQL語法
+</code></pre><script>var cTempLog=`USE {{uCatalog}}
+GO
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+
+CREATE TABLE {{uLog}}
+(
+  [iAutoIndex] [int] IDENTITY(1,1) NOT NULL,
+  [cAction] [nvarchar](10) NOT NULL,
+  [dAction] [datetime] NOT NULL,
+  [iMap2{{uIndex}}] [int] NOT NULL,
+  [cOldData] [nvarchar](max) NULL,
+  [cNewData] [nvarchar](max) NULL,
+  [cHost] [nvarchar](50) NULL,
+  [cHostIP] [nvarchar](50) NULL,
+  [cUser] [nvarchar](50) NULL,
+  PRIMARY KEY CLUSTERED 
+  (
+    [iAutoIndex] ASC
+  ) WITH
+  (
+    PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON
+  )	ON [PRIMARY]
+) ON [PRIMARY] TEXTIMAGE_ON [PRIMARY]
+GO`,cTempTrigger=`USE {{uCatalog}}
+GO
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+
+CREATE
+  TRIGGER {{uTrigger}}
+  ON      {{uTable}}
+  AFTER   INSERT, UPDATE, DELETE
+AS
+BEGIN
+  DECLARE @iCursor CURSOR
+  DECLARE @cAction NVARCHAR(10)
+  DECLARE @dAction DATETIME
+  DECLARE @iMap2{{uIndex}} INT
+  DECLARE @cHost nvarchar(50)
+  DECLARE @cHostIP nvarchar(50)
+  DECLARE @cUser nvarchar(50)
+
+  SET @dAction = GETDATE()
+  SET @cHost = CONVERT(NVARCHAR(50), HOST_NAME())
+  SET @cHostIP = CONVERT(NVARCHAR(50), CONNECTIONPROPERTY('client_net_address'))
+  SET @cUser = CONVERT(NVARCHAR(50), SYSTEM_USER)
+
+  IF EXISTS (SELECT * FROM inserted) AND NOT EXISTS (SELECT * FROM deleted)
+  BEGIN
+      SET @iCursor = CURSOR FOR SELECT [{{uIndex}}] FROM inserted
+      SET @cAction = '新增' -- INSERT
+  END
+  ELSE IF EXISTS (SELECT * FROM inserted) AND EXISTS (SELECT * FROM deleted)
+  BEGIN
+      SET @iCursor = CURSOR FOR SELECT [{{uIndex}}] FROM inserted
+      SET @cAction = '修改' -- UPDATE
+  END
+  ELSE IF EXISTS (SELECT * FROM deleted) AND NOT EXISTS (SELECT * FROM inserted)
+  BEGIN
+      SET @iCursor = CURSOR FOR SELECT [{{uIndex}}] FROM deleted
+      SET @cAction = '刪除' -- DELETE
+  END
+
+  OPEN @iCursor
+  FETCH NEXT FROM @iCursor INTO @iMap2{{uIndex}}
+  WHILE @@FETCH_STATUS = 0
+  BEGIN
+    DECLARE @cOldData NVARCHAR(max)
+    DECLARE @cNewData NVARCHAR(max)
+    IF @cAction = '新增'
+    BEGIN
+        SET @cOldData = NULL
+        SET @cNewData = (SELECT * FROM inserted WHERE [{{uIndex}}] = @iMap2{{uIndex}} FOR XML RAW)
+    END
+    ELSE IF @cAction = '修改'
+    BEGIN
+        SET @cOldData = (SELECT * FROM deleted WHERE [{{uIndex}}] = @iMap2{{uIndex}} FOR XML RAW)
+        SET @cNewData = (SELECT * FROM inserted WHERE [{{uIndex}}] = @iMap2{{uIndex}} FOR XML RAW)
+    END
+    IF @cAction = '刪除'
+    BEGIN
+        SET @cOldData = (SELECT * FROM deleted WHERE [{{uIndex}}] = @iMap2{{uIndex}} FOR XML RAW)
+        SET @cNewData = NULL
+    END
+    INSERT INTO {{uLog}}
+    VALUES (@cAction, @dAction, @iMap2{{uIndex}}, @cOldData, @cNewData, @cHost, @cHostIP, @cUser)
+    FETCH NEXT FROM @iCursor INTO @iMap2{{uIndex}}
+  END
+  CLOSE @iCursor
+  DEALLOCATE @iCursor
+END
+GO`</script><script>$("#uGenerate").click(function(){let n=$("#uCatalog").val(),t=$("#uTable").val(),i=$("#uIndex").val(),r=$("#uTrigger").val(),u=$("#uLog").val(),f=cTempLog.replace(/{{uCatalog}}/g,n).replace(/{{uTable}}/g,t).replace(/{{uIndex}}/g,i).replace(/{{uTrigger}}/g,r).replace(/{{uLog}}/g,u),e=cTempTrigger.replace(/{{uCatalog}}/g,n).replace(/{{uTable}}/g,t).replace(/{{uIndex}}/g,i).replace(/{{uTrigger}}/g,r).replace(/{{uLog}}/g,u);$("h2").eq(1).nextAll("pre").remove();$("h2").eq(1).after(`<pre><code class=language-sql>${f}</code></pre`+">");$("h2").eq(2).nextAll("pre").remove();$("h2").eq(2).after(`<pre><code class=language-sql>${e}</code></pre`+">");HighlightCodeRender()})</script><h6>Microsoft SqlServer TABLE Trigger Log AutoLog CRUD Create Insert Update Delete GenerateSqlCommand</h6></main><footer></footer><script src=/.file/site.js></script></body></html>
