@@ -1,3 +1,35 @@
+# emoji-test.txt
+# Date: 2023-06-05, 21:39:54 GMT
+# © 2023 Unicode®, Inc.
+# Unicode and the Unicode Logo are registered trademarks of Unicode, Inc. in the U.S. and other countries.
+# For terms of use, see https://www.unicode.org/terms_of_use.html
+#
+# Emoji Keyboard/Display Test Data for UTS #51
+# Version: 15.1
+#
+# For documentation and usage, see https://www.unicode.org/reports/tr51
+#
+# This file provides data for testing which emoji forms should be in keyboards and which should also be displayed/processed.
+# Format: code points; status # emoji name
+#     Code points — list of one or more hex code points, separated by spaces
+#     Status
+#       component           — an Emoji_Component,
+#                             excluding Regional_Indicators, ASCII, and non-Emoji.
+#       fully-qualified     — a fully-qualified emoji (see ED-18 in UTS #51),
+#                             excluding Emoji_Component
+#       minimally-qualified — a minimally-qualified emoji (see ED-18a in UTS #51)
+#       unqualified         — a unqualified emoji (See ED-19 in UTS #51)
+# Notes:
+#   • This includes the emoji components that need emoji presentation (skin tone and hair)
+#     when isolated, but omits the components that need not have an emoji
+#     presentation when isolated.
+#   • The RGI set is covered by the listed fully-qualified emoji. 
+#   • The listed minimally-qualified and unqualified cover all cases where an
+#     element of the RGI set is missing one or more emoji presentation selectors.
+#   • The file is in CLDR order, not codepoint order. This is recommended (but not required!) for keyboard palettes.
+#   • The groups and subgroups are illustrative. See the Emoji Order chart for more information.
+
+
 # group: Smileys & Emotion
 
 # subgroup: face-smiling
@@ -5280,3 +5312,14 @@
 1F3F4 E0067 E0062 E0065 E006E E0067 E007F              ; fully-qualified     # 🏴󠁧󠁢󠁥󠁮󠁧󠁿 E5.0 flag: England
 1F3F4 E0067 E0062 E0073 E0063 E0074 E007F              ; fully-qualified     # 🏴󠁧󠁢󠁳󠁣󠁴󠁿 E5.0 flag: Scotland
 1F3F4 E0067 E0062 E0077 E006C E0073 E007F              ; fully-qualified     # 🏴󠁧󠁢󠁷󠁬󠁳󠁿 E5.0 flag: Wales
+
+# Flags subtotal:		275
+# Flags subtotal:		275	w/o modifiers
+
+# Status Counts
+# fully-qualified : 3773
+# minimally-qualified : 1009
+# unqualified : 243
+# component : 9
+
+#EOF
