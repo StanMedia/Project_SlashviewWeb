@@ -5,6 +5,30 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <link href="/.file/site.css" rel="stylesheet" />
   <script src="/.include/jquery/jquery.min.js"></script>
+</head>
+<body>
+  <header></header>
+  <main>
+    <div class="container">
+      <div class="row">
+        <div class="col">
+          <div class="page-header">
+            <h1><i class="fa-solid fa-magnifying-glass me-1 text-success"></i> search articles</h1>
+          </div>
+        </div>
+      </div>
+      <div class="row">
+        <div class="col">
+          <div id="Search-Result">
+            <gcse:search></gcse:search>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+  <footer></footer>
+  <script async src="https://cse.google.com/cse.js?cx=8022b920c1b5a4463"></script>
+  <script src="/.file/site.js"></script>
   <style>
     main h1 {
       /* 將main hN樣式擦除 */
@@ -18,6 +42,9 @@
       font-weight: 600;
       text-align: center;
       margin: 1rem 0 2rem 0rem;
+    }
+    main div {
+      margin-bottom: 0 !important;
     }
   </style>
   <style>
@@ -34,9 +61,6 @@
     .gsc-search-box {
       border-collapse: collapse !important;
     }
-    .gsc-input {
-      padding-right: 1rem !important;
-    }
     .gsc-input-box {
       border: 1px solid #dfe1e5;
       background: #fff;
@@ -44,7 +68,7 @@
       padding: 1px 10px;
     }
     .gsc-search-button-v2 {
-      padding: 0.5rem !important;
+      padding: .5rem .9rem .5rem .95rem !important;
       cursor: pointer;
       border-radius: 50%;
     }
@@ -57,33 +81,14 @@
     .gcsc-more-maybe-branding-root {
       display: none !important;
     }
+    .gsc-tabsArea {
+      border: 0 !important;
+      border-radius: 0 !important;
+      margin-top: 1.5rem !important;
+    }
     #___gcse_0, #___gcse_1 {
       zoom: 1.2 !important;
     }
   </style>
-</head>
-<body>
-  <header></header>
-  <main>
-    <div class="container">
-      <div class="row">
-        <div class="col">
-          <div class="page-header">
-            <h1><i class="fa-solid fa-magnifying-glass me-3 text-success"></i> search articles</h1>
-          </div>
-        </div>
-      </div>
-      <div class="row">
-        <div class="col">
-          <div id="Search-Result">
-            <gcse:search></gcse:search>
-          </div>
-        </div>
-      </div>
-    </div>
-  </main>
-  <footer></footer>
-  <script async src="https://cse.google.com/cse.js?cx=8022b920c1b5a4463"></script>
-  <script src="/.file/site.js"></script>
 </body>
 </html>
