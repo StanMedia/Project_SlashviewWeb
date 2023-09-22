@@ -21,61 +21,44 @@
     }
   </style>
   <style>
-    .gsc-control-cse, .gsc-webResult.gsc-result {
-      background: transparent !important;
-      border-color: transparent !important;
+    main {
+      min-height: 70vh;
     }
-
+    h1 {
+      font-weight: 500;
+      margin-bottom: 1.5rem;
+    }
+    h1 .ir {
+      color: var(--indecapColor);
+    }
+    .gsc-search-box {
+      border-collapse: collapse !important;
+    }
     .gsc-input {
-      padding-top: 12px !important;
+      padding-right: 1rem !important;
     }
-
     .gsc-input-box {
-      height: auto !important;
-      border-radius: 5px;
+      border: 1px solid #dfe1e5;
+      background: #fff;
+      border-radius: 2rem;
+      padding: 1px 10px;
     }
-
-    .gsc-input-box input {
-      padding: 0 !important;
+    .gsc-search-button-v2 {
+      padding: 0.5rem !important;
+      cursor: pointer;
+      border-radius: 50%;
     }
-
-    .gsc-input-box span {
-      display: none !important;
+    .gsc-above-wrapper-area {
+      padding-top: 2rem;
     }
-
-    .gsc-search-button {
-      height: 42px;
-      color: black;
-    }
-
-    .gsc-search-button button {
-      border-radius: 5px;
-    }
-
-    .gsc-adBlock {
-      margin-bottom: 2rem !important;
-    }
-
-    .gsc-webResult {
-      zoom: 1.2 !important;
-      margin: 0 !important;
-      padding: 0 !important;
-    }
-
-    a.gs-title {
-      margin: 0 !important;
-    }
-
     .gsc-control-cse {
       padding: 0 !important;
     }
-
-    .gsc-cursor-box {
-      zoom: 1.4 !important;
+    .gcsc-more-maybe-branding-root {
+      display: none !important;
     }
-
-    .gsc-cursor-page {
-      color: black !important;
+    #___gcse_0, #___gcse_1 {
+      zoom: 1.2 !important;
     }
   </style>
 </head>
@@ -100,19 +83,7 @@
     </div>
   </main>
   <footer></footer>
-  <script>
-    /* 程式化搜尋引擎
-     * https://programmablesearchengine.google.com/ */
-    (function () {
-      var cx = "8022b920c1b5a4463";
-      var gcse = document.createElement("script");
-      gcse.type = "text/javascript";
-      gcse.async = true;
-      gcse.src = `https://cse.google.com/cse.js?cx=${cx}`;
-      var s = document.getElementsByTagName("script")[0];
-      s.parentNode.insertBefore(gcse, s);
-    })();
-  </script>
+  <script async src="https://cse.google.com/cse.js?cx=8022b920c1b5a4463"></script>
   <script src="/.file/site.js"></script>
 </body>
 </html>
