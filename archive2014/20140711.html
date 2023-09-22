@@ -38,7 +38,7 @@ FROM Table_A
 LEFT OUTER JOIN Table_B
 ON Table_A.cName = Table_B.cName
 WHERE Table_B.iIndex IS NULL
-</code></pre><p><img src=https://content.slashview.com/img/2014/20140711_08.jpg alt="" /></p><h2>部份聯集：LEFT OUTER JOIN - Table_A OR Table_B IS NULL</h2><p>這個部份表示在Table_A與Table_B的資料我全要，但是Table_A與Table_B中共同擁有的資料我不要！請見下圖圖示：</p><p><img src=https://content.slashview.com/img/2014/20140711_09.jpg alt="" /></p><pre><code class=language-sql>使用指令與結果：
+</code></pre><p><img src=https://content.slashview.com/img/2014/20140711_08.jpg alt="" /></p><h2>部份聯集：FULL OUTER JOIN - Table_A OR Table_B IS NULL</h2><p>這個部份表示在Table_A與Table_B的資料我全要，但是Table_A與Table_B中共同擁有的資料我不要！請見下圖圖示：</p><p><img src=https://content.slashview.com/img/2014/20140711_09.jpg alt="" /></p><pre><code class=language-sql>使用指令與結果：
 /*** JOIN TEST 05 ***/
 SELECT *
 FROM Table_A
