@@ -1,3 +1,7 @@
-﻿User-agent: *
+﻿Sitemap: https://slashview.com/.data/sitemap.txt
+
+User-agent: GPTBot
+Disallow: /
+
+User-agent: *
 Allow: /
-Sitemap: https://slashview.com/.data/sitemap.txt
