@@ -9,7 +9,7 @@
   age: 18,
   name: "John2" //name: "John1"被覆蓋了
 }
-</code></pre><p>另外一面，我希望透過文字檔案快速地把資料灌入動態創建的DataTable，這邊也有一個以前從來都沒有注意到的細節值得被記錄起來：我一直以為DataColumn名稱是可以重複的，但事實不然，DataColumnName必須是唯一值，插入重複的名稱會跳例外喔！唯一可以動手操刀的只剩下Caption這個屬性（相當於顯示端的屬性）。</p><h2>文字資料動態轉DataTable並透過ExpandoObject客製化成想要的列舉型態</h2><p>最終，把程式碼紀錄在下方供給日後參考，這段程式碼沒有甚麼特別的技術性，但有許多有趣的寫法可供一覽。</p><ol><li>快速建立DataTable欄位屬性與名稱等結構。</li><li>快速填充一列Row資料進入DataTable。</li><li>DataTable透過System.Data.DataSetExtensions的擴充方法，可以AsEnumerable()轉換IEnumerable集合化。</li><li>動態生成ExpandoObject的屬性的方法，原來ExpandoObject有實作<code>IDictionary&lt;string, object></code>介面。</li><li>強大的Json.NET其實可以直接把DataTable序列化。</li></ol><p>程式碼範例：</p><pre><code class=language-cs>/* ***** DataTable建立與填充值 ***** */
+</code></pre><p>另外一面，我希望透過文字檔案快速地把資料灌入動態創建的DataTable，這邊也有一個以前從來都沒有注意到的細節值得被記錄起來：我一直以為DataColumn名稱是可以重複的，但事實不然，DataColumnName必須是唯一值，插入重複的名稱會跳例外喔！唯一可以動手操刀的只剩下Caption這個屬性（相當於顯示端的屬性）。</p><h2>文字資料動態轉DataTable並透過ExpandoObject客製化成想要的列舉型態</h2><p>最終，把程式碼紀錄在下方供給日後參考，這段程式碼沒有甚麼特別的技術性，但有許多有趣的寫法可供一覽。</p><ol><li>快速建立DataTable欄位屬性與名稱等結構。</li><li>快速填充一列Row資料進入DataTable。</li><li>DataTable透過System.Data.DataSetExtensions的擴充方法（<code>using System.Data;</code>），可以AsEnumerable()轉換IEnumerable集合化。</li><li>動態生成ExpandoObject的屬性的方法，原來ExpandoObject有實作<code>IDictionary&lt;string, object></code>介面。</li><li>強大的Json.NET其實有能力可以直接把DataTable序列化。</li></ol><p>程式碼範例：</p><pre><code class=language-cs>/* ***** DataTable建立與填充值 ***** */
 var oDT = new System.Data.DataTable();
 //新增欄位結構
 try
