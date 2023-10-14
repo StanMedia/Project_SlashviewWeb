@@ -1,0 +1,37 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>RouterOS：MikroTik路由器自定義網址（Static DNS）</h1><p>如果家中有一大堆網路設備，那麼你有可能會陷入要一直背誦IP的地獄，例如：網路印表機的IP是多少？三樓的網路攝影機的IP是多少？，這時候你就需要自定義DNS功能的出現，在RouterOS裡面稱為靜態DNS（Static DNS）。</p><h2>MikroTik設定DHCP的預設DNS主機</h2><p>因為家中絕大部分的設備上網都是透過DHCP協議，因此首先要解決的是DHCP的DNS指派將要導回RouterOS本身這台機器，也就是最後路由器、閘道器、DNS伺服器有可能都會回歸MikroTik這台設備了，這也就是RouterOS的強大之處。</p><p>Step 1. 從<code>IP</code>＞<code>DHCP Server</code>＞<code>Networks</code>頁籤可以看到，原本DHCP預設派發的DNS伺服器是指向中華電信的DNS，請點選進入。</p><p><img src=https://content.slashview.com/img/2023/20231010_01.jpg alt="" /></p><p>Step 2. 進入後我們可以將<code>DNS Servers</code>指回<code>192.168.2.1</code>即可。</p><p><img src=https://content.slashview.com/img/2023/20231010_02.jpg alt="" /></p><p>另外要注意的是靜態IP的部分，如果也想要擁有自定義DNS的解析，那麼在設定<code>IPv4</code>的IP位址時，一定要將其指向回Router本身這台機器喔（<code>192.168.2.1</code>）。</p><h2>MikroTik設定靜態DNS（自定義DomainName）</h2><p>Step 1. 從<code>IP</code>＞<code>DNS</code>進入，將<code>Allow Remote Requests</code>勾選起來，這樣才可以讓連接這台伺服器的網路設備，透過DNS協議來查詢IP。如果查不到某DomainName，RouterOS會將其轉拋到指定的DNS Servers詢問。勾選完按下<code>Apply</code>套用後，請點選畫面中的<code>Static</code>按鈕。</p><p><img src=https://content.slashview.com/img/2023/20231010_03.jpg alt="" /></p><p>Step 2. 進入後點選<code>Add New</code>就可以看到下列畫面，可以在<code>Name</code>欄位指定你要的客製化網址，例如我想要取名為<code>slash.router</code>，另外的<code>Address</code>就是填上你想要轉過去的IP。（有趣的是這個IP無論是內網或是外網都可以喔，內網叫做<code>方便</code>，外網的話通常稱為<code>汙染</code>啦～）</p><p><img src=https://content.slashview.com/img/2023/20231010_03.jpg alt="" /></p><h2>驗證</h2><ol><li>透過DHCP重新連上網路後，打開cmd輸入<code>ipconfig /all</code>顯示已經將DNS自動預設成<code>192.168.2.1</code>了：</li></ol><pre><code class=language-txt>無線區域網路介面卡 Wi-Fi:
+
+   連線特定 DNS 尾碼 . . . . . . . . :
+   描述 . . . . . . . . . . . . . . .: Intel(R) Wi-Fi 6 AX201 160MHz
+   實體位址 . . . . . . . . . . . . .: 略
+   DHCP 已啟用 . . . . . . . . . . . : 是
+   自動設定啟用 . . . . . . . . . . .: 是
+   連結-本機 IPv6 位址 . . . . . . . : 略
+   IPv4 位址 . . . . . . . . . . . . : 192.168.2.238(偏好選項)
+   子網路遮罩 . . . . . . . . . . . .: 255.255.255.0
+   租用取得 . . . . . . . . . . . . .: 略
+   租用到期 . . . . . . . . . . . . .: 略
+   預設閘道 . . . . . . . . . . . . .: 192.168.2.1
+   DHCP 伺服器 . . . . . . . . . . . : 192.168.2.1
+   DHCPv6 IAID . . . . . . . . . . . : 略
+   DHCPv6 用戶端 DUID. . . . . . . . : 略
+   DNS 伺服器 . . . . . . . . . . . .: 192.168.2.1
+   NetBIOS over Tcpip . . . . . . . .: 略
+</code></pre><ol start=2><li>透過<code>nslookup</code>可以發現，作業系統已經將<code>192.168.2.1</code>確實認知為一台DNS伺服器，當我們輸入從來沒有造訪過的網站時，也確實能夠幫我們做轉譯詢問。而當我們詢問已知的DomainName的時候，它會自動回傳我們自定義的IP位址，至此確定大功告成。</li></ol><pre><code class=language-txt>預設伺服器:  slash.router
+Address:  192.168.2.1
+
+> www.yahoo.com
+伺服器:  slash.router
+Address:  192.168.2.1
+
+未經授權的回答:
+名稱:    new-fp-shed.wg1.b.yahoo.com
+Addresses:  2406:2000:ec:c58::3000
+          2406:2000:ec:c58::3001
+          180.222.102.202
+          180.222.102.201
+Aliases:  www.yahoo.com
+
+> slash.router
+伺服器:  slash.router
+Address:  192.168.2.1
+</code></pre><h3>相關參考</h3><ul><li><a href=/archive2023/20231007.html>RouterOS：MikroTik路由器的接入中華電信PPPoE的設定</a></li><li><a href=/archive2023/20231008.html>RouterOS：MikroTik路由器的安全設定、設定檔備份還原與韌體升降級的方法</a></li><li><a href=/archive2023/20231009.html>RouterOS：MikroTik路由器觀測相關數據</a></li><li><a href=/archive2023/20231010.html>RouterOS：MikroTik路由器自定義網址（Static DNS）</a></li></ul><h6>MikroTik RouterOS Router DNS StaticDomainName StaticDNS CustomizedDomainName CustomDomainName CustomDNS DnsCachePollution DNS汙染 DNS客製化 DNS自定義 自訂DNS</h6></main><footer></footer><script src=/.file/site.js></script></body></html>
