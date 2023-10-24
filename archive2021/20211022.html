@@ -2,11 +2,10 @@
 cName nvarchar(10)
 </code></pre><p>Step 2. 假設在AP端已經有一張DataTable資料表，其名稱為TableOnAp，資料結構如下：</p><pre><code class=language-sql>cNameOthers nvarchar(10)
 </code></pre><p>Step 3. BulkCopy（Bulk Insert）根本不會在乎你的DataTable（TableOnAp）裡面的欄位名稱是什麼，他在乎的是欄位的順序與型別，只要跟TableOnSql資料表的順序與型別錯誤就會馬上報錯，因此以例子中的TableOnAp.cNameOthers很顯然是要對應到TableOnSql.cName，只要是順序對一切就會正確，只可惜在TableOnSql.cName的前端還有一個自動增量的PK名為iAutoIndex擋住，這個我們會在程式碼中解決掉。</p><pre><code class=language-cs>using var oConn = new System.Data.SqlClient.SqlConnection("...");
+oConn.Open();
 using var oTrans = oConn.BeginTransaction();
 try
-{
-  oConn.Open();
-  //寫入大量資料到SQLServer
+{ //寫入大量資料到SQLServer
   using var oBulk = new System.Data.SqlClient.SqlBulkCopy(oConn, System.Data.SqlClient.SqlBulkCopyOptions.Default, oTrans);
   oBulk.DestinationTableName ="TableOnSql";
 
