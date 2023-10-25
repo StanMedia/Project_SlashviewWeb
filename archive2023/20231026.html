@@ -1,0 +1,80 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>利用SwitchExpression取代if-else，並閃避逐行判斷的寫法</h1><p>認知中的C# Switch Expression有分成兩種運作模式，一種是執行效能較高的傳統switch寫法，命中了就回傳離開，另外一種是效能較低逐行掃描型態的寫法，但無論是哪一種寫法都可以精簡程式碼的數量，在這邊透過整理陳列供大家參考。</p><p>至於是高效能單一命中就離開還是逐行掃描，我認為應該是語法糖背後的編譯器，默默地幫忙COVER掉所有的轉換工作啦（我猜，未證實）。</p><h2>傳統高效能：執行完成就離開</h2><p>下方是一個非常傳統的SwitchExpression寫法，透過單步執行我們可以發現，每次迴圈進入到<code>i switch</code>後，只會命中一步就離開，例如當<code>j=1</code>回傳<code>1</code>後，就會直接離開往下一次迴圈繼續執行，運作模式跟傳統的<code>switch case ...</code>完全一致。</p><pre><code class=language-cs>for (int i = 0; i &lt; 10; i++)
+{
+  var j = i switch
+  {
+    1 => 1,
+    2 => 2,
+    _ => 3,
+  };
+}
+</code></pre><p>再改成下方這種邏輯判斷的寫法（不要在乎邏輯，這邊純粹是要測試語法與執行方式）：</p><pre><code class=language-cs>for (int i = 0; i &lt; 10; i++)
+{
+  var j = i switch
+  {
+    >= 1 and &lt; 2 => 1,
+    >= 2 and &lt; 3 => 2,
+    _ => 3,
+  };
+}
+</code></pre><p>這樣的寫法在VisualStudio單步追蹤可以發現，依然是每次進入<code>i switch</code>後，只會命中一步就離開，也就是說除了<code>1回傳1</code>、<code>2回傳2</code>之外，其他的都回傳0且毫不囉嗦的離開，運作模式與傳統的<code>switch case ...</code>認知一致，但你可以發現傳統的<code>switch case ...</code>其實並沒有辦法進行太多的邏輯判斷（其實C# 7.0後的<code>switch case when ...</code>還是可以辦到），這就是SwitchExpression寫法逐漸勝出之處。</p><h2>逐行低效能：每一個判段都執行才離開</h2><p>然而世界並非如此簡單，任何事情都可以用SwitchExpression提供的基本判斷式子就可以解決，下面我們先創造一個產生<code>DataTable</code>假資料的方法，從這個方法中，我們也可以瞥見SwitchExpression已經開始引入<code>when</code>的條件式寫法了。</p><pre><code class=language-cs>static System.Data.DataTable MakeTable()
+{
+  var oDT = new System.Data.DataTable();
+  oDT.Columns.AddRange(
+    "cID, iMoney, dDate"
+    .Split(',')
+    .Select(x => {
+      return x.Trim() switch {
+        string y when y.StartsWith("i") => new System.Data.DataColumn(y, typeof(System.Int32)),
+        string y when y.StartsWith("d") => new System.Data.DataColumn(y, typeof(System.DateTime)),
+        _ => new System.Data.DataColumn(x.Trim(), typeof(System.String))
+      };
+    })
+    .ToArray()
+  );
+  oDT.Rows.Add("A123456787,9999,2023-10-26".Split(",".ToCharArray()));
+  oDT.Rows.Add("A123456788,8888,2023-10-27".Split(",".ToCharArray()));
+  oDT.Rows.Add("A123456789,7777,2023-10-28".Split(",".ToCharArray()));
+  return oDT;
+}
+</code></pre><p>接著我們創造雙迴圈去讀取這個DataTable裡面的值，並逐一取出來判斷是否有問題，這時候我們的SwitchExpression就要改寫成這樣：</p><pre><code class=language-cs>var oDT = MakeTable();
+foreach (System.Data.DataRow oRow in oDT.Rows)
+{
+  for (int i = 0; i &lt; oDT.Columns.Count; i++)
+  {
+    var j = i switch {
+      int x when (x == 0 &amp;&amp; oRow[x].ToString().Length != 10) => throw new System.Exception($"身分證號必須為10碼。"),
+      int x when (x == 1 &amp;&amp; !System.Int32.TryParse(oRow[x].ToString(), out int y)) => throw new System.Exception($"金額必須為正整數。"),
+      int x when (x == 2 &amp;&amp; !System.DateTime.TryParseExact(oRow[x].ToString(), new string[] { "yyyy-MM-dd", "yyyy-MM-dd HH:mm:ss" }, System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.None, out System.DateTime y)) => throw new System.Exception($"日期格式必須正確。"),
+      _ => ""
+    };
+  }
+}
+</code></pre><p>從上面的程式碼我們可以發現，他會逐一地把DataRow的每一個欄位值拿出來檢查，但本文要討論的是這樣的寫法之下，SwitchExpression的運作模式就再也不是命中>執行>跳到下一個迴圈，而是真的會逐筆比對。</p><p>舉例來說，明明已經陷入<code>i=0</code>的條件去判斷文字的長度是否為10碼，但執行判斷完成後，他還是會繼續陷入接續的下一個條件，也就是是否為<code>正整數</code>的判斷，所以每一個條件都進行一次評估的作法，已經回到<code>If-Else</code>的工作模式了。</p><p>⚠ 另外這邊要<code>特別特別特別</code>注意的地方是，因為我們<code>MakeTable()</code>給的資料都是正確的資料，也就是根本不會有拋出<code>System.Exception</code>的機會，因此<code>i=0~2</code>每一條都評估後沒有命中，一定都會跑去執行一次<code>_ => ""</code>。</p><p>如果喜歡更精簡的寫法，可以再把上面的程式碼更簡化成下列：</p><pre><code class=language-cs>var oDT = MakeTable();
+foreach (System.Data.DataRow oRow in oDT.Rows)
+{
+  for (int i = 0; i &lt; oDT.Columns.Count; i++)
+  {
+    var j = i switch
+    {
+      _ when (i == 0 &amp;&amp; oRow[i].ToString().Length != 10) => throw new System.Exception($"身分證號必須為10碼。"),
+      _ when (i == 1 &amp;&amp; !System.Int32.TryParse(oRow[i].ToString(), out _)) => throw new System.Exception($"金額必須為正整數。"),
+      _ when (i == 2 &amp;&amp; !System.DateTime.TryParseExact(oRow[i].ToString(), new string[] { "yyyy-MM-dd", "yyyy-MM-dd HH:mm:ss" }, System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.None, out _)) => throw new System.Exception($"日期格式必須正確。"),
+      _ => ""
+    };
+  }
+}
+</code></pre><p>從上面新的寫法可以發現，我們把原本宣告的暫時性<code>int x</code>變數移除改用<code>_</code>符號來取代，此外進行<code>TryParse</code>後動態宣告的外拋變數，因為沒有使用到，因此也被用<code>_</code>符號來取代，程式碼變得更精簡了。但是，這樣的寫法仍然會落入逐一掃瞄判斷的程序之中。</p><h2>把逐一掃瞄判斷的改回執行完就離開</h2><p>天無絕人之路，SwitchEpression的寫法有無窮的可能性。下面展示如何把上面這種逐一掃瞄、每一行都判斷執行的寫法，改回只有判斷一次，運行過就離開的寫法，這樣可以大幅度的提升程式執行的效能喔。</p><pre><code class=language-cs>var oDT = MakeTable();
+foreach (System.Data.DataRow oRow in oDT.Rows)
+{
+  for (int i = 0; i &lt; oDT.Columns.Count; i++)
+  {
+    _ = i switch
+    {
+      0 when oRow[i].ToString().Length != 10 => throw new System.Exception($"身分證號必須為10碼。"),
+      1 when !int.TryParse(oRow[i].ToString(), out _) => throw new System.Exception($"金額必須為正整數。"),
+      2 when !DateTime.TryParseExact(oRow[i].ToString(), new[] { "yyyy-MM-dd", "yyyy-MM-dd HH:mm:ss" }, System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.None, out _) => throw new System.Exception($"日期格式必須正確。"),
+      _ => ""
+    };
+  }
+}
+</code></pre><p>從上面的程式碼我們可以發現，回到給定特定的<code>欄位值</code>搭配<code>when</code>，強制SwitchExpression回到做完後就離開的模式，在這樣的寫法下，舉例以<code>i=1</code>的情況下，他跑完<code>1 when ...</code>這一行後就會離開了。另外也可以發現其實我們根本不需要先前被拿來宣告的<code>var j</code>變數，因此這邊一併使用<code>_</code>符號來取代掉。</p><p>⚠ 另外這邊還是要<code>特別特別特別</code>再叮嚀一次，因為我們<code>MakeTable()</code>給的資料都是正確的資料，也就是根本不會有拋出<code>System.Exception</code>的機會，因此例如<code>i=0</code>跑評估後沒有命中，還是會跳到Default去跑一次<code>_ => ""</code>。</p><h3>相關連結</h3><ol><li><a href=/archive2021/20210224.html>在C#的SwitchExpression下使用模式比對（Pattern Matching）</a></li><li><a href=/archive2022/20220331.html>利用SwitchExpression來進行switch流程程式碼判斷的優化</a></li><li><a href=/archive2023/20231026.html>利用SwitchExpression取代if-else，並閃避逐行判斷的寫法</a></li><li><a href=/archive2019/20190827.html>利用C#的switch case when語法來忽略字串大小寫</a></li><li><a href=/archive2021/20210301.html>C#的IS與AS運算子之撰寫方法</a></li><li><a href=/archive2022/20221108.html>C#的NULL運算演化：?.、??、??=、以及模式比對增強功能</a></li><li><a href=https://docs.microsoft.com/zh-tw/dotnet/csharp/language-reference/proposals/csharp-8.0/patterns>遞迴模式比對</a></li><li><a href=https://docs.microsoft.com/zh-tw/dotnet/csharp/whats-new/csharp-9#pattern-matching-enhancements>C# 9.0 中的新增功能</a></li></ol><h6>C# CSharp SwitchExpression If-Else IfElse</h6></main><footer></footer><script src=/.file/site.js></script></body></html>
