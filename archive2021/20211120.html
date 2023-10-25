@@ -15,9 +15,8 @@ var oDT = new System.Data.DataTable();
 try
 {
   oDT.Columns.AddRange(
-    new System.Collections.Generic.List&lt;string>() { "帳號,密碼,姓名,錄取部門,成績1,成績2" }
-    .FirstOrDefault()
-    .Split(",".ToCharArray())
+    "帳號,密碼,姓名,錄取部門,成績1,成績2"
+    .Split(',')
     .Select(x => new System.Data.DataColumn(x, typeof(string)))
     .ToArray()
   );
