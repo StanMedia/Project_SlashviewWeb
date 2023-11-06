@@ -1,0 +1,85 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>ASP.NET web.config資料庫連線字串加密與解密</h1><p>在傳統中ASP.NET，大家習慣用來統一存放SQL資料庫連線帳號密碼的<code>connectionStrings</code>區塊，再透過<code>ConfigurationManager</code>在執行期動態取出的作法，這中間如果引入資訊安全的觀念，就是再也不能採用<code>明碼</code>存放必須將其加密起來。</p><p>依據OWASP Developer Guide：</p><pre><code class=language-txt>5.4 Implementation Do's and Don'ts
+5.4.2 Secure coding
+Do not store passwords in code or in configuration files. Use Secrets Manager to store passwords.
+</code></pre><p>依據OWASP Top 10 2021：</p><pre><code class=language-txt>A07:2021 Identification and Authentication Failures
+Uses plain text, encrypted, or weakly hashed passwords data stores.
+</code></pre><p>其實從接觸ASP.NET到現在，我是還沒有聽說過在IIS嚴密的保護下，誰的web.config因為系統漏洞被拿走的議題。但就是有<code>某些白癡</code>自幹一些讀檔的程式碼自HIGH到忘記防護、加密，導致讓駭客可以透過路徑快樂的切換進而取得，於是問題自此而生。每每被稽核員拿來當案例，正所謂一人錯萬人錯，稽核員對你的長官吐句：「難道貴組織想要承擔這個風險嗎？」，你覺得長官會拿你的辯詞鏗鏘回擲，還是轉頭叫你改好？答案絕對明顯。</p><p>這篇文章採用的是RSA（RSAProtectedConfigurationProvider ）預設值來進行加解密演算，其實微軟另有提供DPAPI（DPAPIProtectedConfigurationProvider）的實作，但我<code>勸你不要用</code>。在資安稽核界<code>微軟就是千瘡百孔，Linux就是堅若磐石</code>是絕對不可挑戰的信仰，搞不好稽核員連<code>DPAPI</code>聽都沒聽過，當然先入為主的否定，難道你還想花時間向他們解釋RSA與DPAPI的安全係數跟管理便利性的議題？</p><p>廢話不多說，開始正題吧！</p><h2>ASP.NET端準備測試的工具程式碼</h2><p>一般來說我們的web.config比較機敏的資料庫連線字串會長的如下：</p><pre><code class=language-xml>&lt;?xml version="1.0" encoding="utf-8"?>
+&lt;configuration>
+  &lt;connectionStrings>
+    &lt;add name="MyDB" connectionString="server=192.168.1.1;uid=user;pwd=1234;Initial Catalog=Main" providerName="System.Data.SqlClient" />
+  &lt;/connectionStrings>
+&lt;/configuration>
+</code></pre><p>然後我們要準備一個輕量可以跑aspx的架構，那當然就是短小精幹的WebForm啦！下列這段程式碼可用來進行後續加解密時期的可行性驗證（是否成功）：</p><pre><code class=language-cs>&lt;script runat="server">
+public void page_load(Object sender, EventArgs e)
+{ //從web.config取出連線字串並顯示
+  uMsg.Text = System.Configuration.ConfigurationManager.ConnectionStrings["MyDB"].ConnectionString;
+}
+&lt;/script>
+&lt;asp:Literal ID="uMsg" runat="server" />
+</code></pre><h2>找到作業關鍵工具aspnet_regiis.exe放在哪裡？</h2><p>正式環境通常可以在下列路徑找到：</p><pre><code class=language-txt>C:\Windows\Microsoft.NET\Framework\v4.0.30319
+</code></pre><p>若是在開發環境下，也可以從開始選單到<code>類似</code>這種目錄結構下找到：</p><pre><code class=language-txt>C:\Program Files\Microsoft Visual Studio\2022\Community
+</code></pre><p>因為涉及作業系統的金鑰區塊存取，因此開啟的Console一律以<code>Administrator</code>最高管理者身分運行會比較妥當。</p><h2>確立金鑰程序過程中使用的名稱</h2><p>這裡會用到兩個觀念</p><p>一、實際存放金鑰的名稱：<code>ContainerName</code></p><p>一般來說都會取名為XX-Key，例如MyKey、PublicKey...，在範例中我們會取名為<code>RSAKey</code>。</p><p>二、指引金鑰提供者的名稱：<code>ProtectedProvider</code></p><p>一般來說都會取名為XX-ProtectedProvider，在本範例中我們會取名為<code>RSAProvider</code>。</p><p>⚠ 注意！將金鑰取名為Key後也有可能會引發原始碼檢測軟體的過激反應，當你填寫誤報表單後依然可能會引爆某些半桶水資安稽核員高潮，若你不想浪費生命在這種事情上，建議盡量規避程式碼出現<code>Key</code>關鍵字。</p><h2>建立RSA金鑰（Protect Create；-pc）</h2><p>透過下列指令可以建立RSA金鑰，並將其設定成可匯出，金鑰大小為2048-bit。</p><pre><code class=language-txt>aspnet_regiis -pc "RSAKey" -size 2048 -exp
+</code></pre><p>⚠ 注意！金鑰長度預設為1024-bit，自2009年RSA-768分機成功後至撰寫文章的當下，全世界依然沒有任何人可以破解1024-bit。但<code>1024</code>這個關鍵字後可能會引爆某些半桶水資安稽核員高潮，若你不想浪費生命在這種事情上，建議盡量拉升到<code>2048-bit</code>。</p><p>上面的動作，將會在下列目錄建立亂數檔名金鑰，事實上這個目錄是作業系統在保護的目標，你也很難透過檔案複製或刪除去對這個目錄做些什麼。</p><pre><code class=language-txt>C:\ProgramData\Microsoft\Crypto\RSA\MachineKeys
+</code></pre><h2>指引web.config有哪些Decode Providers可參考</h2><p>打開web.config，在組態最末端插入下列參考程式碼，記得<code>RSAProvider</code>、<code>RSAKey</code>關鍵字要替換成自己適用的字串。</p><pre><code class=language-xml>&lt;configuration>
+  &lt;configProtectedData>
+    &lt;providers>
+      &lt;add name="RSAProvider" type="System.Configuration.RsaProtectedConfigurationProvider, System.Configuration, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a" keyContainerName="RSAKey" useMachineContainer="true" />
+    &lt;/providers>
+  &lt;/configProtectedData>
+&lt;configuration>
+</code></pre><p>⚠ 當我們在web.config插入上列組態程式碼並儲存，但該部主機<code>尚未匯入RSA金鑰</code>（或者、以及）<code>web.config的connectionStrings尚未加密</code>，這兩個因素都不會造成整個網站崩潰，因為這個設定動作只有<code>指引</code>而已，還沒有被正式引用。</p><h2>將web.config的connectionStrings區段加密（Protect Encryption File；-pef）</h2><p>透過下列指令可以將web.config的connectionStrings區段，也就是有紀錄資料庫連線字串的connectionString，全部透過RSA技術加密起來。</p><pre><code class=language-txt>aspnet_regiis -pef connectionStrings "C:\W3Test" -prov "RSAProvider"
+</code></pre><p>運行後會看到吐出<code>Succeeded!</code>字樣，代表<code>加密成功</code>。</p><pre><code>Microsoft (R) ASP.NET RegIIS version 4.0.30319.0
+Administration utility to install and uninstall ASP.NET on the local machine.
+Copyright (C) Microsoft Corporation.  All rights reserved.
+Encrypting configuration section...
+Succeeded!
+</code></pre><p>回去看web.config的connectionStrings區段已經全部變成亂碼了，其他未被指定的XML節點依然維持正常的明碼狀態。這裡有一個可以關注的重點，就是configProtectionProvider被指定成<code>RSAProvider</code>，也就是在指引web.config該到哪裡找<code>解碼方案</code>。</p><pre><code class=language-xml>&lt;?xml version="1.0" encoding="utf-8"?>
+&lt;configuration>
+  &lt;connectionStrings configProtectionProvider="RSAProvider">
+    &lt;EncryptedData Type="http://www.w3.org/2001/04/xmlenc#Element"
+      xmlns="http://www.w3.org/2001/04/xmlenc#">
+      &lt;EncryptionMethod Algorithm="http://www.w3.org/2001/04/xmlenc#aes256-cbc" />
+      &lt;KeyInfo xmlns="http://www.w3.org/2000/09/xmldsig#">
+        &lt;EncryptedKey xmlns="http://www.w3.org/2001/04/xmlenc#">
+          &lt;EncryptionMethod Algorithm="http://www.w3.org/2001/04/xmlenc#rsa-oaep-mgf1p" />
+          &lt;KeyInfo xmlns="http://www.w3.org/2000/09/xmldsig#">
+            &lt;KeyName>Rsa Key&lt;/KeyName>
+          &lt;/KeyInfo>
+          &lt;CipherData>
+            &lt;CipherValue>CeG5IOsmYGIwXpMe7PNR...略&lt;/CipherValue>
+          &lt;/CipherData>
+        &lt;/EncryptedKey>
+      &lt;/KeyInfo>
+      &lt;CipherData>
+        &lt;CipherValue>EVEpb9907d3+GzIbG9+u...略&lt;/CipherValue>
+      &lt;/CipherData>
+    &lt;/EncryptedData>
+  &lt;/connectionStrings>
+...略
+&lt;/configuration>
+</code></pre><p>⚠ 值得一提的是，<code>aspnet_regiis -pef</code>有防呆設計，如果你很白目地進行<code>加密→加密</code>，事實上並不會怎樣。另外依據實驗我也觀察到似乎在加密的期間有加入時間戳記鹽，當我在沒有變更檔案內容的情況下，進行<code>加密→解密→加密</code>，觀察兩次加密後的Vaule值，會呈現很大的亂數跳動。</p><h2>將web.config的connectionStrings區段解密（Protect Decryption File；-pdf）</h2><p>看到加密先別急，使用下列指令就可以將原本的明文解密回來，但是令人不開心的是<code>原本的註解或排版</code>全部都會消失，回到最基礎的XML格式，這部分還蠻無言的。</p><pre><code class=language-txt>aspnet_regiis -pdf connectionStrings "C:\W3Test"
+</code></pre><p>解密成功會看到下列訊息：</p><pre><code class=language-txt>Microsoft (R) ASP.NET RegIIS version 4.0.30319.0
+Administration utility to install and uninstall ASP.NET on the local machine.
+Copyright (C) Microsoft Corporation.  All rights reserved.
+Decrypting configuration section...
+Succeeded!
+</code></pre><h2>讓IIS擁有RSA金鑰的存取權限（Protect AccessControlList；-pa）</h2><p>加密後很開心地再跑去運行一次網站，看到噴出下列錯誤：</p><pre><code class=language-txt>Failed to decrypt using provider 'RSAProvider'. Error message from the provider: The RSA key container could not be opened.
+</code></pre><p>這代表你現在運行的IIS所使用的身分，沒有辦法取得RSA金鑰回來解密，因為那個目錄的保護是很嚴格的，因此必須透過下列指令賦予權限。請回到IIS行中的網站，觀察網站運行在哪個<code>應用程式集區（Application Pool）</code>之下，通常預設值是<code>DefaultAppPool</code>。</p><pre><code class=language-txt>aspnet_regiis -pa "RSAKey" "IIS AppPool\DefaultAppPool"
+</code></pre><p>若設定權限成功，會顯示下列資訊：</p><pre><code class=language-txt>Microsoft (R) ASP.NET RegIIS version 4.0.30319.0
+Administration utility to install and uninstall ASP.NET on the local machine.
+Copyright (C) Microsoft Corporation.  All rights reserved.
+Adding ACL for access to the RSA Key container...
+Succeeded!
+</code></pre><h2>匯出RSA金鑰（Protect Export；-pe）</h2><p>現在的伺服器環境通常不會只有一台機器（就算只有一台機器你也總應該把金鑰匯出來備份，難道電腦都不會掛掉？），我們可以透過下列指令將金鑰以XML格式匯出成檔案，後面記得加上<code>-pri</code>引數，把私鑰一併匯出。</p><pre><code class=language-txt>aspnet_regiis -px "RSAKey" "C:\RSAKey.xml" -pri
+</code></pre><p>若匯出成功，可以到C磁碟根目錄下找檔案了。</p><pre><code class=language-txt>Microsoft (R) ASP.NET RegIIS version 4.0.30319.0
+Administration utility to install and uninstall ASP.NET on the local machine.
+Copyright (C) Microsoft Corporation.  All rights reserved.
+Exporting RSA Keys to file...
+Succeeded!
+</code></pre><h2>匯入RSA金鑰（Protect Import；-pi）</h2><p>本機電腦掛掉或ServerFarm架構下的伺服器群要使用，肯定要進行金鑰匯入系統的過程，輸入下列指令就可以進行RSA金鑰的匯入作業。</p><pre><code class=language-txt>aspnet_regiis -pi "RSAKey" "C:\RSAKey.xml"
+</code></pre><p>成功後會出現下列訊息：</p><pre><code class=language-txt>Microsoft (R) ASP.NET RegIIS version 4.0.30319.0
+Administration utility to install and uninstall ASP.NET on the local machine.
+Copyright (C) Microsoft Corporation.  All rights reserved.
+Importing RSA Keys from file..
+Succeeded!
+</code></pre><h3>相關連結</h3><ul><li><a href=/archive2021/20211215.html>ASP.NET web.config資料庫連線字串分離設定</a></li><li><a href=/archive2023/20231105.html>ASP.NET web.config資料庫連線字串加密與解密</a></li></ul><h6>ASP.NET AspNet_RegIIS Web.Config Configuration ConnectionStrings Encode Decode SQLConnection Account Password Security</h6></main><footer></footer><script src=/.file/site.js></script></body></html>
