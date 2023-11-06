@@ -20,7 +20,7 @@ public void page_load(Object sender, EventArgs e)
 </code></pre><p>若是在開發環境下，也可以從開始選單到<code>類似</code>這種目錄結構下找到：</p><pre><code class=language-txt>C:\Program Files\Microsoft Visual Studio\2022\Community
 </code></pre><p>因為涉及作業系統的金鑰區塊存取，因此開啟的Console一律以<code>Administrator</code>最高管理者身分運行會比較妥當。</p><h2>確立金鑰程序過程中使用的名稱</h2><p>這裡會用到兩個觀念</p><p>一、實際存放金鑰的名稱：<code>ContainerName</code></p><p>一般來說都會取名為XX-Key，例如MyKey、PublicKey...，在範例中我們會取名為<code>RSAKey</code>。</p><p>二、指引金鑰提供者的名稱：<code>ProtectedProvider</code></p><p>一般來說都會取名為XX-ProtectedProvider，在本範例中我們會取名為<code>RSAProvider</code>。</p><p>⚠ 注意！將金鑰取名為Key後也有可能會引發原始碼檢測軟體的過激反應，當你填寫誤報表單後依然可能會引爆某些半桶水資安稽核員高潮，若你不想浪費生命在這種事情上，建議盡量規避程式碼出現<code>Key</code>關鍵字。</p><h2>建立RSA金鑰（Protect Create；-pc）</h2><p>透過下列指令可以建立RSA金鑰，並將其設定成可匯出，金鑰大小為2048-bit。</p><pre><code class=language-txt>aspnet_regiis -pc "RSAKey" -size 2048 -exp
 </code></pre><p>⚠ 注意！金鑰長度預設為1024-bit，自2009年RSA-768分機成功後至撰寫文章的當下，全世界依然沒有任何人可以破解1024-bit。但<code>1024</code>這個關鍵字後可能會引爆某些半桶水資安稽核員高潮，若你不想浪費生命在這種事情上，建議盡量拉升到<code>2048-bit</code>。</p><p>上面的動作，將會在下列目錄建立亂數檔名金鑰，事實上這個目錄是作業系統在保護的目標，你也很難透過檔案複製或刪除去對這個目錄做些什麼。</p><pre><code class=language-txt>C:\ProgramData\Microsoft\Crypto\RSA\MachineKeys
-</code></pre><h2>指引web.config有哪些Decode Providers可參考</h2><p>打開web.config，在組態最末端插入下列參考程式碼，記得<code>RSAProvider</code>、<code>RSAKey</code>關鍵字要替換成自己適用的字串。</p><pre><code class=language-xml>&lt;configuration>
+</code></pre><h2>指引web.config有哪些Protected Providers可參考</h2><p>打開web.config，在組態最末端插入下列參考程式碼，記得<code>RSAProvider</code>、<code>RSAKey</code>關鍵字要替換成自己適用的字串。</p><pre><code class=language-xml>&lt;configuration>
   ...略
   &lt;configProtectedData>
     &lt;providers>
