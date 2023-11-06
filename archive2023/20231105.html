@@ -30,7 +30,7 @@ public void page_load(Object sender, EventArgs e)
   ...略
 &lt;configuration>
 </code></pre><p>⚠ 當我們在web.config插入上列組態程式碼並儲存，但該部主機<code>尚未匯入RSA金鑰</code>（或者、以及）<code>web.config的connectionStrings尚未加密</code>，這兩個因素都不會造成整個網站崩潰，因為這個設定動作只有<code>指引</code>而已，還沒有被正式引用。</p><h2>將web.config的connectionStrings區段加密（Protect Encryption File；-pef）</h2><p>透過下列指令可以將web.config的connectionStrings區段，也就是有紀錄資料庫連線字串的connectionString，全部透過RSA技術加密起來。</p><pre><code class=language-txt>aspnet_regiis -pef connectionStrings "C:\W3Test" -prov "RSAProvider"
-</code></pre><p>運行後會看到吐出<code>Succeeded!</code>字樣，代表<code>加密成功</code>。</p><pre><code>Microsoft (R) ASP.NET RegIIS version 4.0.30319.0
+</code></pre><p>運行後會看到吐出<code>Succeeded!</code>字樣，代表<code>加密成功</code>。</p><pre><code class=language-txt>Microsoft (R) ASP.NET RegIIS version 4.0.30319.0
 Administration utility to install and uninstall ASP.NET on the local machine.
 Copyright (C) Microsoft Corporation.  All rights reserved.
 Encrypting configuration section...
