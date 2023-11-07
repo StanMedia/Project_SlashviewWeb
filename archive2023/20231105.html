@@ -72,7 +72,7 @@ Administration utility to install and uninstall ASP.NET on the local machine.
 Copyright (C) Microsoft Corporation.  All rights reserved.
 Adding ACL for access to the RSA Key container...
 Succeeded!
-</code></pre><h2>匯出RSA金鑰（Protect eXport；-px）</h2><p>現在的伺服器環境通常不會只有一台機器（就算只有一台機器你也總應該把金鑰匯出來備份，難道電腦都不會掛掉？），我們可以透過下列指令將金鑰以XML格式匯出成檔案，後面記得加上<code>-pri</code>引數，把私鑰一併匯出。</p><pre><code class=language-txt>aspnet_regiis -px "RSAKey" "C:\RSAKey.xml" -pri
+</code></pre><p>⚠ 如果你是開發端跑IIS Express，那麼不需要經過這個存取權限的設定步驟。</p><h2>匯出RSA金鑰（Protect eXport；-px）</h2><p>現在的伺服器環境通常不會只有一台機器（就算只有一台機器你也總應該把金鑰匯出來備份，難道電腦都不會掛掉？），我們可以透過下列指令將金鑰以XML格式匯出成檔案，後面記得加上<code>-pri</code>引數，把私鑰一併匯出。</p><pre><code class=language-txt>aspnet_regiis -px "RSAKey" "C:\RSAKey.xml" -pri
 </code></pre><p>若匯出成功，可以到C磁碟根目錄下找檔案了。</p><pre><code class=language-txt>Microsoft (R) ASP.NET RegIIS version 4.0.30319.0
 Administration utility to install and uninstall ASP.NET on the local machine.
 Copyright (C) Microsoft Corporation.  All rights reserved.
