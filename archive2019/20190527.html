@@ -34,7 +34,7 @@ echo $'\a'    #設定電腦嗶嗶鈴聲
 chmod u+x myBash    #設定為可以執行
 -----
 ./myBash    #執行Bash
-</code></pre><h3>ntsysv</h3><p>查看看Linux系統裡面有哪些開機被啟動的系統服務。</p><h3>httpd</h3><p>利用yum安裝Apache伺服器。<br /> 設定檔放置於 /etc/httpd/conf/httpd.conf | less<br /> 檔案目錄放置於 /var/www/html/</p><h3>systemctl status firewalld</h3><p>測試CentOS 7的防火牆是否有在運作，如果出現綠色的active (running)就代表有在執行。重新啟動服務：service firewalld restart。</p><h3>防火牆</h3><p>打開80 Port防火牆：<br /> firewall-cmd --zone=public --add-port=80/tcp --permanent<br /> firewall-cmd --reload</p><h3>變更檔案目錄擁有者</h3><p>chown 用戶名稱:群組名稱 某目錄或檔案</p><h3>變更檔案目錄存取權限</h3><p>chmod，權限計算請在網路搜尋「Chmod 計算機」。</p><p><img src=https://content.slashview.com/img/2019/20190527_02.jpg alt="" /></p><h3>vim相關操作</h3><pre><code class=language-txt>yy    #複製該行
+</code></pre><h3>ntsysv</h3><p>查看看Linux系統裡面有哪些開機被啟動的系統服務。</p><h3>httpd</h3><p>利用yum安裝Apache伺服器。<br /> 設定檔放置於 /etc/httpd/conf/httpd.conf | less<br /> 檔案目錄放置於 /var/www/html/</p><h3>systemctl status firewalld</h3><p>測試CentOS 7的防火牆是否有在運作，如果出現綠色的active (running)就代表有在執行。重新啟動服務：service firewalld restart。</p><h3>防火牆</h3><p>打開80 Port防火牆：<br /> firewall-cmd --zone=public --add-port=80/tcp --permanent<br /> firewall-cmd --reload</p><h3>變更檔案目錄擁有者</h3><p>chown 用戶名稱:群組名稱 某目錄或檔案</p><h3>變更檔案目錄存取權限</h3><p>chmod，權限計算請在網路搜尋「Chmod 計算機」。</p><p><img src=https://content.slashview.com/img/2019/20190527_02.jpg alt="" /></p><h3>vim相關操作（若有nano編輯器的話建議用nano即可，不要用vi like的編輯器）</h3><pre><code class=language-txt>yy    #複製該行
 p     #貼上
 dd    #刪除整行
 u     #回復動作

@@ -1,0 +1,7 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>Linux關閉Listen Ports</h1><p>以Ubuntu為例，當你安裝完最小化Server時，他仍然會幫你預設啟動一些你可能不需要的服務，這時候我們就需要手動去將其關閉，以下是相關範例。</p><h2>查看當前的Listen Ports</h2><p>輸入下列指令，就可以看到TCP與UDP到底有哪些PORT被打開來監聽：</p><pre><code class=language-txt>netstat -tulpn
+</code></pre><h3>關閉icmp（ping）</h3><p>也就是關閉<code>ping</code>服務，關閉後你就沒有辦法透過簡單的ping知道這一台電腦到底網路是否通暢了。</p><p>編輯下列檔案：</p><pre><code class=language-txt>nano \ect\sysctl.conf
+</code></pre><p>移動到檔案的最尾端，添加下列這行：</p><pre><code class=language-txt>net.ipv4.icmp_echo_ignore_all = 1
+</code></pre><p>可以手動套用規則啦，但我建議直接重開機就好，反正沒幾秒鐘。</p><h3>關閉SSH（Port 22）</h3><p>關閉後只能從本機登入嘍！先看一下狀態，理論上會看到<code>active</code>字眼：</p><pre><code class=language-txt>sudo systemctl status ssh
+</code></pre><p>下達關閉指令：</p><pre><code class=language-txt>sudo systemctl disable ssh
+</code></pre><p>重開機後，再去看狀態，理論上就會看到<code>inactive (dead)</code>字眼。</p><h3>關閉DNS（Port 53）</h3><pre><code class=language-txt>sudo systemctl disable systemd-resolved
+</code></pre><p>重開機後，Port 53的監聽就會消失了。</p><h6>Unix Linux Ubuntu CentOS TCP UDP PortsDisable ServicesDisable DaemonDisable</h6></main><footer></footer><script src=/.file/site.js></script></body></html>
