@@ -7,7 +7,7 @@
   {
     StartInfo = new System.Diagnostics.ProcessStartInfo()
     {
-      WorkingDirectory = @"D:\",  //沒寫可能會造成無法捕獲RedirectStandardOutput問題
+      WorkingDirectory = @"D:\",  //沒寫可能會造成RedirectStandardOutput無法捕獲某些EXE的輸出
       FileName = @"D:\csc.exe",
       Arguments = @"something",
       UseShellExecute = false,
