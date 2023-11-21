@@ -1,0 +1,37 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>透過非同步的方式執行外部EXE檔案，並捕捉輸出字串</h1><p>這篇文章沒有甚麼新奇之處，純粹整理出透過ASP.NET WebForm的架構，以非同步的方式運行外部執行檔（Exe），並將輸出的結果捕捉成字串，以非同步的方式送回並顯示，其中大部分的知識點是<code>讓ASPX頁面可以執行非同步方法，等候回傳與顯示</code>。</p><h2>ASP.NET WebForm非同步架構</h2><p>Step 1. 首先，你必須在標題宣告<code>&lt;%@ Page Async="true" %></code>，這一步很重要。</p><p>Step 2. 然後我們設計一個透過非同步運行外部程序的方法，其中一律採用事件觸發來進行執行狀態與輸出的監控，並於運行後將輸出文字回送。</p><pre><code class=language-cs>private async System.Threading.Tasks.Task&lt;string> RunExternalProcessAsync()
+{
+  var oTask = new System.Threading.Tasks.TaskCompletionSource&lt;string>();
+  var oSB = new System.Text.StringBuilder();
+
+  using var oProcess = new System.Diagnostics.Process()
+  {
+    StartInfo = new System.Diagnostics.ProcessStartInfo()
+    {
+      WorkingDirectory = @"D:\",  //沒寫可能會造成無法捕獲RedirectStandardOutput問題
+      FileName = @"D:\csc.exe",
+      Arguments = @"something",
+      UseShellExecute = false,
+      CreateNoWindow = true,
+      RedirectStandardOutput = true
+    },
+    EnableRaisingEvents = true
+  };
+
+  oProcess.OutputDataReceived += (s, e) => oSB.AppendLine(e.Data);
+  oProcess.Exited += (s, e) =>
+  {
+    ((System.Diagnostics.Process)s).Close();
+    oTask.TrySetResult(oSB.ToString());
+  };
+
+  oProcess.Start();
+  oProcess.BeginOutputReadLine();
+
+  return await oTask.Task;
+}
+</code></pre><p>Step 3. 撰寫非同步Page_Load，把回傳的字串顯示在網頁上。</p><pre><code class=language-cs>public async void Page_Load(Object sender, EventArgs e)
+{
+  var cTemp = await RunExternalProcessAsync();
+  cMsg.Text = $"&lt;pre>{cTemp}&lt;/pre>";
+}
+</code></pre><p>整體的結構大概像這樣就可以運行了，網頁執行後會跑去運行外部EXE，如果運行時間長一點網站就會開始轉圈圈等候，當有輸出回應時就會自動將運行結果輸出在畫面上並結束。</p><h3>相關參考</h3><ul><li><a href=/archive2016/20160517.html>利用C#呼叫一個外部執行檔，並且偵測是否已經完成執行</a></li><li><a href=/archive2017/20170206.html>透過Console執行Exe檔案，並動態取回回傳值</a></li><li><a href=/archive2023/20230202.html>執行外部EXE檔案時考量逾時、路徑錯置、檔案資源釋放之方法</a></li><li><a href=/archive2023/20231121.html>透過非同步的方式執行外部EXE檔案，並捕捉輸出字串</a></li></ul><h6>.NetFramework C# CallEXE CallExecute DetectHadFinish DetectHadExit WaitingTime DataExchange FileExchange FileReleased ResourceReleased Async Await</h6></main><footer></footer><script src=/.file/site.js></script></body></html>
