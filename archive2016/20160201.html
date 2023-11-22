@@ -41,7 +41,13 @@ static async System.Threading.Tasks.Task Delay(int iSecond)
 Waiting Start.
 Waiting End.
 Step 3.B
-</code></pre><h2>同場加映ContinueWith()的用法</h2><p>static void RunTest_4() { WriteLine("Step 4.A"); System.Threading.Tasks.Task.Delay(5000).ContinueWith(_ => { WriteLine("I'm End."); }); //底線的寫法代表使用lambda時，如果不使用到傳入參數，就要打一個底線。 WriteLine("Step 4.B"); }</p><p>RunTest_4()輸出的字串如下：</p><pre><code class=language-txt>Step 4.A
+</code></pre><h2>同場加映ContinueWith()的用法</h2><pre><code class=language-cs>static void RunTest_4()
+{
+  WriteLine("Step 4.A");
+  System.Threading.Tasks.Task.Delay(5000).ContinueWith(_ => { WriteLine("I'm End."); });  //底線的寫法代表使用lambda時，如果不使用到傳入參數，就要打一個底線。
+  WriteLine("Step 4.B");
+}
+</code></pre><p>RunTest_4()輸出的字串如下：</p><pre><code class=language-txt>Step 4.A
 Step 4.B
 I'm End. ←由此可以看出CallBack效果
 </code></pre><h6>Thread.Sleep Task.Delay</h6></main><footer></footer><script src=/.file/site.js></script></body></html>
