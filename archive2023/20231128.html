@@ -1,0 +1,15 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>正確的計算出字串的長度</h1><p>網際網路時至今日，早已經是一個地球村的概念，所有的資訊透過網際網路飛快的傳遞，讓語言的使用率與能見度都達到前所未有的境界，以目前來說全世界大概是對<code>UTF-8</code>編碼有共識，絕大部分的網站都是採用UTF-8編碼，而.NET內建的文字編碼是<code>UTF-16</code>，也就是說所有的文字在處理的過程中，都會以<code>UTF-16</code>來識別處理。</p><h2>字串長度（文字長度）的基本計算 / String.Length</h2><p>有些時刻我們必須針對字串進行長度計算，通常用於<code>報表</code>或是<code>填補字串 Pad</code>上，錯誤的字元數量計算可能會造成錯誤的結果，而偏偏進入到<code>Unicode</code>時代後，中文字的編碼是以一種變動的型態來進行編碼，有些常用的中文字元落在BMP（Basic Multilingual Plane），那麼就可以被正確的計算成一個字，例如：<code>張</code>的<a href=%22https://www.compart.com/en/unicode/U+5F35%22>UTF-16編碼</a>是<code>0x5F35</code>。而有些罕見自可能會若在SIP（Supplementary Ideographic Plane），那麼這時候C#採用String.Length計算就會出錯，被計算成兩個字元。例如：<code>𡩋</code>的<a href=%22https://www.compart.com/en/unicode/U+21A4B%22>UTF-16編碼</a>是<code>0xD846 0xDE4B</code>。</p><h2>字串長度（文字長度）的仔細計算</h2><p>可以使用.NET的<code>System.Globalization.StringInfo</code>類別來輔助，程式碼如下：</p><pre><code class=language-cs>string cDemo = "張鈞𡩋";
+Console.WriteLine($"錯誤的長度：{cDemo.Length}");
+
+var oSI = new System.Globalization.StringInfo(cDemo);
+Console.WriteLine($"正確的長度：{oSI.LengthInTextElements}");
+</code></pre><p>輸出的結果：</p><pre><code class=language-txt>錯誤的長度：4 //𡩋的長度算錯了
+正確的長度：3
+</code></pre><p>透過上面的方法，可以更精準的計算出<code>中文字</code>正確的長度，就算是<code>中英文混雜</code>也適用。但倘落涉及到使用到菲茨派屈克修飾符（EMOJI MODIFIER FITZPATRICK）的Emojis，那麼計算就可能又變得不正確了。不過這個問題還好，畢竟沒有人會用Emojis當作名字吧？（好啦，或許未來有可能）</p><pre><code class=language-cs>string cDemo = "🍖🧒🏿";
+Console.WriteLine($"錯誤的長度：{cDemo.Length}");
+
+var oSI = new System.Globalization.StringInfo(cDemo);
+Console.WriteLine($"正確的長度：{oSI.LengthInTextElements}");
+</code></pre><p>輸出的結果：</p><pre><code class=language-txt>錯誤的長度：6
+正確的長度：3
+</code></pre><p>從上面的輸出結果發現很顯然是錯誤的，正確的長度應該是２才對。<code>🍖</code>其實有被正確的計算成<code>1</code>。但是<code>🧒🏿</code>因為涉及到修飾符，所以計算就錯誤了，被錯誤的計算成<code>2</code>。</p><h3>相關參考</h3><ul><li><a href=/archive2016/20160517.html>利用C#呼叫一個外部執行檔，並且偵測是否已經完成執行</a></li><li><a href=https://tonsky.me/blog/unicode/>The Absolute Minimum Every Software Developer Must Know About Unicode in 2023 (Still No Excuses!)</a></li></ul><h6>.NET .NetFramework .NetCore string length count CJK emojis</h6></main><footer></footer><script src=/.file/site.js></script></body></html>
