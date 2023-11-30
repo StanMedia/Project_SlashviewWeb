@@ -10,6 +10,15 @@
   Read();
 }
 </code></pre><p>經過這樣的程式碼後，我們就可以將oBlocks清單裡面的成員排除掉了，另外建議若是比對資料量很大的情況下，建議用<a href=/archive2022/20220210.html>Except()</a>，輸出的結果如下：</p><pre><code class=language-txt>aaa、ccc、fff
+</code></pre><h2>利用LINQ ANY()尋找是否有在黑名單裡</h2><p>有時候我們需要的並不是合法的清冊，而是有出現一筆不合法的都不可以。舉例來說，一個旅行團有10個人，裡面出現一個危險人物可能整團都會被海關帶去問話。以下是範例：</p><pre><code class=language-cs>//旅行團清單
+var oUsers = new System.Collections.Generic.List&lt;string>() { "王小明", "李小華", "陳小英", "JOHNNY" };
+//海關黑名單
+var oBlocks = new System.Collections.Generic.List&lt;string>() { "陳大英", "johnny" };
+//是否有違法人員
+var bIllegal = oUsers.Any(x => oBlocks.Contains(x, System.StringComparer.OrdinalIgnoreCase));
+//輸出
+Console.WriteLine($"團隊裡面是否有違法人員混入：{bIllegal}");
+</code></pre><p>從上面的程式碼可以發現我故意引入忽略大小寫的判斷，輸出如下：</p><pre><code class=language-txt>團隊裡面是否有違法人員混入：True
 </code></pre><h2>補充說明：LINQ ALL()</h2><p>ANY()的運算是「只要有一筆符合」即可（或；OR），反過來的指令ALL()是「所有的資料都要符合」才可（及；AND）。以下用一個簡單的例子來展示補充說明：</p><pre><code class=language-cs>public class People
 {
   public string cName { get; set; }
