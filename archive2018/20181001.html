@@ -15,7 +15,7 @@ foreach (var oItem in oCollections)
 </code></pre><p>輸出結果會長得像這樣：</p><pre><code class=language-txt>A: 小明
 A: 小華
 B: 小英
-</code></pre><h2>數值合併</h2><p>在HTTP的世界裡面應用的最多，就是單一鍵但有多重值，這時候我們可以這樣處理：</p><pre><code class=language-cs>var oCollections =
+</code></pre><h2>單一鍵且多值合併</h2><p>在HTTP的世界裡面應用的最多，就是單一鍵但有多重值，這時候我們可以這樣處理：</p><pre><code class=language-cs>var oCollections =
       oNC.AllKeys
         .GroupBy(k => k)
         .Select(g => $"{g.Key}: {string.Join("、", g.SelectMany(value => oNC.GetValues(value)))}");
