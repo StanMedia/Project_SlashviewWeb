@@ -5,14 +5,23 @@ oNC.Add("B", "小英");
 </code></pre><p>NameValueCollection內值得結果會長得像這樣：</p><pre><code class=language-txt>A --> [小明、小華]
 B --> [小英]
 </code></pre><h3>讓我們用LINQ把它拍扁（Flatten）吧！</h3><p>多一層迴圈其實也不是甚麼樣的問題，但其實我們可以靠LINQ SelectMany來幫我們把集合拍扁，讓他的結構層次從二階層降回一階層，讓程式碼更精簡，以下是程式碼範例。</p><pre><code class=language-cs>//拍扁它
-var oCollections = System.Web.HttpContext.Current.Request.Headers.AllKeys.SelectMany(
-  System.Web.HttpContext.Current.Request.Headers.GetValues,
+var oCollections = oNC.AllKeys.SelectMany(
+  oNC.GetValues,
   (k, v) => new {key = k, value = v}
 );
 //簡單的一階層迴圈就拿到資料嘍
 foreach (var oItem in oCollections)
 { Console.WriteLine($"{oItem.key}: {oItem.value}"); }
-</code></pre><p>oCollections內值得結果會長得像這樣：</p><pre><code class=language-txt>A --> 小明
-A --> 小華
-B --> 小英
+</code></pre><p>輸出結果會長得像這樣：</p><pre><code class=language-txt>A: 小明
+A: 小華
+B: 小英
+</code></pre><h2>數值合併</h2><p>在HTTP的世界裡面應用的最多，就是單一鍵但有多重值，這時候我們可以這樣處理：</p><pre><code class=language-cs>var oCollections =
+      oNC.AllKeys
+        .GroupBy(k => k)
+        .Select(g => $"{g.Key}: {string.Join("、", g.SelectMany(value => oNC.GetValues(value)))}");
+//簡單的一階層迴圈就拿到資料嘍
+foreach (var oItem in oCollections)
+{ Console.WriteLine($"{oItem.key}: {oItem.value}"); }
+</code></pre><p>輸出結果會長得像這樣：</p><pre><code class=language-txt>A: 小明、小華
+B: 小英
 </code></pre><h3>相關連結</h3><ul><li><a href=/archive2018/20180503.html>LINQ筆記：利用Linq撈取具有兩個階層的匿名型別（AnonymousType）資料</a></li><li><a href=/archive2018/20181001.html>列舉NameValueCollection集合內所有的資料</a></li><li><a href=/archive2022/20220208.html>LINQ筆記：SelectMany的使用方式</a></li></ul><h6>System.Collections.Specialized.NameValueCollection LINQ Flat Flatten ForNext Foreach</h6></main><footer></footer><script src=/.file/site.js></script></body></html>
