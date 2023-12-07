@@ -7,22 +7,22 @@
 }
 </code></pre><p>Step 2. 回到Main Console測試一下：</p><pre><code class=language-cs>ORM oTest = new ORM() { cName = "john", iMoney = 99999 };
 Console.WriteLine(JsonConvert.SerializeObject(oTest, Formatting.Indented));
-</code></pre><p>當ORM類別沒有附掛屬性時輸出：</p><pre><code class=language-json>{
+</code></pre><p>當ORM類別沒有附掛JsonProperty屬性時輸出：</p><pre><code class=language-json>{
   "cName": "john",
   "iMoney": 99999
 }
-</code></pre><p>當ORM類別附掛屬性時輸出：</p><pre><code class=language-json>{
+</code></pre><p>當ORM類別附掛JsonProperty屬性時輸出：</p><pre><code class=language-json>{
   "cAliasName": "john",
   "iAliasMoney": 99999
 }
 </code></pre><p>最後想對那位不知名的程式設計師說：「施主！何苦執著啊～轉個念頭豈不輕鬆乎？」就算退後一萬步沒有JsonPropertyAttribute，宣告個匿名型別（AnonymousType）包皮後在網外丟不也到達一樣的效果嗎？</p><h2>反序列化時期的名稱對齊</h2><p>JsonProperty還有另外一個功用，就是序列化時期的名稱對齊，例如有一個別人給你的JSON，偏偏就是要這樣命名：</p><pre><code class=language-json>{
   "My-Name": "John"
 }
-</code></pre><p>這種命名方式在很多語言中均不符合變數命名規則，關鍵就出在這個減法的符號<code>-</code>。以C#為例子，你沒有辦法設計一個ORM來讓後續的JSON.NET反序列化，自動賦值到該物件身上。例如：</p><pre><code class=language-cs>class ORM
+</code></pre><p>這種命名方式在很多語言中均不符合變數命名規則，關鍵就出在這個減法的符號<code>-</code>。以C#為例子，你沒有辦法設計一個ORM來讓後續的JSON.NET反序列化，自動賦值到該物件身上。例如：</p><pre><code class=language-cs>public class ORM
 {
   public string My-Name { get; set; }  //不合法的屬性命名規則
 }
-</code></pre><p>這時候我們可以改成這樣，在反序列化時期就可達成自動賦值：</p><pre><code class=language-cs>class ORM
+</code></pre><p>這時候我們可以改成這樣，在反序列化時期就可達成自動賦值：</p><pre><code class=language-cs>public class ORM
 {
   [JsonProperty("My-Name")]
   public string MyName { get; set; }  //解決！
