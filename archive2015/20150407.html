@@ -41,12 +41,13 @@ protected void QueryTCPServer(object sender, EventArgs e)
 public void KnockDoor(string cTempIP, int cTempPort)
 {
   try
-  {
-    System.Net.Sockets.TcpClient oTcp = new System.Net.Sockets.TcpClient(cTempIP, cTempPort);  //由於TCP協定的限制，不可以設定連線時間，因此如果對方的FTP沒開，會卡在這一行卡很久
-    bConnected = oTcp.Connected;  //如果跑到這一行了，表示對方主機有開且連線已經成功，通常這樣的動作不到一秒就完成了。如果對方的主機沒開，那大約要等20秒才會跳到錯誤區塊
+  { //由於TCP協定的限制，不可以設定連線時間，因此如果對方的FTP沒開，會卡在這一行卡很久
+    using var oTcp = new System.Net.Sockets.TcpClient(cTempIP, cTempPort);
+    //如果跑到這一行了，表示對方主機有開且連線已經成功，通常這樣的動作不到一秒就完成了。如果對方的主機沒開，那大約要等20秒才會跳到錯誤區塊
+    bConnected = oTcp.Connected;
   }
-  catch
-  {
+  catch (System.Exception oEx)
+  { //連線逾時
     oException = new System.Exception("TCP觸發連線逾時。");
   }
 }
