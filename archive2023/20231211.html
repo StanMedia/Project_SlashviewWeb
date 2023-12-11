@@ -1,5 +1,5 @@
 ﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>縮短Windows的TCP斷線前TIME_WAIT等候</h1><p>前陣子發現在實作<code>System.Net.HttpWebResponse</code>取回資訊的時候，明明有使用<code>using</code>或<code>Close()</code>進行正確的關閉動作，但是TCP PORT還是保持在<code>TIME_WAIT</code>時期一段很長的時間，經查依照TCP規範預設TIME_WAIT的逾時時間為兩倍MSL（Maximum Segment Lifetime），這個等待期也太長了。</p><p>下列是一個透過<code>netstat</code>指令觀察TIME_WAIT的連線狀態：</p><pre><code class=language-txt>C:\>netstat -an | findstr "TIME_WAIT"
-TCP    120.114.101.1:7485    20.209.68.33:443    TIME_WAIT
+TCP    XX.XX.XX.XX:7485    20.209.68.33:443    TIME_WAIT
 </code></pre><h2>改善網路效能</h2><p>依據微軟的<a href=https://learn.microsoft.com/zh-tw/biztalk/technical-guides/settings-that-can-be-modified-to-improve-network-performance>官方文件</a>，指出Windows預設的TIME_WAIT是<code>120秒</code>，但其實依據我實際的觀察會更久才關閉（大約３－４分鐘），因此我們將其縮短成微軟建議的<code>30秒</code>，可將預設TCP的等候關閉時間大幅縮短。</p><p>將下列的REG登入程式碼，存成<code>TimeWait.reg</code>，其中的16進制數值<code>1e</code>就是10進制的<code>30</code>：</p><pre><code class=language-txt>Windows Registry Editor Version 5.00
 
 [HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Services\Tcpip\Parameters]
