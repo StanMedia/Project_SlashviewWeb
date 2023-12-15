@@ -1,0 +1,102 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>ChatGPT-GPTs Actions超基本教學</h1><p>Open AI在2023-11-06進行第一屆開發者大會，其中我認為最重磅的功能就是Actions的推出，透過這個功能可以讓ChatGPT不再流於嘴砲<code>單純的返回訊息</code>，而是真正的可以幫忙去<code>做某些事情</code>，讓人類距離動嘴命令AI管家做事情的理想，又更縮短了一步。</p><p><img src=https://content.slashview.com/img/2023/20231215_01.jpg alt="" /></p><h2>先前條件與說明</h2><p>要達成這個功能，首先你必須要去申請一個<code>ChatGPT Plus</code>會員，才可以使用GPTs。</p><p>建立一個新的GPTs後，你可以進去下一些<code>Prompt</code>來提示ChatGPT該怎麼幫你做一個資料正規化的事情，正規化的過程其實就是現實生活中最煩人的部分，因為有很多使用者根本不知道他們自己的問題在哪裡、或者他們要問什麼，這部分就讓最擅長溝通的GPT來代勞啦。</p><h2>建立Schema</h2><p>切換到<code>config頁籤</code>就可以看到許多進階功能，這部分就是在定義怎麼透過ACTION送出去外界進行真正的動作，這邊我們採用一個查詢<code>郵遞區號小助手</code>作範例。</p><p>首先我們先給予OpenAPI定義的雙方交握Schema，這部分可以透過<a href=https://editor.swagger.io/>Swagger</a>來進行線上編輯與視覺化檢視：</p><pre><code class=language-yml>openapi: 3.0.3
+info:
+  title: 郵遞區號小助手
+  description: ChatGPT GPTs Action Demo
+  version: v1.0.0
+servers:
+  - url: https://somesite.com
+paths:
+  /chatGPTAction.ashx:
+    post:
+      tags:
+         -  郵遞區號
+      description: 取得郵遞區號
+      operationId: LocationQuery
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/oQuery'
+        required: true
+      responses:
+        '200':
+          description: 正確返回結果
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/oData'
+components:
+  schemas:
+    oQuery:
+      type: object
+      properties:
+        cLocation:
+          type: string
+          example: 台北市大安區
+    oData:
+      type: object
+      properties:
+        cLocation:
+          type: string
+          description: 原先查詢地區
+        iPostalCode:
+          type: integer
+          description: 郵遞區號
+        cMessage:
+          type: string
+          description: 其他訊息
+</code></pre><p>從上面的案例我們大致上可以看出，我們將透過POST傳遞JSON格式的資料字串進去，輸出的話會返回一個自定義的物件包，從Swagger的UI看起來就如下圖瑣示：</p><p><img src=https://content.slashview.com/img/2023/20231215_02.jpg alt="" /></p><h2>Action後端程式碼</h2><p>基本上你的Schema定義好後，GPTs會在後面寫一段自有的程式碼，來將你的需求定義成一支Functions，然後當ChatGPT跟使用者對話到某一個確認的程度時，會自動送需求給這支Functions。為此，我們在這邊寫一個模擬後端回應。（ASP.NET WebForm ASHX）</p><pre><code class=language-cs>public class chatGPTAction : System.Web.IHttpHandler
+{
+  public void ProcessRequest(System.Web.HttpContext oContext)
+  {
+    using var oSR = new System.IO.StreamReader(oContext.Request.InputStream);
+    var oRequest = Newtonsoft.Json.JsonConvert.DeserializeAnonymousType(oSR.ReadToEnd(), new { cLocation = "" });
+    var cLocation = oRequest?.cLocation;
+    if (string.IsNullOrEmpty(cLocation)) { cLocation = "無法取得地區資料"; }
+    var oData = new GptORM() { cLocation = cLocation };
+    switch (cLocation)
+    {
+      case "台北市大安區":
+        oData.iPostalCode = 106;
+        oData.cMessage = "命中目標";
+        break;
+      default:
+        var oRnd = new System.Random();
+        oData.iPostalCode = oRnd.Next(100, 999);
+        oData.cMessage = "亂數產生";
+        break;
+    }
+
+    //oData輸出成JSON，略...
+  }
+
+  public bool IsReusable { get { return false; } }
+
+  public class GptORM
+  {
+    public string cLocation { get; set; }
+    public int iPostalCode { get; set; }
+    public string cMessage { get; set; }
+  }
+}
+</code></pre><p>經過這樣的設計後，基本上就可以在GPTs上面對話了，頂多可以在<code>Prompt</code>裡面加上一些咒語，例如：</p><pre><code class=language-txt>當Actions收到JSON回傳時，請回覆成下列格式：
+您好，經查{cLocation}的郵遞區號是{iPostalCode}，此次交易遠端的附加訊息是{cMessage}
+</code></pre><p>您可能會覺得，怎麼可能ChatGPT看得懂這樣的咒語格式？放心！他就是真的跟人類一樣可以理解你想要幹嘛！</p><h2>補充說明</h2><p>⚠ 特別補充一個我在學習的過程中撞牆了一兩個小時的痛過經歷，因為一開始我打算是採用HTTP POST FormData <code>application/x-www-form-urlencoded</code>來進行，並且因為第一次摸索，在全然沒有任何有效的參考文件下進行，而當我的Schema寫明請幫我透過Form POST的方式送出資料時，GPTs一直回覆我錯誤，無法送出的Debug訊息：</p><pre><code class=language-txt>[debug] Calling HTTP endpoint
+{
+  "domain": "somesite.com",
+  "method": "post",
+  "path": "/chatGPTAction.ashx",
+  "operation": "LocationQuery",
+  "operation_hash": "73ca3637538bf62c6d8e9d5f45770242ededb314",
+  "is_consequential": true,
+  "params": {
+    "cLocation": "SomeStringWannaQuery"
+  }
+}
+
+[debug] Response received
+{
+  "response_data": "UnrecognizedKwargsError: cLocation"
+}
+</code></pre><p>經過我反覆檢查了：Schema YAML、Schema JSON、伺服端的程式碼、伺服端的CORS、非ANSI字元的UrlEncode、欄位名稱...之後，終於發現都不是這些問題，而是OpenAI一開始就沒有把後端自有程式碼的Form POST寫正確，也就是說如果你想要透過GPTs Actions使用HTTP Post FORM送出資料，無論如何都會得到這個錯誤：</p><pre><code class=language-txt>UnrecognizedKwargsError: XXXXX
+</code></pre><p>最憋屈的是，GPT-4每日只有40個Session的額度，你在測試的過程中隨便錯幾次額度就爆炸了，換來的就是漫長的等待...。總之就是這樣了，如果你找到這一篇有極高的概率，應該也是採用Form POST的陷阱。</p><h6>OpenAI ChatGPT ChatGPTs ChatGPTsActions HowTo ASP.NET CSharp C# Demo</h6></main><footer></footer><script src=/.file/site.js></script></body></html>
