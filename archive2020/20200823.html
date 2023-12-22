@@ -1,10 +1,11 @@
-﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>SQL筆記：在SSMS資料表設計階段快速對欄位進行描述輸入</h1><p>資料表欄位描述的重要性，在後期維護作業扮演著非常重要的角色，但在歷代SSMS（SQL Server Management Studio）的資料表設計介面中，這個欄位都被藏在下方很難「快速繕打」，雖然可以選擇在設計完成之後再去資料庫圖表中呼叫出來輸入，但總覺得不夠直觀且緩不濟急，實在無法理解為何這種東西不是預設被放在介面中？</p><p>今天怒查了一下果然可以在資料表設計階段中就把描述（Description）叫出來，甚至連以往都要拉到最下方的識別／自動增量（Identity）也可以在設計時期直觀的顯示，因此將其記錄在此。</p><h2>在SSMS資料表設計時期快速使用描述與識別欄位</h2><p>Step 1. 打開Regedit進入下列路徑，路徑中的14.0代表的是SSMS版本號，請自己調整當前使用的版本號：</p><pre><code class=language-txt>HKEY_CURRENT_USER\SOFTWARE\Microsoft\SQL Server Management Studio\14.0\DataProject
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>SQL筆記：在SSMS資料表設計階段快速對欄位進行描述輸入</h1><p>資料表欄位描述的重要性，在後期維護作業扮演著非常重要的角色，但在歷代SSMS（SQL Server Management Studio）的資料表設計介面中，這個欄位都被藏在下方很難「快速繕打」，雖然可以選擇在設計完成之後再去資料庫圖表中呼叫出來輸入，但總覺得不夠直觀且緩不濟急，實在無法理解為何這種東西不是預設被放在介面中？</p><p>今天怒查了一下果然可以在資料表設計階段中就把描述（Description）叫出來，甚至連以往都要拉到最下方的識別／自動增量（Identity）也可以在設計時期直觀的顯示，因此將其記錄在此。</p><h2>在SSMS資料表設計時期快速使用描述與識別欄位</h2><p>Step 0. 把你的SSMS關閉，沒有關閉的話下面的設定會被回寫成預設值。</p><p>Step 1. 打開Regedit進入下列路徑，路徑中的14.0代表的是SSMS版本號，請自己調整當前使用的版本號。</p><pre><code class=language-txt>HKEY_CURRENT_USER\SOFTWARE\Microsoft\SQL Server Management Studio\14.0\DataProject
 </code></pre><p><img src=https://content.slashview.com/img/2020/20200823_01.jpg alt="" /></p><p>Step 2. 找到兩個機碼「SSVPropViewColumnsSQL70」、「SSVPropViewColumnsSQL80」並將值「1,2,6;」變更為「1,2,6,8,17;」，或者直接使用下列的註冊檔（將文字儲存成*.reg即可）。</p><pre><code class=language-txt>Windows Registry Editor Version 5.00
 
 [HKEY_CURRENT_USER\SOFTWARE\Microsoft\SQL Server Management Studio\14.0\DataProject]
 "SSVPropViewColumnsSQL70"="1,2,6,8,17;"
 "SSVPropViewColumnsSQL80"="1,2,6,8,17;"
-</code></pre><p>Step 3. 重新開啟SSMS後，就可以看到效果了。</p><p><img src=https://content.slashview.com/img/2020/20200823_02.jpg alt="" /></p><h2>介面那串神秘的數值代碼意義如下：</h2><pre><code class=language-txt>01    Column Name
+</code></pre><p>Step 3. 重新開啟SSMS後，就可以看到效果了。</p><p><img src=https://content.slashview.com/img/2020/20200823_02.jpg alt="" /></p><h2>注意！</h2><p>於SSMS 18版後，註冊檔路徑將會變成類似下列，請自行理解並修正：</p><pre><code class=language-txt>HKEY_CURRENT_USER\SOFTWARE\Microsoft\SQL Server Management Studio\18.0_IsoShell\DataProject
+</code></pre><h2>介面那串神秘的數值代碼意義如下：</h2><pre><code class=language-txt>01    Column Name
 02    Data Type
 03    Length
 04    Precision
