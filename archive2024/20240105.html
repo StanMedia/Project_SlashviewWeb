@@ -1,0 +1,46 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>SQL筆記：實作階層遞迴查詢（透過CTE暫存表）</h1><p>有時候我們會想要透過精簡的資料表結構，來達成具備階層觀念的表達，例如：公司的組織架構、人員管理結構、網站選單結構．．．等。理論上可以避免就避免這樣的資料表設定，但如果真的想要用單一資料表來完成這樣的表述，也不是不行，只是SELECT時期與日後對於SQL的語法理解維護，就得要加把勁了。</p><h2>建立一個組織資料表與資料</h2><p>某公司有以下的資料表結構（單一資料表），用來描述公司的組織架構：</p><pre><code class=language-sql>CREATE TABLE Organization (
+	[iAutoIndex] [int] IDENTITY(1,1) NOT NULL,
+	[cCode] [nvarchar](50) NOT NULL,
+	[cName] [nvarchar](50) NULL,
+	[cTopCode] [nvarchar](50) NULL
+)
+</code></pre><p>這張資料表有下列資料，並請自行望文生意，應該不難理解這張資料表要表達的意思：</p><pre><code class=language-txt>iAutoIndex cCode cName            cTopCode
+1          COM   ＯＯ股份有限公司 NULL
+2          DEV   研發中心         COM
+3          SEL   銷售中心         COM
+4          001   軟體部           DEV
+5          002   硬體部           DEV
+6          ABC   網路部           SEL
+7          DEF   零售部           SEL
+</code></pre><h2>透過遞迴查詢，來把組織階層結構完整的表達</h2><p>接下來我們要處理的問題是，我要怎麼SELECT出一張資料表，裡面可以表達出這間公司所有的組織結構？答案就是透過CTE暫存表來進行遞迴查詢。</p><pre><code class=language-sql>WITH CTE AS (
+  SELECT iAutoIndex, cCode, cName, cTopCode
+  FROM Organization
+  WHERE cTopCode IS NULL
+  UNION ALL
+  SELECT o.iAutoIndex, o.cCode, o.cName, o.cTopCode
+  FROM Organization o
+  JOIN CTE c ON o.cTopCode = c.cCode
+)
+
+SELECT 
+  COALESCE(t1.cName, '') AS cCompany,
+  COALESCE(t2.cName, '') AS cDepartmentLV1,
+  COALESCE(t3.cName, '') AS cDepartmentLV2,
+  COALESCE(t1.cCode, '') AS cCodeCompany,
+  COALESCE(t2.cCode, '') AS cCodeDepartmentLV1,
+  COALESCE(t3.cCode, '') AS cCodeDepartmentLV2,
+  COALESCE(t1.cCode, '') + COALESCE(t2.cCode, '') + COALESCE(t3.cCode, '') AS cCodeDepartmentFull
+FROM
+  CTE t1
+LEFT JOIN
+  CTE t2 ON t1.cCode = t2.cTopCode
+LEFT JOIN
+  CTE t3 ON t2.cCode = t3.cTopCode
+WHERE
+  t1.cTopCode IS NULL
+</code></pre><p>透過上面的SQL指令，就可以輕易的SELECT出這間公司所有的階層結構，供給後續的應用程式讀取了，資料結果集如下：</p><pre><code class=language-txt>cCompany          cDepartmentLV1 cDepartmentLV2 cCodeCompany cCodeDepartmentLV1 cCodeDepartmentLV2 cCodeDepartmentFull
+ＯＯ股份有限公司  研發中心       軟體部         COM          DEV                001                COMDEV001
+ＯＯ股份有限公司  研發中心       硬體部         COM          DEV                002                COMDEV002
+ＯＯ股份有限公司  銷售中心       網路部         COM          SEL                ABC                COMSELABC
+ＯＯ股份有限公司  銷售中心       零售部         COM          SEL                DEF                COMSELDEF
+</code></pre><p>單一資料表來表述階層結構的優點是，若日後組織調整又或是階層的增加，只要頭腦清楚修改得宜，的確可以快速的表述資料（不用增刪其他相關資料表），也可以快速的修正SQL指令來對應。但是缺點也是很明顯的，這張資料表的產生是<code>透過遞迴</code>來完成，這代表日後如果所有的應用程式依存在這張資料表上，那每次的查詢他都要進行必較大量的運算並耗用記憶體，對大型組織來說應該不是一件好事。</p><p>對了，你<code>真的確定</code>幾年後回來看這個遞迴SQL指令，你的頭腦會很清楚嗎，要確定ㄋㄟ？</p><h6>SQL Command Statement TempTable CTE RecursiveQuery</h6></main><footer></footer><script src=/.file/site.js></script></body></html>
