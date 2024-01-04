@@ -1,0 +1,19 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>SQL筆記：不須預先宣告欄位的CTE暫存表</h1><p>SQL的暫存表之一般資料表運算式（Common Table Expressions, CTE），他幾乎可以完美的取代<code>@TempTable</code>語法，理由是<code>@TempTable</code>這種語法需要進行預先欄位宣告，包含欄位名稱與型別，這個設定非常的惱人。而反觀CTE就沒有這種問題，盡管他表面上的正式語法也是需要預先宣告欄位名稱，但這種寫法是可以被略過、精簡掉的。</p><h2>SQL暫存表（CTE）</h2><p>一段CTE正式語法如下</p><pre><code class=language-sql>WITH YourTempTableName(columnName1, columnName2 ...) AS
+(
+  SELECT
+    *
+  FROM
+    AnotherTable
+)
+</code></pre><p>上面的語法其實已經比<code>@TempTable</code>還精簡一些了，但SQL允許我們變得更精簡：</p><pre><code class=language-sql>WITH YourTempTableName AS
+(
+  SELECT
+    *
+  FROM
+    AnotherTable
+)
+</code></pre><p>免宣告欄位名稱與型別，超爽是不是？</p><p>接著我們就可以用一般的SELECT或是其他SQL語法，針對CTE型態的資料表將其讀取回來：</p><pre><code class=language-sql>SELECT
+  *
+FROM
+  YourTempTableName
+</code></pre><p>再說一次，比起那些成串令人嘔吐的花式SQL子查詢語法，是不是簡單好閱讀多了？同樣的，這種CTE依然只活在執行週期裡面，所以你不需要擔心垃圾、占用記憶體、釋放等問題。</p><p>CTE最常被拿來用在SQL Select遞迴查詢，也就是單資料表生出CTE讓<code>自己join自己</code>，形成一個超噁心的結果集，不過那是另外一個話題了。</p><h3>相關參考</h3><ul><li><a href=/archive2017/20170515.html>SQL筆記：利用SQL相關子查詢，來產生多張資料表間的統計檢視表</a></li><li><a href=/archive2022/20221109.html>SQL筆記：關於子查詢（SubQuery）的語法整理</a></li><li><a href=/archive2022/20221110.html>SQL筆記：關於SQL暫存表語法整理</a></li><li><a href=/archive2024/20240104.html>SQL筆記：不須預先宣告欄位的CTE暫存表</a></li></ul><h6>SQL Command Statement TempTable CTE InsertIntoSelect SelectIntoTempTable</h6></main><footer></footer><script src=/.file/site.js></script></body></html>
