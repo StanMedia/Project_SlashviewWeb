@@ -1,0 +1,17 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>瀏覽器自動化控制初體驗：Selenium.WebDriver</h1><p>在撰寫文章的此刻，如果要透過實體調用Web Browser並取得內容，最好的方式就是透過Selenium來調用WebDriver。知道這個東西但一直都沒有時間玩看看，這篇文章就針對這個調用瀏覽器操作的需求，來初步的嘗試看看。</p><h2>安裝WebDriver</h2><p>端看你習慣使用哪一種瀏覽器，例如我使用的是Microsoft Edge，那麼請到下列網址<a href=https://developer.microsoft.com/en-us/microsoft-edge/tools/webdriver/>Microsoft Edge WebDriver</a>下載WebDriver，如果是使用Chrome或是其他瀏覽器，那麼就到對應的網站去下載，自行Google一下不難找。</p><p>到網站後尋找目標<code>Stable Channel</code>: <code>Current general public release channel</code>，以撰寫文章的現在來說，Microsofe Edge的版本號是<code>120.0.2210.144</code>，因此WebDriver也是下載這個版本即可。日後如果Edge自動升級版本（小版本更新），理論上依然可以持續使用舊版的WebDriver，但如果發現開始變得怪怪的甚至不能執行，那麼就要到這個網站再更新一次成為新版的WebDriver。</p><p>下載<code>x64</code>版本打開來，其實就是一個EXE執行檔案（msedgedriver.exe），執行起來跑在Console模式下，看起來應該是包裝成一個<code>local services</code>，預設在<code>Port 9515</code>監聽指令並轉換成Browser對應動作。請將執行檔複製到自己想要放置的資料夾下，若要測試看看，可以執行後去你自己的瀏覽器輸入<code>http://localhost:9515/</code>，就會看到JSON格式的錯誤訊息：</p><pre><code class=language-json>{
+  "value": {
+    "error": "unknown command",
+    "message": "unknown command: unknown command: ",
+    "stacktrace": "...略"
+  }
+}
+</code></pre><p>🥐 也可以偷懶透過VisualStudio去nuget搜尋安裝類似<code>Microsoft Edge WebDriver</code>的關鍵字，找到他人封裝後的安裝包，這樣就不用自己去網路下載了，也可以日後透過nuget更新一次就升級到最新版。缺點是這類的封裝都不是官方的，這意味著日後的更新或許是一種幻想，取決於作者會不會持續維護。</p><h2>安裝Selenium.WebDriver</h2><p>這個沒有甚麼好說的，請到VisualStudio裡面透過nuget安裝Selenium.WebDriver，這個套件是Selenium官方出品的，後續應該會持續更新才是。</p><h2>利用C#經由Selenium透過WebDriver獲取網頁資料</h2><p>進入到C#語言後，記得在專案引用名稱空間<code>using OpenQA.Selenium;</code>，當然要寫完整名稱空間也可以啦。下面程式碼示範從台灣YAHOO的首頁，拿取焦點新聞的第一條文字，顯示在Console介面上。</p><pre><code class=language-cs>static void Main(string[] args)
+{
+  var oService = OpenQA.Selenium.Edge.EdgeDriverService.CreateDefaultService("C:\\Program Files\\Microsoft Edge WebDriver", "msedgedriver.exe");
+  var oOption = new OpenQA.Selenium.Edge.EdgeOptions();
+  var oDriver = new OpenQA.Selenium.Edge.EdgeDriver(oService, oOption);
+  oDriver.Navigate().GoToUrl("https://tw.yahoo.com/");
+  var oElement = oDriver.FindElement(OpenQA.Selenium.By.XPath("/html/body/div[1]/div/main/div[3]/div/ul/li[1]/div/div/ul/li[1]/a/span"));
+  Console.WriteLine(oElement.Text);
+}
+</code></pre><p>上面的程式碼執行後會去透過Selenium調用Edge WebDriver，至YAHOO網頁拿取內容，並透過XPATH解析DOM，取出SAPN標籤裡面的文字，例如：<code>台灣960萬人 列入「準富裕層」</code>，練習完成收工。</p><h6>C# WebBrowserControl Selenium WebDriver Google Chrome Microsoft Edge Firefox</h6></main><footer></footer><script src=/.file/site.js></script></body></html>
