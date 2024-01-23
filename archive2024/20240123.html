@@ -1,0 +1,13 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>再論ASP.NET WebAPI的JSON、XML輸出格式、排序</h1><p>先前的WebAPI文章有討論過如何將XML的輸出格式關閉，但在現實上仍然會遇到一些問題，那就是在真實的運作上，剛收到WebAPI的開發者難免會在瀏覽器上直接透過GET看一下你的API，或者是透過Postman軟體忘記送出HTTP Accept Header，這些都會遭遇到一些議題。</p><h2>我面臨到的WebAPI的極端問題</h2><p>我不能毀掉傳統XML輸出格式，但我希望所有的開發者採用JSON格式。</p><p>但開發者第一時間拿到WebAPI，直覺=透過瀏覽器送出的Accept Header是：text/html,application/xhtml+xml,application/xml...brabra，這意味著就算你再怎麼調整FormattersCollection順序，依然閃躲不掉XML被開發者視為預設值的問題（第一印象看到的回應）。</p><h2>調整順序大法（無用）</h2><p>在沒有任何設定下送出無Accept Header回應值會是JSON，這意味著其實FormattersCollection中，JSON其實是預設值（第一順位）。網路上有人忽視<code>JOSN早就已經是預設值</code>的規則，建議採用全部清除再重建順序，程式碼如下：</p><pre><code class=language-cs>System.Web.Http.GlobalConfiguration.Configuration.Formatters.Clear();
+System.Web.Http.GlobalConfiguration.Configuration.Formatters.Add(new System.Net.Http.Formatting.JsonMediaTypeFormatter());
+System.Web.Http.GlobalConfiguration.Configuration.Formatters.Add(new System.Net.Http.Formatting.XmlMediaTypeFormatter());
+</code></pre><p>上面的程式碼除了表達Formatters可能是一個Collections之外，其實沒有太多意義。除了忽視JSON本來就是預設值外，也忽視了瀏覽器預設Accept內含XML的議題，因此這樣的解決方案是無用的。</p><h2>讓瀏覽器GET行為預設輸出JSON，同時保留XML回應的可能性</h2><p>透過瀏覽器GET預設輸出JSON格式，可以達到暗示開發者採用JSON的特性。透過<a href="https://learn.microsoft.com/en-us/previous-versions/aspnet/hh834497(v=vs.118)">RequestHeaderMapping</a>來介入<code>Configuration.Formatters.JsonFormatter.MediaTypeMappings</code>，可以達到此目的：</p><pre><code class=language-cs>System.Web.Http.GlobalConfiguration.Configuration.Formatters.JsonFormatter.MediaTypeMappings.Add(
+  new System.Net.Http.Formatting.RequestHeaderMapping(
+    "Accept",
+    "text/html",
+    System.StringComparison.InvariantCultureIgnoreCase,
+    true,
+    "application/json"
+  )
+);
+</code></pre><h6>ASP.NET WebAPI ResponseMode ResponseFormat JSON XML Files Browser Accept text/html JSONResponse</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

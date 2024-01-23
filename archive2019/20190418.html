@@ -3,8 +3,8 @@
 </code></pre><h2>取消ASP.NET WebAPI某種輸出格式的方法</h2><p>基本上都是關掉XML啦，下面我還是都把兩個範例寫出來。基本上如果你兩個格式都關閉的話，ASP.NET WebAPI會採用「檔案輸出」的方式餵資料給你，也是蠻妙的。</p><pre><code class=language-cs>void Application_Start(object sender, EventArgs e)
 {
   //關閉XML回應格式
-  GlobalConfiguration.Configuration.Formatters.XmlFormatter.SupportedMediaTypes.Clear();
+  System.Web.Http.GlobalConfiguration.Configuration.Formatters.XmlFormatter.SupportedMediaTypes.Clear();
   //關閉JSON回應格式（你不是真的想這樣做吧？）
-  //GlobalConfiguration.Configuration.Formatters.JsonFormatter.SupportedMediaTypes.Clear();
+  //System.Web.Http.GlobalConfiguration.Configuration.Formatters.JsonFormatter.SupportedMediaTypes.Clear();
 }
-</code></pre><h6>ASP.NET WebAPI ResponseMode ResponseFormat JSON XML Files</h6></main><footer></footer><script src=/.file/site.js></script></body></html>
+</code></pre><p>最後要注意的事情是，如果你採用上面的程式碼，把系統的格式鎖定到剩下JSON格式，那麼無論你給什麼<code>HTTP Accept Header</code>，甚至<code>沒有給Accept</code>，所有的輸出一律都剩下JSON格式喔。</p><h6>ASP.NET WebAPI ResponseMode ResponseFormat JSON XML Files</h6></main><footer></footer><script src=/.file/site.js></script></body></html>
