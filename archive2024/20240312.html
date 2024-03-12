@@ -134,4 +134,4 @@ Name: 6 - $6
 Name: 7 - $7
 Name: 8 - $8
 Name: 9 - $9
-</code></pre><p>實際測試產生百萬筆資料等級的資料物件，讀寫本機Redis效率非常驚人，寫入大約2秒多，讀取大約1秒多就完成，如果只是一般的常數讀寫效率都是1ms上下就完成了，有這方面喜好的人可以自行嘗試看看。</p><h6>CSharp SingletonPattern Redis Cache Server Request Response Set Get</h6></main><footer></footer><script src=/.file/site.js></script></body></html>
+</code></pre><p>實際測試產生百萬筆資料等級的資料物件，讀寫本機Redis效率非常驚人（寫入大約2秒多，讀取大約1秒多）就完成，如果只是一般的常數等級的讀寫效率都是1ms上下就完成了，有這方面喜好的人可以自行嘗試看看。</p><p>另外必須提醒一點就是<code>數值的處理</code>必須注意，貌似Redis只有實際支援到<code>INT32</code>等級的數據，若要更高位數的處理可能需要特別轉換，或乾脆直接先轉型成字串再取回自行手動轉型也可以，更複雜的狀況例如decimal、float就更未知了，因為那不是我本篇文章關心的重點，所以有用到的人請特別注意一下數值處理便是。</p><h6>CSharp SingletonPattern Redis Cache Server Request Response Set Get</h6></main><footer></footer><script src=/.file/site.js></script></body></html>
