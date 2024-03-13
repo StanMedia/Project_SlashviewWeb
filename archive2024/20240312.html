@@ -1,36 +1,43 @@
 ﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>透過C#單一實例實作Redis快取伺服器之存取與管理</h1><p>Redis的高速與效能常常是快取伺服器的首選，這篇文章將透過程式碼來展示如何設計與存取這個快取資料庫。</p><ol><li><p>首先，你必須要架設好一台<code>Redis伺服器</code>，且Listen於預設的<code>6379 Port</code>。</p></li><li><p>選擇連線的程式庫：若以效能來考量<code>ServiceStack.Redis</code>的連線程式庫最好（目前版本是V8），但是他從V4版本後每小時只給你6000次存取，除非花錢否則只能降轉V3版本（如果你是屬於不在乎版權的人，網路上倒是有很多人分享暗黑版本）。考量到V3已經是上古時期的產物，只好將眼光投向效能稍差一些但完全免費的<code>StackExchange.Redis</code>，喜歡的人請自己去nuget拿（目前版本是V2.7.33）。</p></li><li><p>接下來你必須知道，在網站伺服器的世界裡面，併發要求（Concurrent Request）是絕對必須承認的環境，但又基於我們不可能讓網站後台或Redis伺服器無限制的開啟傳送、接收連線需求（將會讓TCP Ports耗盡），這時候就是單一實例（Singleton Pattern）的應用場景啦！類別程式碼如下：</p></li></ol><pre><code class=language-cs>public class Redis
-{ //Redis伺服器位址
-  private static readonly string _cServer = "localhost:6379";
-  
-  //延遲建立：管理者連線
-  private static StackExchange.Redis.ConnectionMultiplexer _oAdminConn => _oAdminLazyConn.Value;
-  private static readonly System.Lazy&lt;StackExchange.Redis.ConnectionMultiplexer> _oAdminLazyConn = new System.Lazy&lt;StackExchange.Redis.ConnectionMultiplexer>(() => {
+{ //伺服器位址
+  private static readonly string _cServer = "127.0.0.1:6379";
+  //伺服器密碼
+  private static readonly string _cPassword = "SlashviewPassword";
+
+  //延遲建立：Redis連線
+  private static StackExchange.Redis.ConnectionMultiplexer _oConn => _oLazyConn.Value;
+  private static readonly System.Lazy&lt;StackExchange.Redis.ConnectionMultiplexer> _oLazyConn = new System.Lazy&lt;StackExchange.Redis.ConnectionMultiplexer>(() => {
     var oOptions = new StackExchange.Redis.ConfigurationOptions
     {
       EndPoints = { _cServer },
-      AllowAdmin = true,
-    };
-    return StackExchange.Redis.ConnectionMultiplexer.Connect(oOptions);
-  });
-  
-  //延遲建立：使用者連線
-  private static StackExchange.Redis.ConnectionMultiplexer _oUserConn => _oUserLazyConn.Value;
-  private static readonly System.Lazy&lt;StackExchange.Redis.ConnectionMultiplexer> _oUserLazyConn = new System.Lazy&lt;StackExchange.Redis.ConnectionMultiplexer>(() => {
-    var oOptions = new StackExchange.Redis.ConfigurationOptions
-    {
-      EndPoints = { _cServer },
+      Password = _cPassword,
       AbortOnConnectFail = false,
+      AllowAdmin = true,
     };
     return StackExchange.Redis.ConnectionMultiplexer.Connect(oOptions);
   });
   
   //單一實例Singleton：取得伺服器
   private static StackExchange.Redis.IServer GetServer()
-  { return _oAdminConn.GetServer(_cServer); }
+  {
+    try
+    { return _oConn.GetServer(_cServer); }
+    catch (System.Exception oEx)
+    { throw new System.Exception($"管理Redis失敗 / {oEx.Message}"); }
+  }
   
   //單一實例Singleton：取得資料庫
   private static StackExchange.Redis.IDatabase GetDatabase()
-  { return _oUserConn.GetDatabase(); }
+  {
+    try
+    {
+      if (!_oConn.IsConnected)
+      { throw new System.Exception($"主機連接資訊：{_oConn.Configuration}");  }
+      return _oConn.GetDatabase();
+    }
+    catch (System.Exception oEx)
+    { throw new System.Exception($"存取Redis失敗 / {oEx.Message}"); }
+  }
 
   /// &lt;summary>
   /// 管理者方法：清除全部快取
@@ -38,8 +45,8 @@
   public static void Clear()
   {
     var oDB = GetServer();
-    oDB.FlushDatabase();
-    oDB.MemoryPurge();
+    oDB.FlushDatabase();  //全部清除快取
+    oDB.MemoryPurge();    //立即釋放資源
   }
 
   /// &lt;summary>
@@ -47,7 +54,8 @@
   /// &lt;/summary>
   /// &lt;param name="cKey">鍵名&lt;/param>
   /// &lt;param name="cValue">值&lt;/param>
-  public static void Set(string cKey, string cValue) => Set&lt;string> (cKey, cValue);
+  /// &lt;param name="iSecond">過期秒數&lt;/param>
+  public static void Set(string cKey, string cValue, int? iSecond = null) => Set&lt;string> (cKey, cValue, iSecond);
 
   /// &lt;summary>
   /// 使用者方法：設定快取（泛型）
@@ -55,13 +63,14 @@
   /// &lt;typeparam name="T">泛型型別&lt;/typeparam>
   /// &lt;param name="cKey">鍵名&lt;/param>
   /// &lt;param name="tValue">值&lt;/param>
-  public static void Set&lt;T>(string cKey, T tValue)
+  /// &lt;param name="iSecond">過期秒數&lt;/param>
+  public static void Set&lt;T>(string cKey, T tValue, int? iSecond = null)
   {
     var oDB = GetDatabase();
     if (tValue is string)
-    { oDB.StringSet(cKey, tValue as string); }
+    { oDB.StringSet(cKey, tValue as string, iSecond == null ? null : System.TimeSpan.FromSeconds(iSecond.Value)); }
     else
-    { oDB.StringSet(cKey, Newtonsoft.Json.JsonConvert.SerializeObject(tValue)); }
+    { oDB.StringSet(cKey, Newtonsoft.Json.JsonConvert.SerializeObject(tValue), iSecond == null ? null : System.TimeSpan.FromSeconds(iSecond.Value)); }
   }
 
   /// &lt;summary>
@@ -101,7 +110,7 @@
     oDB.KeyDelete(cKey);
   }
 }
-</code></pre><p>考量在實際運作場景上對於程式設計師的便利性，因此我最後採用的思路就是除了字串之外，其他無論是三小類型一律序列化伺候就對了。缺點除了效率會損失一些（存入取出都需要JSON.NET起來幫我們序列與反序列化）之外，撰寫時期的思考可以降至為零，不必再思考現在這個POCO、DTO Collections要用哪個特別的方法存取，或者是否有在Class加上[Serializable]。</p><ol start=3><li>實際調用範例</li></ol><p>文字型別的快取存取：</p><pre><code class=language-cs>Redis.Set("testString", "這是一個文字字串 / Test string");
+</code></pre><p>考量在實際運作場景上對於程式設計師的便利性，因此在撰寫這個類別我最後採用的思路就是除了字串之外，其他無論是三小類型一律序列化伺候就對了。缺點除了效率會損失一些（存入取出都需要JSON.NET起來幫我們序列與反序列化）之外，撰寫時期的思考可以降至為零，不必再思考現在這個POCO、DTO Collections要用哪個特別的方法存取，或者是否有在Class加上[Serializable]。對付一般應用場景我覺得是很夠用了，如果最終遇到千萬筆導致讀寫效能過低時，頂多再手動調用<code>StackExchange.Redis</code>原始類別解決即可。</p><ol start=3><li>實際調用範例</li></ol><p>文字型別的快取存取：</p><pre><code class=language-cs>Redis.Set("testString", "這是一個文字字串 / Test string");
 Console.WriteLine(Redis.Get("testString"));
 
 //輸出：
@@ -134,4 +143,4 @@ Name: 6 - $6
 Name: 7 - $7
 Name: 8 - $8
 Name: 9 - $9
-</code></pre><p>實際測試產生百萬筆資料等級的資料物件，讀寫本機Redis效率非常驚人（寫入大約2秒多，讀取大約1秒多）就完成，如果只是一般的常數等級的讀寫效率都是1ms上下就完成了，有這方面喜好的人可以自行嘗試看看。</p><p>另外必須提醒一點就是<code>數值的處理</code>必須注意，貌似Redis只有實際支援到<code>INT32</code>等級的數據，若要更高位數的處理可能需要特別轉換，或乾脆直接先轉型成字串再取回自行手動轉型也可以，更複雜的狀況例如decimal、float就更未知了，因為那不是我本篇文章關心的重點，所以有用到的人請特別注意一下數值處理便是。</p><h6>CSharp SingletonPattern Redis Cache Server Request Response Set Get</h6></main><footer></footer><script src=/.file/site.js></script></body></html>
+</code></pre><p>實際測試產生百萬筆資料等級的資料物件，讀寫本機Redis效率非常驚人（包含序列反序列化，寫入大約2秒多讀取大約1秒多）就完成，如果只是一般的常數等級的讀寫效率都是1ms上下就完成了，有這方面喜好的人可以自行嘗試看看。</p><p>另外必須提醒一點就是<code>數值的處理</code>必須注意，貌似Redis只有實際支援到<code>INT32</code>等級的數據，若要更高位數的處理可能需要特別轉換，或乾脆直接先轉型成字串再取回自行手動轉型也可以，更複雜的狀況例如decimal、float就更未知了，因為那不是我本篇文章關心的重點，所以有用到的人請特別注意一下數值處理便是。</p><h6>CSharp SingletonPattern Redis Cache Server Request Response Set Get</h6></main><footer></footer><script src=/.file/site.js></script></body></html>
