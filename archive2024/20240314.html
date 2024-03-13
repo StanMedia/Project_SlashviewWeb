@@ -1,0 +1,41 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>在Linux下安裝Redis Server</h1><p>因為有安裝Redis伺服器的需要所以寫了這篇，雖然說這個萬物Docker時代直接透過Docker下載Redis image就搞定，但考量到效能與細節設定，還是逐步老老實實地把Redis安裝起來比較恰當。</p><h2>透過Ubuntu安裝Redis Server</h2><ol><li><p>首先，請先擁有一套乾淨的Ubuntu Server，這邊我預設安裝的是<code>Ubuntu Server Minimized</code>，所以後續過程會囉嗦點。</p></li><li><p>切換到最高權限。</p></li></ol><pre><code>sudo -i
+</code></pre><ol start=3><li>對apt-get下指令更新。</li></ol><pre><code>apt-get update
+</code></pre><ol start=4><li>開始安裝Redis，全程YES到底就對了。</li></ol><pre><code>apt-get install redis -y
+</code></pre><ol start=5><li>裝完後立刻執行Linux版本的<code>redis-cli</code>，不用帶任何參數，自動連線到本機<code>127.0.0.1:6379</code>，接著下指令：</li></ol><pre><code>> ping
+PONG  //系統回應給你的回應
+</code></pre><ol start=6><li>離開回到Linux作業系統後，輸入<code>service redis-server status</code>來觀察Redis運行狀態：</li></ol><pre><code>一大堆資訊中間會出現下列綠色文字：
+Active: active (running) since ... ago
+</code></pre><ol start=7><li>取得<code>nano編輯器</code>，準備後續幹活。</li></ol><pre><code>apt-get install nano
+</code></pre><ol start=8><li>安裝完成後輸入下列指令，進行Redis設定編輯：</li></ol><pre><code>nano /etc/redis/redis.conf
+</code></pre><ol start=9><li>在編輯器中，開啟外部網路監聽：</li></ol><pre><code>找到
+bind 127.0.0.1 ::1
+改成
+bind 0.0.0.0
+</code></pre><p><img src=https://content.slashview.com/img/2024/20240314_01.jpg alt="" /></p><ol start=10><li>在編輯器中，開啟密碼連線功能，以防止未知的連線亂入：</li></ol><pre><code>找到
+requirepass foobared
+改成
+requirepass SlashviewPassword
+</code></pre><p><img src=https://content.slashview.com/img/2024/20240314_02.jpg alt="" /></p><ol start=11><li><p>有趣的是透過apt-get安裝的Redis版本是<code>6.0.16</code>（在Redis-cli輸入<code>INFO SERVER</code>就可以查看），這個版本裝完後，就直接幫我<code>註冊成開機後會執行</code>，也就是不用再煩惱後續要編輯開機運行的設定了。</p></li><li><p>至此成為一部Redis Server所需要的功能都處理好了，重啟服務（或者重開機）吧。</p></li></ol><pre><code>systemctl restart redis
+或者
+service redis-server restart
+</code></pre><ol start=13><li>安裝並執行<code>HTOP</code>，以方便監視系統CPU、RAM負載狀況。</li></ol><pre><code>sudo apt-get install htop -y
+htop
+</code></pre><p>下列這張圖表，是我在壓測Redis的時候透過HTOP觀察到的數據：</p><p><img src=https://content.slashview.com/img/2024/20240314_03.jpg alt="" /></p><h2>在Windows下連線至遠端Redis伺服器</h2><p>接著我們把場景轉換到Windows，並在這環境中針對遠端Redis伺服器下指令：</p><ol><li><p>下載Windows版本的<code>redis-cli</code>。（點此下載：<a href=https://content.slashview.com/file/20240314/redis-cli.zip>redis-cli.exe</a>））</p></li><li><p>輸入連線參數，連到剛才創建的遠端Redis伺服器：</p></li></ol><pre><code>Redis-cli -h XX.XX.XX.XX -p 6379 -a SlashviewPassword
+</code></pre><ol start=3><li>連上去之後就可以開始使用簡單的指令來測試啦！</li></ol><pre><code>//設定somekey鍵值資料
+set somekey "HelloWorld"
+
+//取得somekey鍵值資料
+get somekey
+
+//列出所有的鍵值
+keys *
+
+//刪除鍵值
+del somekey
+
+//刪除所有鍵值
+flushall
+
+//立刻釋放資源
+memory purge
+</code></pre><p>本篇文章只是淺嚐Redis架設滋味，真正實務上還要考慮很多架構因素，例如：主從、覆寫...等，但那又是另外一個世界了。</p><h6>Linux Windows RedisServer Install Setup CLI Command</h6></main><footer></footer><script src=/.file/site.js></script></body></html>
