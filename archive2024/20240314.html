@@ -15,12 +15,12 @@ bind 0.0.0.0
 requirepass foobared
 改成
 requirepass SlashviewPassword
-</code></pre><p><img src=https://content.slashview.com/img/2024/20240314_02.jpg alt="" /></p><ol start=11><li><p>有趣的是透過apt-get安裝的Redis版本是<code>6.0.16</code>（在Redis-cli輸入<code>INFO SERVER</code>就可以查看），這個版本裝完後，就直接幫我<code>註冊成開機後會執行</code>，也就是不用再煩惱後續要編輯開機運行的設定了。</p></li><li><p>至此成為一部Redis Server所需要的功能都處理好了，重啟服務（或者重開機）吧。</p></li></ol><pre><code>systemctl restart redis
+</code></pre><p><img src=https://content.slashview.com/img/2024/20240314_02.jpg alt="" /></p><ol start=11><li><p>有趣的是透過apt-get安裝Redis後（版本是<code>6.0.16</code>，在redis-cli輸入<code>INFO SERVER</code>就可以查看），他直接幫我<code>註冊成開機後常駐執行</code>，也就是不用再煩惱後續編輯開機運行的設定了。</p></li><li><p>至此成為一部Redis Server所需要的功能都處理好了，重啟服務（或者重開機）吧。</p></li></ol><pre><code>systemctl restart redis
 或者
 service redis-server restart
 </code></pre><ol start=13><li>安裝並執行<code>HTOP</code>，以方便監視系統CPU、RAM負載狀況。</li></ol><pre><code>sudo apt-get install htop -y
 htop
-</code></pre><p>下列這張圖表，是我在壓測Redis的時候透過HTOP觀察到的數據：</p><p><img src=https://content.slashview.com/img/2024/20240314_03.jpg alt="" /></p><h2>在Windows下連線至遠端Redis伺服器</h2><p>接著我們把場景轉換到Windows，並在這環境中針對遠端Redis伺服器下指令：</p><ol><li><p>下載Windows版本的<code>redis-cli</code>。（點此下載：<a href=https://content.slashview.com/file/20240314/redis-cli.zip>redis-cli.exe</a>））</p></li><li><p>輸入連線參數，連到剛才創建的遠端Redis伺服器：</p></li></ol><pre><code>Redis-cli -h XX.XX.XX.XX -p 6379 -a SlashviewPassword
+</code></pre><p>下列這張圖表，是我在壓測Redis的時候透過HTOP觀察到的數據：</p><p><img src=https://content.slashview.com/img/2024/20240314_03.jpg alt="" /></p><h2>在Windows下連線至遠端Redis伺服器</h2><p>接著我們把場景轉換到Windows，並在這環境中針對遠端Redis伺服器下指令：</p><ol><li><p>下載Windows版本的<code>redis-cli.exe</code>。（點此下載：<a href=https://content.slashview.com/file/20240314/redis-cli.zip>redis-cli.zip</a>））</p></li><li><p>輸入連線參數，連到剛才創建的遠端Redis伺服器：</p></li></ol><pre><code>redis-cli -h XX.XX.XX.XX -p 6379 -a SlashviewPassword
 </code></pre><ol start=3><li>連上去之後就可以開始使用簡單的指令來測試啦！</li></ol><pre><code>//設定somekey鍵值資料
 set somekey "HelloWorld"
 
@@ -33,9 +33,22 @@ keys *
 //刪除鍵值
 del somekey
 
-//刪除所有鍵值
+//清除資料庫
+flushdb
+
+//清除整機
 flushall
 
-//立刻釋放資源
+//立刻釋放記憶體
 memory purge
-</code></pre><p>本篇文章只是淺嚐Redis架設滋味，真正實務上還要考慮很多架構因素，例如：主從、覆寫...等，但那又是另外一個世界了。</p><h6>Linux Windows RedisServer Install Setup CLI Command</h6></main><footer></footer><script src=/.file/site.js></script></body></html>
+</code></pre><h2>針對Redis進行輕度優化</h2><p>一個Redis支援多個DB，而每個DB又分別被實作<code>AOF</code>與<code>RDB</code>，這導致現代的Redis已經跟傳統印象中的記憶體資料庫不太相同了，透過AOF與RDB實作，就算作業系統當機、斷電，Redis都有能力回復斷電前特定時間的狀態，端看你當時候的備份機制而定。以下是名詞說明：</p><ul><li>AOF（Append Only File）：功能預設為關閉。可以將這個功能視為資料庫的交易紀錄（Log)，也就是你針對Redis每一筆下的指令都會被如實的紀錄下來，Redis也會在運作時期定時針對AOF檔案進行重寫（rewrite）藉以優化AOF檔案。</li></ul><pre><code>例如下列指令
+set someKey "Hello"
+set someKey "Welcome"
+set someKey "Test"
+最後會被重寫成，因為前面的狀態已經不需要
+set someKey "Test"
+</code></pre><ul><li>RDB（Redis Database Backup file）：功能預設為開啟。可以將這個功能視為資料庫快照，也就是依據固定的時間或條件，Redis會將記憶體中所有的資料抄寫到檔案，當斷電重新恢復時Redis會重新讀取文件恢復，達成資料復原。有趣的是，當你沒有把功能設定為關閉且針對主機下shutdown或reboot，Redis也會自動幫你下<code>save</code>指令保存資料喔。</li></ul><p>透過<code>AOF</code>與<code>RDB</code>的實作，我們可以稱為這台Redis有能力達成某種程度的<code>持久化</code>，而我們這裡談的優化，就是要把這個<code>持久化拿掉</code>，讓他回到單純的記憶體快取資料庫時代，透過這樣的優化，我們可以讓寫入的時間再進一步縮短，也可以降低Redis伺服器的CPU損耗。</p><h3>AOF確認關閉</h3><p>由於AOF預設就是關閉的，我們只要在設定檔中再確認一次即可，確認<code>appendonly no</code>。</p><p><img src=https://content.slashview.com/img/2024/20240314_04.jpg alt="" /></p><h3>RDB確認開啟</h3><p>由於RDB預設就是開啟的，因此我們要在設定檔中將他關閉，找到<code>save XXX X</code>的字眼後將三段都備註起來，新增<code>save ""</code>即可。</p><p><img src=https://content.slashview.com/img/2024/20240314_05.jpg alt="" /></p><pre><code>原始設定的意思：
+save 900 1      //900秒內若有1鍵值變化就快照
+save 300 10     //300秒內若有10鍵值變化就快照
+save 60 10000   //60秒內若有10000鍵值變化就快照
+</code></pre><p>提醒：</p><ul><li>針對設定檔案進行任何的變更，都要重新開啟服務喔。</li><li>若將AOF、RDB均關閉，經過實測於一千萬筆的寫入時期，可以將速度提升近50%。（原本兩秒多變成一秒多）</li><li>盡管有些文章會寫<code>flushall</code>或<code>flushdb</code>會清除<code>.rdb文件</code>，但依據我的測試是：不會清除，你要自行手動清除。</li><li>本文章只是淺嚐Redis架設滋味，真正實務上還要考慮很多架構因素，例如：主從、覆寫...等，但那又是另外一回事了。</li></ul><h6>Linux Windows RedisServer Install Setup CLI Command</h6></main><footer></footer><script src=/.file/site.js></script></body></html>
