@@ -21,6 +21,9 @@ service redis-server restart
 </code></pre><ol start=13><li>安裝並執行<code>HTOP</code>，以方便監視系統CPU、RAM負載狀況。</li></ol><pre><code>sudo apt-get install htop -y
 htop
 </code></pre><p>下列這張圖表，是我在壓測Redis的時候透過HTOP觀察到的數據：</p><p><img src=https://content.slashview.com/img/2024/20240314_03.jpg alt="" /></p><h2>在Windows下連線至遠端Redis伺服器</h2><p>接著我們把場景轉換到Windows，並在這環境中針對遠端Redis伺服器下指令：</p><ol><li><p>下載Windows版本的<code>redis-cli.exe</code>。（點此下載：<a href=https://content.slashview.com/file/20240314/redis-cli.zip>redis-cli.zip</a>））</p></li><li><p>輸入連線參數，連到剛才創建的遠端Redis伺服器：</p></li></ol><pre><code>redis-cli -h XX.XX.XX.XX -p 6379 -a SlashviewPassword
+</code></pre><p>補充：如果你是在<code>Linux</code>下的redis-cli，那麼你無法直接使用<code>-a</code>去帶入密碼，而是要先聯入機器後出現提示符號後，再輸入密碼資訊：</p><pre><code>redis-cli -h XX.XX.XX.XX -p 6379
+>AUTH SlashviewPassword
+通過密碼驗證後，就可以開始輸入指令
 </code></pre><ol start=3><li>連上去之後就可以開始使用簡單的指令來測試啦！</li></ol><pre><code>//設定somekey鍵值資料
 set somekey "HelloWorld"
 
