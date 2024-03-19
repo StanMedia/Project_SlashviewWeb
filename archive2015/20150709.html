@@ -52,4 +52,4 @@
 </code></pre><h2>輸出的畫面</h2><p>嗯嗯，JSON值很正常的顯示嘍！</p><p><img src=https://content.slashview.com/img/2015/20150709_01.jpg alt="" /></p><p>終於脫離不需要ORM情境下還要建立ORM的幹意了！程式碼非常的簡潔清爽，如果有更好的寫法，也請您分享一下喔！</p><h3>20210216補充：</h3><p>沒有其他特殊原因的話，基本上我一律是建議使用匿名型別來處理這個問題，但是有些場合可能各程式碼之間需要共用的ORM來嵌套資料，若強行用匿名型別來處理可能要脫褲子放屁的多打一次匿名描述程式碼，萬一共用的ORM類別屬性改了可能又要回來修正，這時候可以改採用JObject的SelectToken寫法來解套。範例如下：</p><pre><code class=language-cs>var oMyORM = Newtonsoft.Json.JsonConvert.DeserializeObject(
   Newtonsoft.Json.Linq.JObject.Parse(cTemp2).SelectToken("unnecessary").ToString()
 );
-</code></pre><h6>匿名類型 匿名型別 JSON RootClass RootElements Remove Select AnonymousTypes Newtonsoft.Json ObjectRelationalMapping</h6></main><footer></footer><script src=/.file/site.js></script></body></html>
+</code></pre><h6>匿名類型 匿名型別 JSON RootClass RootElements Remove Select AnonymousTypes Newtonsoft.Json ObjectRelationalMapping</h6></main><footer></footer><script src=/.file/site.js></script><script src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-7039045520564660"></script></body></html>

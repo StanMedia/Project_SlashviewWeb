@@ -156,30 +156,21 @@
 
     //如果不是本機網站就插入廣告
     if (!(bIsLocalhost || bIsGoogleBot)) {
-      //動態載入Javascript
-      $.ajax({
-        url: "https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-7039045520564660",
-        dataType: "script",
-        crossorigin: "anonymous",
-        success: function () {
-          //完成JS載入，開始進行廣告
-          BusinessServices("uBS1")
-            .then(function () {
-              return BusinessServices("uBS2");
-            })
-            .then(function () {
-              return BusinessServices("uBS3");
-            })
-            .then(function () {
-              return BusinessServices("uBS4");
-            })
-        }
-      });
+      //動態載入廣告
+      BusinessServices("uBS1")
+      .then(function () {
+        return BusinessServices("uBS2");
+      })
+      .then(function () {
+        return BusinessServices("uBS3");
+      })
+      .then(function () {
+        return BusinessServices("uBS4");
+      })
     }
   }
 
   /* 後續要插入的程式碼 */
-  //...
   //...
 
 });

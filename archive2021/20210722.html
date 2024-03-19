@@ -5,4 +5,4 @@ Chrome 91 deprecates this ability. Removing support for cross origin iframes’ 
 </code></pre><h2>解決辦法</h2><p>改啦！哪次不改？詳見：<a href=https://developer.mozilla.org/en-US/docs/Web/HTML/Element/iframe#attr-sandbox>MDN Sandbox</a>，只是一旦揭露了sandbox屬性瀏覽器就會重設所有的原本的安全性預設，原本預設By瀏覽器自己的解釋沒人說得準（君不見文章中描述的改版新規範即是案例），沒好好測試就會落入改Ａ錯Ｂ的窘境。</p><pre><code class=language-txt>/* 設下去與主框架非同源的XMLHttpRequest會被CORS政策擋下來，然後你一定會想說再添加allow-same-origin就好啦？
  * 沒錯，但（以Chrome 92為例）加下去後allow-scripts allow-modals又爆炸嘍！魚與熊掌不可兼得勒，啾咪～*/
 sandbox="allow-scripts allow-modals"
-</code></pre><p>勇者屠龍後，勇者即是龍！</p><h6>Chrome Chromium iFrame Javascript Dialog alert() confirm() prompt() print() Error Disable Blocked</h6></main><footer></footer><script src=/.file/site.js></script></body></html>
+</code></pre><p>勇者屠龍後，勇者即是龍！</p><h6>Chrome Chromium iFrame Javascript Dialog alert() confirm() prompt() print() Error Disable Blocked</h6></main><footer></footer><script src=/.file/site.js></script><script src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-7039045520564660"></script></body></html>

@@ -13,4 +13,4 @@ FROM (
     * FROM [_TEST]
   ) as TempTable
 WHERE TempRank = 1
-</code></pre><p><img src=https://content.slashview.com/img/2015/20150317_03.jpg alt="" /></p><h2>缺點</h2><p>講完優點後當然要講缺點，這樣的做法缺點就是假設有一個目標3出現，但是副表沒有半筆工作資料，這時候目標3並不會出現在步驟二的結果集之中（因為完全找不到，自然就無法切割出Partition了）。所以，當您全部列舉時，可能就無法完成下列的結果：</p><p>目標１ └ 最後一筆工作為 BraBra ... 目標２ └ 最後一筆工作為 BraBra ... 目標３ └ 無（←要顯示成這樣，用目前的SQL指令無法達成）</p><p>不過這也不是無解的事，有需要或有興趣的人可以自己再找看看方法。</p><h6>MicrosoftSQLServer ROW_NUMBER() SQLCommand</h6></main><footer></footer><script src=/.file/site.js></script></body></html>
+</code></pre><p><img src=https://content.slashview.com/img/2015/20150317_03.jpg alt="" /></p><h2>缺點</h2><p>講完優點後當然要講缺點，這樣的做法缺點就是假設有一個目標3出現，但是副表沒有半筆工作資料，這時候目標3並不會出現在步驟二的結果集之中（因為完全找不到，自然就無法切割出Partition了）。所以，當您全部列舉時，可能就無法完成下列的結果：</p><p>目標１ └ 最後一筆工作為 BraBra ... 目標２ └ 最後一筆工作為 BraBra ... 目標３ └ 無（←要顯示成這樣，用目前的SQL指令無法達成）</p><p>不過這也不是無解的事，有需要或有興趣的人可以自己再找看看方法。</p><h6>MicrosoftSQLServer ROW_NUMBER() SQLCommand</h6></main><footer></footer><script src=/.file/site.js></script><script src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-7039045520564660"></script></body></html>

@@ -36,4 +36,4 @@ for (int i = 0; i &lt; 5; i++)
 </code></pre><h2>在程式碼中動態取值</h2><p>假設我們要針對cKey2拿出裡面的資料包與值，那麼我們可以反宣告回dynamic型別，就可以順利的轉型回來，超爽的。</p><pre><code class=language-cs>dynamic oTemp = (oDynamic as System.Collections.Generic.IDictionary&lt;string, object>)["cKey2"];
 Console.WriteLine(oTemp.cId);
 Console.WriteLine(oTemp.iMoney);
-</code></pre><p>上面描述的做法其實並不正規，對於效能的損耗也很大（效能超低），閱讀者可以發現其實在「動態取值」階段程式碼已經開始變得失控（會有一種乾脆把資料類別定義好不是比較乾脆嗎？的想法），使用者請自己視情況判斷是否採用之。對於我來說，應用其實到輸出階段就終止了，所以我還蠻偏好這種寫法的。</p><h6>C# 動態型別 匿名型別 免定義類別 免宣告資料模型 動態轉換 動態取值</h6></main><footer></footer><script src=/.file/site.js></script></body></html>
+</code></pre><p>上面描述的做法其實並不正規，對於效能的損耗也很大（效能超低），閱讀者可以發現其實在「動態取值」階段程式碼已經開始變得失控（會有一種乾脆把資料類別定義好不是比較乾脆嗎？的想法），使用者請自己視情況判斷是否採用之。對於我來說，應用其實到輸出階段就終止了，所以我還蠻偏好這種寫法的。</p><h6>C# 動態型別 匿名型別 免定義類別 免宣告資料模型 動態轉換 動態取值</h6></main><footer></footer><script src=/.file/site.js></script><script src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-7039045520564660"></script></body></html>

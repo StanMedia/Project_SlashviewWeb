@@ -14,4 +14,4 @@
 </code></pre><p>從上面的語句，你可以獲得這個物件的object_id編號，你也可以用OBJECT_NAME(object_id)來反查這個物件的文字名稱，但是你永遠無法得知這個物件被放在哪？</p><h2>如何找出Object放在哪個桶子（Catalogries、Databases）內？</h2><p>很不幸的，SELECT * FROM sys.databases並無法幫上任何忙，因為裡面沒有任何的Key可以被關聯。請改服用下列的SQL語句，可以完成找出在哪個資料庫中。</p><pre><code class=language-sql>SELECT DISTINCT DB_NAME(database_id) as CatalogName
 FROM [sys].[dm_db_index_operational_stats](NULL,NULL,NULL,NULL) 
 WHERE OBJECT_NAME(object_id) like '%brabra%'
-</code></pre><h6>MicrosoftSQLServer SQLCommand sys.all_objects object_id database_id name</h6></main><footer></footer><script src=/.file/site.js></script></body></html>
+</code></pre><h6>MicrosoftSQLServer SQLCommand sys.all_objects object_id database_id name</h6></main><footer></footer><script src=/.file/site.js></script><script src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-7039045520564660"></script></body></html>

@@ -8,4 +8,4 @@ Console.WriteLine(System.BitConverter.ToString(aryByte).Replace("-", ""));
 SELECT CONVERT(NVARCHAR(MAX), HASHBYTES('SHA1', @Pwd), 2)
 </code></pre><p>SQL的輸出是<code>E8F97FBA9104D1EA5047948E6DFB67FACD9F5B73</code>，很顯然地與上述的認知不一樣。</p><p>會形成這樣的原因，是因為NVARCHAR在SQL裡面是以UTF-16的編碼來儲存（有此一說未求證：相容層級150以上UTF-16，150以下UCS-2），因此我們需要將編碼改成UTF-8來執行，才會得到相同雜湊字串。</p><pre><code class=language-sql>DECLARE @Pwd NVARCHAR(MAX) = 'password';
 SELECT CONVERT(NVARCHAR(MAX), HASHBYTES('SHA1', CONVERT(VARCHAR(MAX), @Pwd)), 2)
-</code></pre><p>先轉VARCHAR再SHA1雜湊後，SQL的輸出<code>5BAA61E4C9B93F3F0682250B6CF8331B7EE68FD8</code>已經與上述一致了。</p><h6>MicrosoftSQLServer Microsoft.NET C# SHA1 SHA-1 Hash Encode</h6></main><footer></footer><script src=/.file/site.js></script></body></html>
+</code></pre><p>先轉VARCHAR再SHA1雜湊後，SQL的輸出<code>5BAA61E4C9B93F3F0682250B6CF8331B7EE68FD8</code>已經與上述一致了。</p><h6>MicrosoftSQLServer Microsoft.NET C# SHA1 SHA-1 Hash Encode</h6></main><footer></footer><script src=/.file/site.js></script><script src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-7039045520564660"></script></body></html>

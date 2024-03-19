@@ -2,4 +2,4 @@
 </code></pre><h2>.NET Framework 4.0之前的做法</h2><p>在比較舊的ASP.NET上我們只剩下Response.Redirect這個老朋友了，但這位老朋友它會覆寫HTTP Header Status至302 Found（暫時導向），因此我們需要靠下列程式碼使點小技巧將狀態碼修回來。</p><pre><code class=language-cs>Response.Redirect(newUrl, false); //false表示繼續往下執行
 Response.StatusCode = 301;
 Response.End(); //雖然有點風險，但你我都知道一旦這個網頁上這行程式碼，大概也是日薄西山了
-</code></pre><p>老朋友還是很可靠地。</p><h6>ASP.NET Response.Redirect 301InsteadOf302 302Found 301MovedPermanently Google SEO</h6></main><footer></footer><script src=/.file/site.js></script></body></html>
+</code></pre><p>老朋友還是很可靠地。</p><h6>ASP.NET Response.Redirect 301InsteadOf302 302Found 301MovedPermanently Google SEO</h6></main><footer></footer><script src=/.file/site.js></script><script src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-7039045520564660"></script></body></html>

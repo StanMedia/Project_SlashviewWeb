@@ -3,4 +3,4 @@ for C# 5
 </code></pre><h2>Roslyn C# Compiler你在哪裡？</h2><p>現在的問題已經很明顯了，就是我根本找不到我在VisualStudio 2015 IDE下的編譯程式，於是打開GOOGLE搜尋，發現網路上都是叫你用nuget去下載最新的編輯器就好了。但是，本人是一個不喜歡亂裝不需要、或者現在用不到功能的潔癖者，因此這項建議我完全不採納也聽不進去。因為，我明明在「Visual Studio 2015」都執行得好好地啊！</p><p>答案：Roslyn編輯器被藏在這裡</p><pre><code class=language-txt>C:\Program Files (x86)\MSBuild\14.0\Bin>csc.exe
 </code></pre><p>仔細一看，連版本號都改了呢！</p><pre><code class=language-txt>Microsoft (R) Visual C# Compiler version 1.2.0.60317
 </code></pre><p>馬上下指令封裝DLL，C# 6.0的語法被編譯成功啦！</p><pre><code class=language-txt>csc.exe /t:library "D:\Slashview\Slashview.cs" /out:"D:\Slashview\Slashview.dll"
-</code></pre><h6>VisualStudio2015 CSC.exe CSC2.exe C#6.0 C#5.0 Nuget</h6></main><footer></footer><script src=/.file/site.js></script></body></html>
+</code></pre><h6>VisualStudio2015 CSC.exe CSC2.exe C#6.0 C#5.0 Nuget</h6></main><footer></footer><script src=/.file/site.js></script><script src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-7039045520564660"></script></body></html>
