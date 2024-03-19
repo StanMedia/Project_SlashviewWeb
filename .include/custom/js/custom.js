@@ -155,7 +155,8 @@
       );
 
     //如果不是本機網站就插入廣告
-    if (!(bIsLocalhost || bIsGoogleBot)) {
+    //if (!(bIsLocalhost || bIsGoogleBot)) {
+    if (false) {
       var cAdsUrl = "https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-7039045520564660";
       var bAdsBlocked = false;
       //動態偵測瀏覽器是否封鎖廣告
