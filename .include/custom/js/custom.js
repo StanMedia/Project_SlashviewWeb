@@ -6,7 +6,7 @@
 
   //是否為本機網站
   let bIsLocalhost = false;
-  if (window.location.hostname === "localhost") { bIsLocalhost = true; }
+  if (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1") { bIsLocalhost = true; }
 
   //是否為GoogleBot
   let bIsGoogleBot = false;
@@ -156,39 +156,54 @@
 
     //如果不是本機網站就插入廣告
     if (!(bIsLocalhost || bIsGoogleBot)) {
-      var cAdUrl = "https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-7039045520564660";
+      var cAdsUrl = "https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-7039045520564660";
+      var bAdsBlocked = false;
       //動態偵測瀏覽器是否封鎖廣告
-      fetch(new Request(cAdUrl, {
+      fetch(new Request(cAdsUrl, {
           method: "HEAD"
-      })).then(function (response) {
-          if (!response.ok) {
-              //偵測到廣告阻擋執行
-              console.log("偵測到廣告阻擋111");
-          } else {
-            console.log("沒有偵測到廣告阻擋。");
-          }
-      }).catch(function (e) {
-          //偵測到廣告阻擋執行
-          console.log("偵測到廣告阻擋222");
-      });
-
-      //動態載入Javascript
-      $.ajax({
-        url: cAdUrl,
-        dataType: "script",
-        crossorigin: "anonymous",
-        success: function () {
-          //完成JS載入，開始進行廣告
-          BusinessServices("uBS1")
-            .then(function () {
-              return BusinessServices("uBS2");
-            })
-            .then(function () {
-              return BusinessServices("uBS3");
-            })
-            .then(function () {
-              return BusinessServices("uBS4");
-            })
+      })).then(function (oResponse) {
+        if (!oResponse.ok) {  //軟攔截
+          bAdsBlocked = true;
+          console.log("AdsBlocked-Soft");
+        }
+      }).catch(function () {  //硬攔截（AdBlock、EdgePrivacy）
+        bAdsBlocked = true;
+        console.log("AdsBlocked-Hard");
+      }).finally(function () {
+        if (bAdsBlocked) {
+          //封鎖廣告：執行反制動作
+          var cContent = $("main.container");
+          cContent.find("p:eq(1)").nextAll().remove();
+          cContent.append(`
+<h2>很抱歉！您將無法繼續閱讀網站內容...</h2>
+<p>因偵測到廣告屏蔽故無法顯示網站內容，本網站透過微薄的廣告營利支持有品質的內容產生，請透過下列設定，立即以<code>免費的方式</code>協助網站可永續持續營運下去。</p>
+<h3>一、移除AdBlock套件</h3>
+<p>瀏覽器上可能裝有AdBlock廣告封鎖套件（Plugin），請協助將<code>slashview.com</code>加入網站白名單內。</p>
+<h3>二、降低瀏覽器隱私層級</h3>
+<p>若您採用Microsoft Edge瀏覽器，可透過設定裡的<code>防止追蹤</code>（edge://settings/privacy），將<code>嚴格</code>調降至<code>平衡</code>即可，亦可選擇將本站加入<code>例外</code>名單。</p>
+<hr class="bg-secondary mb-4">
+<p>設定完成後，點選按鈕即可看見內容：<button type="button" class="btn btn-warning" onclick="location.reload()"><i class="fa-solid fa-rotate-right"></i> Reload Page</button></p>
+`);
+        } else {
+          //未封鎖廣告：動態載入Javascript
+          $.ajax({
+            url: cAdsUrl,
+            dataType: "script",
+            crossorigin: "anonymous",
+            success: function () {
+              //完成JS載入，開始進行廣告
+              BusinessServices("uBS1")
+                .then(function () {
+                  return BusinessServices("uBS2");
+                })
+                .then(function () {
+                  return BusinessServices("uBS3");
+                })
+                .then(function () {
+                  return BusinessServices("uBS4");
+                })
+            }
+          });
         }
       });
     }
