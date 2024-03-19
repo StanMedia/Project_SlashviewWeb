@@ -92,4 +92,4 @@ private static void myOnKnowAnswer(object sender, Calculator.AnswerArgs e)
 }
 </code></pre><p>輸出結果照片如下：</p><p><img src=https://content.slashview.com/img/2015/20150901_03.jpg alt="" /></p><p>最後值得一提的是（在Console示範時也有提醒過），如果你願意的話，可以將程式碼寫得更正規：（純粹可以表示這是受哪一個在委派託管，意義不大。）</p><pre><code class=language-cs>//oTemp.OnKnowAnswer += myOnKnowAnswer;
 oTemp.OnKnowAnswer += new Calculator.AnswerEventHandler(myOnKnowAnswer);
-</code></pre><p>註：如果沒有要帶入任何的EventArgs，也不想宣告delegate EventHandler，可以參考這一篇利用泛型委派的寫法：<a href=/archive2015/20150909.html>運用泛型委派進行基本的觀察者模式實作</a>。</p><h6>C# Events UserDefinedClass SelfDefinedClass Delegates FireEvents RaiseEvents</h6></main><footer></footer><script src=/.file/site.js></script><script src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-7039045520564660"></script></body></html>
+</code></pre><p>註：如果沒有要帶入任何的EventArgs，也不想宣告delegate EventHandler，可以參考這一篇利用泛型委派的寫法：<a href=/archive2015/20150909.html>運用泛型委派進行基本的觀察者模式實作</a>。</p><h6>C# Events UserDefinedClass SelfDefinedClass Delegates FireEvents RaiseEvents</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

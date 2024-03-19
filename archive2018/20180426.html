@@ -9,4 +9,4 @@ oContext.Items["Key"] = value;
 { //如果Key不存在或是Key存在但沒有內容，那就預設寫入OOO
   Context.Items[cKey] = OOO;
 }
-</code></pre><p>最後還是要叮嚀一下，Context.Items在頁面生成階段後會被自動清空，並等候下一次Request的來臨。但有一個特別的情況下可以把值傳向別的頁面，那就是鮮少有人使用的Server.Transfer啦！</p><h2>特別注意</h2><p>HttpContext.Items並不可以在ASP.NET WebForm與ASP.NET MVC之間共享資料，MVC有自己實作一個包皮類別HttpContextWrapper，看起來很像、用起來也很像，但這兩者並不相通。</p><h6>HttpContext.Items Context.Items System.Collections.IDictionary Key/Value RequestLifeCycle 一次性 短暫 變數 參數 資料 儲存空間</h6></main><footer></footer><script src=/.file/site.js></script><script src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-7039045520564660"></script></body></html>
+</code></pre><p>最後還是要叮嚀一下，Context.Items在頁面生成階段後會被自動清空，並等候下一次Request的來臨。但有一個特別的情況下可以把值傳向別的頁面，那就是鮮少有人使用的Server.Transfer啦！</p><h2>特別注意</h2><p>HttpContext.Items並不可以在ASP.NET WebForm與ASP.NET MVC之間共享資料，MVC有自己實作一個包皮類別HttpContextWrapper，看起來很像、用起來也很像，但這兩者並不相通。</p><h6>HttpContext.Items Context.Items System.Collections.IDictionary Key/Value RequestLifeCycle 一次性 短暫 變數 參數 資料 儲存空間</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

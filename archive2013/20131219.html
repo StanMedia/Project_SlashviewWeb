@@ -41,4 +41,4 @@ SERVICE_NAME: w32time
 &lt;/pre>
 </code></pre><p>也就是說，可能是在Windows 7或Windows Server 2008R2之後，微軟對W32Time服務增加了一個觸發事件，當這台電腦沒有加入DC網域時，服務會自動停止。因此我們對其更改服務觸發指令，讓網路起來服務就起來，網路卸載服務就關閉，用來進行對預設觸發事件的變更，如此一來就成功的解決問題了。</p><pre><code class=language-txt>C:\Users\Administrator>sc triggerinfo w32time start/networkon stop/networkoff
 [SC] ChangeServiceConfig2 成功
-</code></pre><h6>WindowsServer NTP Time Services Server</h6></main><footer></footer><script src=/.file/site.js></script><script src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-7039045520564660"></script></body></html>
+</code></pre><h6>WindowsServer NTP Time Services Server</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

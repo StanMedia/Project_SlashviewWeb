@@ -4,4 +4,4 @@
 The ORDER BY clause is invalid in views, inline functions, derived tables, subqueries, and common table expressions, unless TOP, OFFSET or FOR XML is also specified.
 </code></pre><p>事實上就算你真的想盡辦法繞過檢查把ORDER BY語法寫進去，SQL執行期依然是不會執行ORDER BY的。</p><p>那麼，真的沒有辦法了嗎？其實是有的，就是把TOP (100) PERCENT改寫成下列...</p><pre><code class=language-sql>SELECT TOP (2147483647) ... --INT32最大值，若結果集超過２１億筆數的人請自行斟酌。
 SELECT TOP (999999999) ... --常規下若懶得記憶可改使用口訣「九個９」，可接收結果集至１０億筆數。
-</code></pre><p>如此一來，SQL檢視表真的會跳過ORDER BY的檢查限制，真正幫你執行排序，但是效能就請自行考慮了。（我猜會搜尋到這篇文章的人應該都不太在乎效能損耗才對...）</p><p>註：會想要在VIEW裡面排序的人一定是追求最終的懶惰與精簡，所以關於使用OFFSET指令、包預存程序等讓事情愈發複雜的做法就完全不在考慮範圍了。</p><h6>SQL SqlView SqlAlterView OrderBy ASC DESC</h6></main><footer></footer><script src=/.file/site.js></script><script src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-7039045520564660"></script></body></html>
+</code></pre><p>如此一來，SQL檢視表真的會跳過ORDER BY的檢查限制，真正幫你執行排序，但是效能就請自行考慮了。（我猜會搜尋到這篇文章的人應該都不太在乎效能損耗才對...）</p><p>註：會想要在VIEW裡面排序的人一定是追求最終的懶惰與精簡，所以關於使用OFFSET指令、包預存程序等讓事情愈發複雜的做法就完全不在考慮範圍了。</p><h6>SQL SqlView SqlAlterView OrderBy ASC DESC</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

@@ -51,4 +51,4 @@
 }
 </code></pre><p>輸出就會變成：</p><pre><code class=language-txt>99  //在被強制檢查裡面又被拋棄了
 Arithmetic operation resulted in an overflow.
-</code></pre><h3>感想</h3><p>感覺上.NET這樣設計應該是為了效能導向（整體政策性問題），不然大可在程式碼中判斷溢位就拋錯誤即可，不過這個效能導向可能會害慘一堆認為<code>程式語言應該會對溢位報錯吧！？</code>的程式設計師（等到運行到會產生溢位時，都是上線Ｎ年後的事情了）。話說回來，處理大型數值或精密浮點數我早已內化到一律以<code>decimal</code>優先，這樣把話說回來應該也不關<code>checked</code>或<code>unchecked</code>啥事了。畢竟等到連decimal都有溢位的問題，那問題就更大條到不行啦...</p><h6>C# CSharp Keywords Checked Unchecked ArithmeticOperation Overflow</h6></main><footer></footer><script src=/.file/site.js></script><script src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-7039045520564660"></script></body></html>
+</code></pre><h3>感想</h3><p>感覺上.NET這樣設計應該是為了效能導向（整體政策性問題），不然大可在程式碼中判斷溢位就拋錯誤即可，不過這個效能導向可能會害慘一堆認為<code>程式語言應該會對溢位報錯吧！？</code>的程式設計師（等到運行到會產生溢位時，都是上線Ｎ年後的事情了）。話說回來，處理大型數值或精密浮點數我早已內化到一律以<code>decimal</code>優先，這樣把話說回來應該也不關<code>checked</code>或<code>unchecked</code>啥事了。畢竟等到連decimal都有溢位的問題，那問題就更大條到不行啦...</p><h6>C# CSharp Keywords Checked Unchecked ArithmeticOperation Overflow</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

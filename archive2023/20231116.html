@@ -4,4 +4,4 @@
 </code></pre><p>可以手動套用規則啦，但我建議直接重開機就好，反正沒幾秒鐘。</p><h3>關閉SSH（Port 22）</h3><p>關閉後只能從本機登入嘍！先看一下狀態，理論上會看到<code>active</code>字眼：</p><pre><code class=language-txt>sudo systemctl status ssh
 </code></pre><p>下達關閉指令：</p><pre><code class=language-txt>sudo systemctl disable ssh
 </code></pre><p>重開機後，再去看狀態，理論上就會看到<code>inactive (dead)</code>字眼。</p><h3>關閉DNS（Port 53）</h3><pre><code class=language-txt>sudo systemctl disable systemd-resolved
-</code></pre><p>重開機後，Port 53的監聽就會消失了。</p><h6>Unix Linux Ubuntu CentOS TCP UDP PortsDisable ServicesDisable DaemonDisable</h6></main><footer></footer><script src=/.file/site.js></script><script src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-7039045520564660"></script></body></html>
+</code></pre><p>重開機後，Port 53的監聽就會消失了。</p><h6>Unix Linux Ubuntu CentOS TCP UDP PortsDisable ServicesDisable DaemonDisable</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

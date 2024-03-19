@@ -16,4 +16,4 @@ TitleSpan: function HTMLSpanElement() { [native code] }
 //第二個this回傳Window物件是三小？
 PureSpan: function Window() { [native code] }
 </code></pre><h2>使用前請詳閱公開說明書</h2><p>去MDN一查才發現，人家開宗明義就跟你聲明請不要把箭頭函式（<a href=https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Functions/Arrow_functions>Arrow function expressions</a>）當作method，因為他的this會去抓當前宣告語法的父層物件，而因為我們的jQuery寫法是寫在Javascript的root scope，所以抓到最上層的Window物件，原文如下，唉～</p><pre><code class=language-txt>Does not have its own bindings to this or super, and should not be used as methods.
-</code></pre><h2>心得筆記</h2><p>使用箭頭函式Arrow Functions用到this寫法要非常謹慎，甚至最好不要用。</p><h6>Javascript ArrowFunctions this $(this) jQuery ClickMethod</h6></main><footer></footer><script src=/.file/site.js></script><script src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-7039045520564660"></script></body></html>
+</code></pre><h2>心得筆記</h2><p>使用箭頭函式Arrow Functions用到this寫法要非常謹慎，甚至最好不要用。</p><h6>Javascript ArrowFunctions this $(this) jQuery ClickMethod</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

@@ -1,4 +1,4 @@
 ﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>VMware datastorage之*.vmdk更改檔案名稱</h1><p>事實上在vSphere Client是沒有辦法幫vmdk檔案更改檔案名稱的，有可能是我用免費版本的關係吧！要幫vmdk改名字的話可以執行putty，利用SSH連線以console mode的方式進去ESXi 裡面改就可以了。</p><p>更改的方式如下：</p><pre><code class=language-txt>Rename a virtual disk using a command similar to:
 
 vmkfstools -E OldFileName.vmdk NewFileName.vmdk
-</code></pre><p>改完會連動連隱藏關聯的檔案（-flat- like）名稱一起改，還蠻好用的，非常貼心！但是為何不做成UI介面呢？是打console text比較有屌感嗎？</p><h6>VMware VMDK Rename ChangeFileName</h6></main><footer></footer><script src=/.file/site.js></script><script src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-7039045520564660"></script></body></html>
+</code></pre><p>改完會連動連隱藏關聯的檔案（-flat- like）名稱一起改，還蠻好用的，非常貼心！但是為何不做成UI介面呢？是打console text比較有屌感嗎？</p><h6>VMware VMDK Rename ChangeFileName</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

@@ -43,4 +43,4 @@ iptables -t nat -A POSTROUTING -s 192.168.78.0/24 -o ens33 -j MASQUERADE
 iptables -A FORWARD -p tcp --syn -s 192.168.78.0/24 -j TCPMSS --set-mss 1380
 </code></pre><p>step 15. 開機自動啟用PPTP VPN服務</p><pre><code class=language-txt>systemctl enable pptpd.service
 systemctl start pptpd
-</code></pre><p>step 16. reboot，大功告成。</p><p>經過測試，使用Windows 10原生VPN連線程式，或者在Android手機原生VPN連線設定，都可以透過此VPN伺服器進行連線。</p><h3>相關連結：</h3><ul><li><a href=/archive2021/20210602.html>Ubuntu架設VPN-IPsec/L2TP伺服器</a></li></ul><h6>Ubuntu PPTP VPN 架設 Windows Windows10 連線</h6></main><footer></footer><script src=/.file/site.js></script><script src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-7039045520564660"></script></body></html>
+</code></pre><p>step 16. reboot，大功告成。</p><p>經過測試，使用Windows 10原生VPN連線程式，或者在Android手機原生VPN連線設定，都可以透過此VPN伺服器進行連線。</p><h3>相關連結：</h3><ul><li><a href=/archive2021/20210602.html>Ubuntu架設VPN-IPsec/L2TP伺服器</a></li></ul><h6>Ubuntu PPTP VPN 架設 Windows Windows10 連線</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

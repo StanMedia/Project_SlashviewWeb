@@ -20,4 +20,4 @@
 string cName = oFI.Name;
 </code></pre><h2>取得ASP.NET Url Routing後，真正運行的路徑與檔名</h2><p>上面講的那個方式，到了ASP.NET MVC時代就沒有用處了，在到處都是routing的狀況下，你只會拿到rewrite過的URL而已。如果要求得真正的執行路徑（Handler），就要改用下列這個方法：</p><pre><code class=language-cs>var oPage = (System.Web.UI.Page)System.Web.HttpContext.Current.CurrentHandler;
 string cName = oPage.AppRelativeVirtualPath;
-</code></pre><h6>C# ExeSelfName ExeSelfPath Runtime ASPX ASHX ASP.NET MVC UrlRouting</h6></main><footer></footer><script src=/.file/site.js></script><script src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-7039045520564660"></script></body></html>
+</code></pre><h6>C# ExeSelfName ExeSelfPath Runtime ASPX ASHX ASP.NET MVC UrlRouting</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

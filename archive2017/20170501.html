@@ -13,4 +13,4 @@ Use of unassigned local variable 'oTemp'
 </code></pre><p>當然啦，大家心裡都很清楚C#是為我們好，但是我們明明都已經在try中檢查了，可否不要那麼雞婆，逼著我一定要去new一個MyClass的實體行不行？最不爽的是，當MyClass的建構程序如果非常耗效能的話，那麼被逼著new的感覺會更加的無奈。</p><pre><code class=language-cs>//可以不要強迫我寫這行嗎？
 MyClass oTemp = new MyClass();
 </code></pre><h2>出現「使用未指定的區域變數」的解決方法</h2><p>答案很簡單，就是指派給他一個null就可以閃過C# Compiler了。例如：</p><pre><code class=language-cs>MyClass oTemp = null;  //這樣至少不會消耗建構時期的效能
-</code></pre><p>如果你看到這裡，仍然不知道為何給他null就可以跳過編譯器的檢查，那麼我勸你最好還是遵循正規的方法產生一個垃圾實體會比較好，因為這代表你的觀念還不夠深。Happy Coding!</p><h6>使用未指定的區域變數 UseOfUnassignedLocalVariable</h6></main><footer></footer><script src=/.file/site.js></script><script src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-7039045520564660"></script></body></html>
+</code></pre><p>如果你看到這裡，仍然不知道為何給他null就可以跳過編譯器的檢查，那麼我勸你最好還是遵循正規的方法產生一個垃圾實體會比較好，因為這代表你的觀念還不夠深。Happy Coding!</p><h6>使用未指定的區域變數 UseOfUnassignedLocalVariable</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

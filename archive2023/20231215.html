@@ -99,4 +99,4 @@ components:
   "response_data": "UnrecognizedKwargsError: cLocation"
 }
 </code></pre><p>經過我反覆檢查了：Schema YAML、Schema JSON、伺服端的程式碼、伺服端的CORS、非ANSI字元的UrlEncode、欄位名稱...之後，終於發現都不是這些問題，而是OpenAI一開始就沒有把後端自有程式碼的Form POST寫正確，也就是說如果你想要透過GPTs Actions使用HTTP Post FORM送出資料，無論如何都會得到這個錯誤：</p><pre><code class=language-txt>UnrecognizedKwargsError: XXXXX
-</code></pre><p>最憋屈的是，GPT-4每日只有40個Session的額度，你在測試的過程中隨便錯幾次額度就爆炸了，換來的就是漫長的等待...。總之就是這樣了，如果你找到這一篇有極高的概率，應該也是採用Form POST的陷阱。</p><h6>OpenAI ChatGPT ChatGPTs ChatGPTsActions HowTo ASP.NET CSharp C# Demo</h6></main><footer></footer><script src=/.file/site.js></script><script src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-7039045520564660"></script></body></html>
+</code></pre><p>最憋屈的是，GPT-4每日只有40個Session的額度，你在測試的過程中隨便錯幾次額度就爆炸了，換來的就是漫長的等待...。總之就是這樣了，如果你找到這一篇有極高的概率，應該也是採用Form POST的陷阱。</p><h6>OpenAI ChatGPT ChatGPTs ChatGPTsActions HowTo ASP.NET CSharp C# Demo</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

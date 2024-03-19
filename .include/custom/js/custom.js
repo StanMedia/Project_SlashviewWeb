@@ -156,21 +156,46 @@
 
     //如果不是本機網站就插入廣告
     if (!(bIsLocalhost || bIsGoogleBot)) {
-      //動態載入廣告
-      BusinessServices("uBS1")
-      .then(function () {
-        return BusinessServices("uBS2");
-      })
-      .then(function () {
-        return BusinessServices("uBS3");
-      })
-      .then(function () {
-        return BusinessServices("uBS4");
-      })
+      var cAdUrl = "https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-7039045520564660";
+      //動態偵測瀏覽器是否封鎖廣告
+      fetch(new Request(cAdUrl, {
+          method: "HEAD"
+      })).then(function (response) {
+          if (!response.ok) {
+              //偵測到廣告阻擋執行
+              console.log("偵測到廣告阻擋111");
+          } else {
+            console.log("沒有偵測到廣告阻擋。");
+          }
+      }).catch(function (e) {
+          //偵測到廣告阻擋執行
+          console.log("偵測到廣告阻擋222");
+      });
+
+      //動態載入Javascript
+      $.ajax({
+        url: cAdUrl,
+        dataType: "script",
+        crossorigin: "anonymous",
+        success: function () {
+          //完成JS載入，開始進行廣告
+          BusinessServices("uBS1")
+            .then(function () {
+              return BusinessServices("uBS2");
+            })
+            .then(function () {
+              return BusinessServices("uBS3");
+            })
+            .then(function () {
+              return BusinessServices("uBS4");
+            })
+        }
+      });
     }
   }
 
   /* 後續要插入的程式碼 */
+  //...
   //...
 
 });

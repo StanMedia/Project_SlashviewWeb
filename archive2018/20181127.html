@@ -23,4 +23,4 @@ using ((ModeA) ? oSource = new System.IO.FileStream(cStaticFile, System.IO.FileM
   using (System.Drawing.Image oImage = System.Drawing.Image.FromStream(oSource, false, false))
   { ... }
 }
-</code></pre><p>上面的程式碼美妙之處，就是在於第一段的using使用了if判斷式，而在判斷為false後會載入null，而using(null){...}對compiler來說是一個空洞但又合法的寫法，剛剛好可以滿足我們的需求啊！這下我們就不用因為要區分成兩種模式而重載兩個程式碼很雷同的方法，箇中意象就有請大家自己去體會啦！</p><h6>C# Reference UsingStatement IfElse Switch</h6></main><footer></footer><script src=/.file/site.js></script><script src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-7039045520564660"></script></body></html>
+</code></pre><p>上面的程式碼美妙之處，就是在於第一段的using使用了if判斷式，而在判斷為false後會載入null，而using(null){...}對compiler來說是一個空洞但又合法的寫法，剛剛好可以滿足我們的需求啊！這下我們就不用因為要區分成兩種模式而重載兩個程式碼很雷同的方法，箇中意象就有請大家自己去體會啦！</p><h6>C# Reference UsingStatement IfElse Switch</h6></main><footer></footer><script src=/.file/site.js></script></body></html>
