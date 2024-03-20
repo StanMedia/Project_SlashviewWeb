@@ -44,7 +44,7 @@ flushall
 
 //立刻釋放記憶體
 memory purge
-</code></pre><h2>針對Redis進行輕度優化</h2><p>優化設定項目均可以透過編輯<code>redis.conf</code>設定檔案來進行修改。</p><p>一個Redis支援多個DB，而每個DB又分別被實作<code>AOF</code>與<code>RDB</code>，這導致現代的Redis已經跟傳統印象中的記憶體資料庫不太相同了，透過AOF與RDB實作，就算作業系統當機、斷電，Redis都有能力回復斷電前特定時間的狀態，端看你當時候的備份機制而定。以下是名詞說明：</p><ul><li>AOF（Append Only File）：功能預設為關閉。可以將這個功能視為資料庫的交易紀錄（Log)，也就是你針對Redis每一筆下的指令都會被如實的紀錄下來，Redis也會在運作時期定時針對AOF檔案進行重寫（rewrite）藉以優化AOF檔案。</li></ul><pre><code>例如下列指令
+</code></pre><h2>針對Redis進行輕度優化</h2><p>⚠ 優化設定項目請一律透過編輯<code>redis.conf</code>設定檔案來進行修改。</p><p>一個Redis支援多個DB，而每個DB又分別被實作<code>AOF</code>與<code>RDB</code>，這導致現代的Redis已經跟傳統印象中的記憶體資料庫不太相同了，透過AOF與RDB實作，就算作業系統當機、斷電，Redis都有能力回復斷電前特定時間的狀態，端看你當時候的備份機制而定。以下是名詞說明：</p><ul><li>AOF（Append Only File）：功能預設為關閉。可以將這個功能視為資料庫的交易紀錄（Log)，也就是你針對Redis每一筆下的指令都會被如實的紀錄下來，Redis也會在運作時期定時針對AOF檔案進行重寫（rewrite）藉以優化AOF檔案。</li></ul><pre><code>例如下列指令
 set someKey "Hello"
 set someKey "Welcome"
 set someKey "Test"
@@ -54,8 +54,7 @@ set someKey "Test"
 save 900 1      //900秒內若有1鍵值變化就快照
 save 300 10     //300秒內若有10鍵值變化就快照
 save 60 10000   //60秒內若有10000鍵值變化就快照
-</code></pre><h3>maxmemory限制執行期的最高記憶體</h3><p>預設的<code>maxmemory</code>為<code>0</code>，這可能導致Redis在運作的時候會淪落到SWAP的窘境，因此我們可以透過<code>maxmemory XXMB</code>或<code>maxmemory XXGB</code>指令來進行最高記憶體耗用的限制。例如：</p><pre><code>maxmemory 7GB
-</code></pre><h3>maxmemory-policy最高記憶體抵達策略</h3><p>當Redis耗盡記憶體時，我們必須給定策略，不然依據<code>預設值</code>的反應會直接把所有的SET寫入指令都拋Exception返回，可以透過<code>maxmemory-policy XXX</code>來下策略，其中的策略如下，請自行決定：</p><pre><code>noeviction（預設值）
+</code></pre><h3>maxmemory限制執行期的最高記憶體</h3><p>預設的<code>maxmemory</code>為<code>0</code>，這可能導致Redis在運作的時候會淪落到SWAP的窘境，因此我們可以透過<code>maxmemory XXMB</code>或<code>maxmemory XXGB</code>指令來進行最高記憶體耗用的限制。</p><p><img src=https://content.slashview.com/img/2024/20240314_06.jpg alt="" /></p><h3>maxmemory-policy最高記憶體抵達策略</h3><p>當Redis耗盡記憶體時，我們必須給定策略，不然依據<code>預設值</code>的反應會直接把所有的SET寫入指令都拋Exception返回，可以透過<code>maxmemory-policy XXX</code>來下策略。</p><p><img src=https://content.slashview.com/img/2024/20240314_07.jpg alt="" /></p><p>其中的策略列表如下，請自行決定：</p><pre><code>noeviction（預設值）
 當記憶體達到上限時拋出錯誤。
 
 allkeys-lru（多數建議值）
