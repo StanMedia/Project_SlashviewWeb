@@ -44,7 +44,7 @@ flushall
 
 //立刻釋放記憶體
 memory purge
-</code></pre><h2>針對Redis進行輕度優化</h2><p>一個Redis支援多個DB，而每個DB又分別被實作<code>AOF</code>與<code>RDB</code>，這導致現代的Redis已經跟傳統印象中的記憶體資料庫不太相同了，透過AOF與RDB實作，就算作業系統當機、斷電，Redis都有能力回復斷電前特定時間的狀態，端看你當時候的備份機制而定。以下是名詞說明：</p><ul><li>AOF（Append Only File）：功能預設為關閉。可以將這個功能視為資料庫的交易紀錄（Log)，也就是你針對Redis每一筆下的指令都會被如實的紀錄下來，Redis也會在運作時期定時針對AOF檔案進行重寫（rewrite）藉以優化AOF檔案。</li></ul><pre><code>例如下列指令
+</code></pre><h2>針對Redis進行輕度優化</h2><p>優化設定項目均可以透過編輯<code>redis.conf</code>設定檔案來進行修改。</p><p>一個Redis支援多個DB，而每個DB又分別被實作<code>AOF</code>與<code>RDB</code>，這導致現代的Redis已經跟傳統印象中的記憶體資料庫不太相同了，透過AOF與RDB實作，就算作業系統當機、斷電，Redis都有能力回復斷電前特定時間的狀態，端看你當時候的備份機制而定。以下是名詞說明：</p><ul><li>AOF（Append Only File）：功能預設為關閉。可以將這個功能視為資料庫的交易紀錄（Log)，也就是你針對Redis每一筆下的指令都會被如實的紀錄下來，Redis也會在運作時期定時針對AOF檔案進行重寫（rewrite）藉以優化AOF檔案。</li></ul><pre><code>例如下列指令
 set someKey "Hello"
 set someKey "Welcome"
 set someKey "Test"
@@ -54,4 +54,28 @@ set someKey "Test"
 save 900 1      //900秒內若有1鍵值變化就快照
 save 300 10     //300秒內若有10鍵值變化就快照
 save 60 10000   //60秒內若有10000鍵值變化就快照
+</code></pre><h3>maxmemory限制執行期的最高記憶體</h3><p>預設的<code>maxmemory</code>為<code>0</code>，這可能導致Redis在運作的時候會淪落到SWAP的窘境，因此我們可以透過<code>maxmemory XXMB</code>或<code>maxmemory XXGB</code>指令來進行最高記憶體耗用的限制。例如：</p><pre><code>maxmemory 7GB
+</code></pre><h3>maxmemory-policy最高記憶體抵達策略</h3><p>當Redis耗盡記憶體時，我們必須給定策略，不然依據<code>預設值</code>的反應會直接把所有的SET寫入指令都拋Exception返回，可以透過<code>maxmemory-policy XXX</code>來下策略，其中的策略如下，請自行決定：</p><pre><code>noeviction（預設值）
+當記憶體達到上限時拋出錯誤。
+
+allkeys-lru（多數建議值）
+當記憶體達到上限時，根據最近最少使用LRU（Least Recently Used) 刪除Key。
+
+volatile-lru:
+與allkeys-lru類似，但只針對TTL Key刪除。
+
+allkeys-lfu:
+當記憶體達到上限時，根據最近最不常使用（Least Frequently Used) 刪除Key。
+
+volatile-lfu:
+與allkeys-lfu類似，但只針對TTL Key刪除。
+
+allkeys-random:
+當記憶體達到上限時，隨機選擇Key刪除。
+
+volatile-random:
+與allkeys-random類似，但只針對TTL Key刪除。
+
+volatile-ttl:
+當記憶體達到上限時，優先刪除TTL較短的Key。
 </code></pre><p>提醒：</p><ul><li>針對設定檔案進行任何的變更，都要重新開啟服務喔。</li><li>若將AOF、RDB均關閉，經過實測於百萬筆的寫入時期，可以將速度提升近50%。（原本兩秒多變成一秒多）</li><li>盡管某些文章表示<code>flushall</code>或<code>flushdb</code>會清除<code>.rdb文件</code>，但依據我的測試是：不會清除，你要自行手動清除。</li><li>本文章只是淺嚐Redis滋味，真正實務上還要考慮很多架構因素，例如：主從、覆寫策略...等，但那又是另外一回事了。</li></ul><h3>相關連結</h3><ul><li><a href=/archive2024/20240314.html>在Linux下安裝Redis Server</a></li><li><a href=/archive2024/20240312.html>透過C#單一實例實作Redis快取伺服器之存取與管理</a></li></ul><h6>Linux Windows RedisServer Install Setup CLI Command AOF RDB</h6></main><footer></footer><script src=/.file/site.js></script></body></html>
