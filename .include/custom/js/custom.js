@@ -157,7 +157,7 @@
     //如果不是本機網站就插入廣告
     //if (!(bIsLocalhost || bIsGoogleBot)) {
     if (false) {
-      var cAdsUrl = "https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-7039045520564660";
+      var cAdsUrl = "https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-4483405513208846";
       var bAdsBlocked = false;
       //動態偵測瀏覽器是否封鎖廣告
       fetch(new Request(cAdsUrl, {
@@ -223,9 +223,9 @@
 * ********************************** */
 function BusinessServices(cID) {
   //定義Google廣告參數
-  let cGoogleCode = `<ins class="adsbygoogle" style="display:block" data-ad-client="ca-pub-7039045520564660" data-ad-slot="CodeSlot" data-ad-format="auto" data-full-width-responsive="true"></ins>`;
-  let cGoogleSlotUpper = "6325664530";
-  let cGoogleSlotLower = "3803798199";
+  let cGoogleCode = `<ins class="adsbygoogle" style="display:block" data-ad-client="ca-pub-4483405513208846" data-ad-slot="CodeSlot" data-ad-format="auto" data-full-width-responsive="true"></ins>`;
+  let cGoogleSlotUpper = "9296487583";
+  let cGoogleSlotLower = "9286531689";
   let cGoogleSlot;
   switch (cID) {
     case "uBS3":
