@@ -13,7 +13,7 @@ string cHeader =
 Console.WriteLine(oNC["A"]);
 </code></pre><p>上面這段程式在ToString時期會丟出「小明,小華」，而這可能不會是你想要的（或許也可能就是你要的）。</p><h2>Headers GetValues寫法</h2><p>下列這種寫法會更精準的汲取一筆</p><pre><code class=language-cs>//有找到會回傳字串（或第一筆字串），沒找到會回傳NotFound（或你比較喜歡null也可以改回）
 string cHeader = 
-  System.Web.HttpContext.Current.Request.Headers.GetValues(Ksu.Site.HttpHeaderKey.IpAddressDefault.ToExtensionString())?.FirstOrDefault()
+  System.Web.HttpContext.Current.Request.Headers.GetValues(Slashview.HttpHeaderKey.IpAddressDefault.ToExtensionString())?.FirstOrDefault()
   ??
   "NotFound";
 </code></pre><h6>ASP.NET GetCustomizeHttpHeader CanNotFoundHeader HeaderLost Request.ServerVariables IisServerVariables HttpHeader KeyPrefixed</h6></main><footer></footer><script src=/.file/site.js></script></body></html>
