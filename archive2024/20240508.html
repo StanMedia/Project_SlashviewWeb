@@ -1,0 +1,13 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>變更Ubuntu的主機名稱（HostName）與擴增硬碟容量</h1><p>沒有啥營養，依然記錄一下歷程而已，指令預設先一律<code>sudo -i</code>開始。</p><h2>變更主機名稱</h2><p>有時候就是對於Linux主機名稱不甚滿意，以往想要變更需要去改動兩個文字設定檔，現在透過一個指令就解決了</p><pre><code class=language-txt>hostnamectl set-hostname 新主機名稱
+</code></pre><p>變更後我依然維持著與Windows的習慣重新開機，重新進入login畫面後發現主機名稱果然變更了。進入後再輸入一次指令<code>hostnamectl status</code>（其實<code>hostnamectl</code>即可），沒想到比以前的<code>hostname</code>程式陽春的列出一條主機名稱好多了，連作業系統版本、主機外殼、是否虛擬化、Linux內核版本...一併提供，我認為頗有Windows的<code>SystemInfo</code>之味道（但是Windows提供的更多就是了）。</p><p><img src=https://content.slashview.com/img/2024/20240508_01.jpg alt="" /></p><p>But... 最重要的就是這個But...</p><p>用<code>hostnamectl</code>這個方式並不會自動去修改<code>/etc/hosts</code>檔案，將會引爆<code>sudo</code>切換基於<code>DNS運作</code>導致變得極度緩慢，大約要10秒才會彈出密碼輸入提示。因此看起來古法的似乎也不那麼複雜了... 還是遵循古法吧。</p><p>修改hostname</p><pre><code class=language-txt>nano /etc/hostname
+
+新主機名稱
+</code></pre><p>修改dns快查表：hosts</p><pre><code class=language-txt>nano /etc/hosts
+
+127.0.0.1 新主機名稱
+</code></pre><p>兩個檔案修改儲存後重新開機，就可以看到效果。</p><h2>擴增硬碟容量</h2><p>因為我是VM環境所以可以針對虛擬硬碟進行物理上的擴增，我這邊打算把20GB擴增到40GB，首先把作業系統關機後，到VMware裡面針對硬碟進行<code>Expand</code>擴增。</p><p><img src=https://content.slashview.com/img/2024/20240508_02.jpg alt="" /></p><p>開機後，先用<code>fdisk</code>指令檢查當前的磁區狀態，可以看到我們準備開刀的對象就是<code>/dev/sda3</code>，如圖目前的容量只有18GB左右：</p><pre><code class=language-txt>fdisk -l /dev/sda
+</code></pre><p><img src=https://content.slashview.com/img/2024/20240508_03.jpg alt="" /></p><p>若要方便的擴增容量，可以請<code>parted</code>程式來幫忙（類似Windows的diskpart），若無可先下載：</p><pre><code class=language-txt>apt-get install parted
+</code></pre><p>執行<code>parted</code>後，可以進入畫面輸入<code>print</code>查看，再次確認我們要開刀的對象是<code>編號3</code>：</p><p><img src=https://content.slashview.com/img/2024/20240508_04.jpg alt="" /></p><p>接著按照下列指令輸入：</p><pre><code class=language-txt>(parted) resizepart
+Partition number? 3
+End? [21.5GB]? 100%
+</code></pre><p>回到<code>(parted)</code>提示符號就已經擴增完成了，接著可以輸入<code>(parted) quit</code>離開並<code>reboot</code>，再去檢查容量應該就沒問題了。</p><h6>Linux Ubuntu HostName Change Disk Capacity Expand Extension</h6></main><footer></footer><script src=/.file/site.js></script></body></html>
