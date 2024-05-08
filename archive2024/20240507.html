@@ -8,7 +8,7 @@ apt-get install -y mssql-server
 </code></pre><h2>設定SQL Server 2022</h2><p>進入設定模式</p><pre><code class=language-txt>/opt/mssql/bin/mssql-conf setup
 </code></pre><p>測試用途建議選擇<code>Developer</code>版本、<code>允許</code>授權協議，並且設定<code>密碼</code>，設定後系統會自動幫你把SQL Server運行起來。</p><h2>查看SQL Server 2022是否運行</h2><p>如果在Console中有看到綠色的<code>active (runnung)</code>就代表有跑起來了。</p><pre><code class=language-txt>systemctl status mssql-server
 </code></pre><h2>設定SQL Server的定序</h2><p>首先要將SQL Server執行狀態進行關閉</p><pre><code class=language-txt>systemctl stop mssql-server
-</code></pre><p>設定定序，基本上台灣大部分都是設定<code>Chinese_Taiwan_Stroke_CI_AS</code>，也就是筆畫排序、不區分大小寫、區分腔調字。</p><pre><code>/opt/mssql/bin/mssql-conf set-collation
+</code></pre><p>設定定序，基本上台灣最常見的預設值就是設定<code>Chinese_Taiwan_Stroke_CI_AS</code>，亦即：筆畫排序、不區分大小寫、區分腔調字。</p><pre><code>/opt/mssql/bin/mssql-conf set-collation
 
 Enter the collation: Chinese_Taiwan_Stroke_CI_AS
 </code></pre><p>設定之後重新將SQL Server開啟即可</p><pre><code class=language-txt>systemctl start mssql-server
