@@ -59,4 +59,17 @@ while(1) {
 }
 </code></pre><ol start=2><li><p>儲存文字檔，並將檔名設定成<code>MouseMover.ps1</code>放置於桌面。</p></li><li><p>針對檔案點選右鍵，選擇<code>用powershell執行</code>即可。</p></li></ol><p>程式碼每間隔10秒鐘會亂數移動一次滑鼠的座標位置，如果不喜歡的話，可以自行修改程式碼的第一行將<code>10</code>這個數字改掉，例如你想要一分鐘執行一次，可以改成<code>60</code>。</p><pre><code class=language-txt>[int]$iSeconds = 60
 </code></pre><p>如果不想動程式碼的話，可以到桌面的路徑使用<code>powershell</code>帶入參數的方式執行，例如下方指令指定成每分鐘執行一次：</p><pre><code class=language-txt>PS C:\Users\Slashview\Desktop> powershell .\MouseMover.ps1 60
-</code></pre><h6>Windows Powershell nonInstall nonSetup PureScript Mouse AutoMoving AutoMover eLearn eLearning TaiwanGovernment OnlineVedio OnlineStream LearningDetection</h6></main><footer></footer><script src=/.file/site.js></script></body></html>
+</code></pre><h2>Powershell執行權限問題（提升Powershell權限）</h2><p>如果啟動執行後，系統彈出這樣的訊息，代表你的Powershell的執行權限不足。</p><pre><code class=language-txt>.\MouseMover.ps1 : 因為這個系統上已停用指令碼執行，所以無法載入 C:\Users\Slashview\Desktop\MouseMover.ps1 檔案。如需詳細資訊
+，請參閱 about_Execution_Policies，網址為 https:/go.microsoft.com/fwlink/?LinkID=135170。
+位於 線路:1 字元:1
++ .\MouseMover.ps1
++ ~~~~~~~~~~~~~~~~
+    + CategoryInfo          : SecurityError: (:) [], PSSecurityException
+    + FullyQualifiedErrorId : UnauthorizedAccess
+</code></pre><p>按下<code>Windows + R</code>，輸入<code>powershell</code>後，同時按住<code>Ctrl + Shift</code>並按下<code>Enter</code>，系統會提示是否使用最高權限執行，點選<code>是</code>後在視窗中輸入下列指令提升powershell權限：</p><pre><code>Set-ExecutionPolicy Unrestricted
+
+執行原則變更
+執行原則有助於防範您不信任的指令碼。如果變更執行原則，可能會使您接觸到 about_Execution_Policies 說明主題 (網址為
+https:/go.microsoft.com/fwlink/?LinkID=135170) 中所述的安全性風險。您要變更執行原則嗎?
+[Y] 是(Y)  [A] 全部皆是(A)  [N] 否(N)  [L] 全部皆否(L)  [S] 暫停(S)  [?] 說明 (預設值為 "N"): A
+</code></pre><p>選擇<code>A</code>直接允許全部指令碼即可。</p><h6>Windows Powershell nonInstall nonSetup PureScript Mouse AutoMoving AutoMover eLearn eLearning TaiwanGovernment OnlineVedio OnlineStream LearningDetection</h6></main><footer></footer><script src=/.file/site.js></script></body></html>
