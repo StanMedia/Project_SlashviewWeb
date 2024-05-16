@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>Windows下的滑鼠自動移動程式（免安裝，不需要管理者權限）</h1><p>最近被<code>e等公務園</code>的網站強迫每個人都要在線上關注的觀賞課程，這個規定立意良善，但不是每個人都需要某個課程（對我來說是課程太簡單不適合我），總之每個人都有自己的理由，如此一來立意良善的設定就變成強迫了。</p><p>上網查了一些資訊，要達成在Windows作業系統下自動移動滑鼠，都需要下載安裝特定的執行檔（這種小程式好像在疫情期間特別興盛，可能是老闆想要遠端監控你有沒有乖乖的在家上班），但我怕有病毒不想下載。順手利用<code>powershell</code>撰寫了一個滑鼠定時自動移動的程式碼，供給有需要的人參考使用。</p><h2>滑鼠定時自動移動程式碼</h2><ol><li>請開啟記事本，將下列程式碼貼上：</li></ol><pre><code class=language-ps1>param (
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>Windows下的滑鼠自動移動程式（免安裝，不需要管理者權限）</h1><p>最近被<code>e等公務園</code>的網站強迫每個人都要在線上關注的觀賞課程，這個規定立意良善，但不是每個人都需要某個課程（對我來說是課程太簡單不適合我），總之每個人都有自己的理由，如此一來立意良善的設定就變成強迫了。</p><p>上網查了一些資訊，要達成在Windows作業系統下自動移動滑鼠，都需要下載安裝特定的執行檔（這種小程式好像在疫情期間特別興盛，可能是老闆想要遠端監控你有沒有乖乖的在家上班），但我怕有病毒不想下載。順手利用<code>powershell</code>撰寫了一個滑鼠定時自動移動的程式碼，供給有需要的人參考使用。</p><h2>滑鼠定時自動移動程式碼</h2><ol><li>請開啟記事本，將下列程式碼貼上：</li></ol><pre><code class=language-txt>param (
 	[int]$iSeconds = 10
 )
 
@@ -59,4 +59,4 @@ while(1) {
 }
 </code></pre><ol start=2><li><p>儲存文字檔，並將檔名設定成<code>MouseMover.ps1</code>放置於桌面。</p></li><li><p>針對檔案點選右鍵，選擇<code>用powershell執行</code>即可。</p></li></ol><p>程式碼每間隔10秒鐘會亂數移動一次滑鼠的座標位置，如果不喜歡的話，可以自行修改程式碼的第一行將<code>10</code>這個數字改掉，例如你想要一分鐘執行一次，可以改成<code>60</code>。</p><pre><code class=language-txt>[int]$iSeconds = 10
 </code></pre><p>如果不想動程式碼的話，可以到桌面的路徑使用<code>powershell</code>帶入參數的方式執行，例如下方指令：</p><pre><code class=language-txt>PS C:\Users\Slashview\Desktop> powershell .\MouseMover.ps1 60
-</code></pre><h6>Windows Powershell nonInstall nonSetup PureScript Mouse AutoMoving AutoMover</h6></main><footer></footer><script src=/.file/site.js></script></body></html>
+</code></pre><h6>Windows Powershell nonInstall nonSetup PureScript Mouse AutoMoving AutoMover eLearn eLearning TaiwanGovernment OnlineVedio OnlineStream LearningDetection</h6></main><footer></footer><script src=/.file/site.js></script></body></html>
