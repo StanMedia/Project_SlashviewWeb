@@ -57,6 +57,6 @@ while(1) {
   [Windows.Forms.Cursor]::Position = New-Object System.Drawing.Point($x, $y)
   Start-Sleep -Seconds $iSeconds
 }
-</code></pre><ol start=2><li><p>儲存文字檔，並將檔名設定成<code>MouseMover.ps1</code>放置於桌面。</p></li><li><p>針對檔案點選右鍵，選擇<code>用powershell執行</code>即可。</p></li></ol><p>程式碼每間隔10秒鐘會亂數移動一次滑鼠的座標位置，如果不喜歡的話，可以自行修改程式碼的第一行將<code>10</code>這個數字改掉，例如你想要一分鐘執行一次，可以改成<code>60</code>。</p><pre><code class=language-txt>[int]$iSeconds = 10
-</code></pre><p>如果不想動程式碼的話，可以到桌面的路徑使用<code>powershell</code>帶入參數的方式執行，例如下方指令：</p><pre><code class=language-txt>PS C:\Users\Slashview\Desktop> powershell .\MouseMover.ps1 60
+</code></pre><ol start=2><li><p>儲存文字檔，並將檔名設定成<code>MouseMover.ps1</code>放置於桌面。</p></li><li><p>針對檔案點選右鍵，選擇<code>用powershell執行</code>即可。</p></li></ol><p>程式碼每間隔10秒鐘會亂數移動一次滑鼠的座標位置，如果不喜歡的話，可以自行修改程式碼的第一行將<code>10</code>這個數字改掉，例如你想要一分鐘執行一次，可以改成<code>60</code>。</p><pre><code class=language-txt>[int]$iSeconds = 60
+</code></pre><p>如果不想動程式碼的話，可以到桌面的路徑使用<code>powershell</code>帶入參數的方式執行，例如下方指令指定成每分鐘執行一次：</p><pre><code class=language-txt>PS C:\Users\Slashview\Desktop> powershell .\MouseMover.ps1 60
 </code></pre><h6>Windows Powershell nonInstall nonSetup PureScript Mouse AutoMoving AutoMover eLearn eLearning TaiwanGovernment OnlineVedio OnlineStream LearningDetection</h6></main><footer></footer><script src=/.file/site.js></script></body></html>
