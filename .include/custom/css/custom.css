@@ -79,6 +79,9 @@ main .btn, .btn:focus, .btn:hover {
 main p {
   margin-bottom: 1.25rem;
 }
+main p:has(img) {
+  margin-bottom: 4rem;
+}
 
 /* 醒目標註樣式 */
 main code {
