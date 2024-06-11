@@ -1,0 +1,28 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>委派的疊加組合（多點傳送委派）</h1><p>在C#中我們可以透過委派的疊加組合來實現多點傳送委派，這樣可以讓一次性的委派呼叫，即可調用到多個方法。多點傳送委派其實適用的場景並沒有很多，大多屬於資料流處理的後段（也就是不再運算，沒有回傳值，準備下車了），例如：日誌記錄、事件通知、異常處理、或者是輸出列印等應用。</p><h2>C#委派的疊加組合</h2><p>在C#中，委派的疊加組合是通過<code>+=</code>或<code>-=</code>運算符來實現的。例如我們有一個應用情境，當我們在購買東西結帳後，需要針對這一次的購物進行一些單據的列印，通常都是列印出<code>發票</code>與<code>刷卡</code>單據，這兩個單據的資訊大致上是相同的，只是細節略有不同。然而消費者可以透過店員的詢問是否要排除某些列印的單據，這會讓後面的情況變得有點雜亂。（當然啦，也沒有多混亂！這裡只是舉出一個簡單的例子，來套用多點傳送委派的應用。）</p><pre><code class=language-cs>System.Action&lt;int> printInvoice = x => { Console.WriteLine($"發票票券：金額{x:n0}元"); };
+System.Action&lt;int> printReceipt = x => { Console.WriteLine($"收據票券：金額{x:n0}元"); };
+
+var delePrintAll = printInvoice + printReceipt;
+
+var iMoney = 1234;
+
+Console.Write($@"
+0. 全部列印（預設）
+1. 不印發票
+2. 不印收據
+請選擇列印模式？");
+      
+var deleRun = System.Convert.ToInt32(Console.ReadLine()) switch
+{
+  1 => delePrintAll -= printInvoice,
+  2 => delePrintAll -= printReceipt,
+  _ => delePrintAll,
+};
+
+Console.WriteLine("－－－－－\n您拿到的票券：");
+deleRun?.Invoke(iMoney);
+</code></pre><p>透過上面的程式碼我們可以發現我們創造了<code>System.Action&lt;int></code>型別的委派分別為<code>printInvoice</code>、<code>printReceipt</code>，而<code>delePrintAll</code>則是將這兩個委派進行疊加組合。最後透過<code>deleRun</code>來決定要執行的委派，這樣就可以達到多點傳送委派的效果。</p><p>最後要說明的是<code>deleRun?.Invoke</code>是為了調用委派前先檢查是否為<code>null</code>，這樣可以避免在沒有委派的情況下造成例外的發生。至於你可能會想說哪有可能是null呢？其實這是為了避免委派被移除的情況下造成的例外發生，例如：<code>delePrintAll = delePrintAll - printInvoice - printReceipt</code>。</p><h2>結語與補充</h2><p>多點傳送委派的應用場景並不多，但是在某些情況下，這樣的設計可以讓程式碼更加的簡潔與易讀。如果你試圖使用多點傳送委派來解決複合性的計算問題（例如某個委派計算後拋值再丟到另外一個委派運算，那麼光利用<code>+=</code>或<code>-=</code>運算子是行不通的，例如示範一個先將兩數相加後再乘以尾數的委派：</p><pre><code class=language-cs>System.Func&lt;(int, int), int> add = (x) => x.Item1 + x.Item2;
+System.Func&lt;(int, int), int> sub = (x) => x.Item1 - x.Item2;
+System.Func&lt;(int, int), int> addThenMul = (x) => add(x) * x.Item2;
+
+System.Console.WriteLine(addThenMul((3, 4)));
+</code></pre><p>你唯一能做的事就是另外創造<code>addThenMul</code>的委派然後在裡面呼叫<code>add</code>與<code>sub</code>方法，除此之外我沒有想到更好的解法，話說回來這樣的寫法跟一般的C#函數方法撰寫方式根本沒啥兩樣了。</p><h3>相關連結</h3><ul><li><a href=/archive2014/20140514.html>C#之委派之演進史與匿名函式之應用</a></li><li><a href=/archive2014/20141201.html>利用Predicate泛型委派，進行類別方法委派之實作</a></li><li><a href=/archive2019/20190111.html>新舊委派的撰寫與呼叫方式：以購物車折扣為例</a></li><li><a href=/archive2021/20210111.html>利用委派讓List(T)可以使用Lambda運算式寫法</a></li><li><a href=/archive2024/20240611.html>委派的疊加組合（多點傳送委派）</a></li></ul><h6>C# Delegate AnonymousFunctions LambdaExpressions GeneralDelegates Action Func CombineDdelegates MulticastDelegates</h6></main><footer></footer><script src=/.file/site.js></script></body></html>
