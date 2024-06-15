@@ -121,4 +121,20 @@ static void Calc(int x, int y, Func&lt;int, int, int> d)
 {
   Console.WriteLine(d(x, y));
 }
-</code></pre><p>慢慢的我們會發現，寫到最後委派似乎已經變成了關我（Class Methods）屁事，請自己處理！事實上在最終的使用上，委派的確就是走上這一條路，詳見相關參考資料。</p><p>相關連結：</p><ul><li><a href=/archive2014/20141117.html>泛型委派（General Delegates）之研究</a></li><li><a href=/archive2014/20141201.html>利用Predicate泛型委派，進行類別方法委派之實作</a></li><li><a href=/archive2019/20190111.html>新舊委派的撰寫與呼叫方式：以購物車折扣為例</a></li><li><a href=/archive2021/20210111.html>利用委派讓List(T)可以使用Lambda運算式寫法</a></li></ul><h6>C# AnonymousFunctions LambdaExpressions Delegate Lambda 黏巴達表示式 匿名函式</h6></main><footer></footer><script src=/.file/site.js></script></body></html>
+</code></pre><p>慢慢的我們會發現，寫到最後委派似乎已經變成了關我（Class Methods）屁事，請自己處理！事實上在最終的使用上，委派的確就是走上這一條路，詳見相關參考資料。</p><h2>C# 10 所支援的Lambda運算式自然型別（Natural type）</h2><p>從<code>C# 10</code>開始，不需目標型別（Target Type），可以使用新的自然型別（Natural type），換句話說，我們可以使用<code>var</code>關鍵字來<code>宣告委派</code>了，讓C#編譯器自動推論型別。</p><p>有了這個新語法糖後，我們可以把上面的程式碼進行下列改寫：</p><pre><code class=language-cs>static void Main(string[] args)
+{
+  var Add = (int x, int y) => { return x + y; };
+  var Sub = (int x, int y) => { return x - y; };
+  var Mul = (int x, int y) => { return x * y; };
+  var Div = (int x, int y) => { return x / y; };
+  Calc(1, 2, Add);
+  Calc(3, 4, Sub);
+  Calc(5, 6, Mul);
+  Calc(8, 2, Div);
+}
+
+static void Calc(int x, int y, Func&lt;int, int, int> d)
+{
+  Console.WriteLine(d(x, y));
+}
+</code></pre><p>最後程式碼寫最多字的地方，就是方法的引數<code>Func&lt;int, int, int> d</code>了，搞不好未來有可能也會被語法糖消滅掉。看到C#這個語言越來越像Javascript，實在不知道是要喜還是憂啊！</p><h3>相關連結：</h3><ul><li><a href=/archive2014/20141117.html>泛型委派（General Delegates）之研究</a></li><li><a href=/archive2014/20141201.html>利用Predicate泛型委派，進行類別方法委派之實作</a></li><li><a href=/archive2019/20190111.html>新舊委派的撰寫與呼叫方式：以購物車折扣為例</a></li><li><a href=/archive2021/20210111.html>利用委派讓List(T)可以使用Lambda運算式寫法</a></li></ul><h6>C# AnonymousFunctions LambdaExpressions Delegate Lambda 黏巴達表示式 匿名函式</h6></main><footer></footer><script src=/.file/site.js></script></body></html>
