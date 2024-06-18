@@ -2,9 +2,11 @@
 :root {
   --SlashViewColor: #9bf00b
 }
+::selection {
+  background: #fed634;
+}
 
 /* ***** HEADER ***** */
-
 /* 更改LOGO顏色 */
 header div.container i {
   color: var(--SlashViewColor);
