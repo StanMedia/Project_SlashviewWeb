@@ -1,0 +1,14 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>在Linux下透過ollama直接跑LLM大型語言模型：以llama3為例</h1><p>總不能永遠活在Docker下，今天的需求是單獨透過一台Linux安裝Ollama，執行Meta LLAMA3並對外提供API服務。</p><h2>在Linux下安裝Ollama</h2><p>Step 1. 切到root權限</p><pre><code class=language-txt>sudo -i
+</code></pre><p>Step 2. 把所有該更新的檔案都更新一遍。</p><pre><code class=language-txt>apt update
+apt upgrade -y
+</code></pre><p>Step 3. 安裝Ollama。</p><pre><code class=language-txt>curl -fsSL https://ollama.com/install.sh | sh
+</code></pre><p>Step 4. 確定Ollama運行無誤：因為沒有瀏覽器，所以透過curl來進行確認。</p><pre><code class=language-txt>curl http://localhost:11434
+</code></pre><p>如果出現<code>Ollama is running</code>就確定沒問題了。</p><p>Step 5. 開啟外部網路監聽。</p><p>如果只有在localhost才能用就太可惜了，因此我們可以到下列網址進行脫離本機的設定：</p><pre><code class=language-txt>nano /etc/systemd/system/ollama.service
+</code></pre><p>在下列區塊下新增一行設定，因為我只有一塊網卡所以就偷懶設定全域監聽<code>0.0.0.0</code>，如果你只想要綁定到某一組IP就請自行指定：</p><pre><code class=language-txt>[Service]
+Environment="OLLAMA_Host=0.0.0.0"
+</code></pre><p>設定儲存好後，可以透過下列指令重啟服務（其實重開機會更快一點）：</p><pre><code class=language-txt>systemctl daemon-reload
+systemctl restart ollama
+</code></pre><p>完成後就到確定可連線到<code>192.168.1.10</code>這台Linux的電腦，透過圖形介面瀏覽器開起來看一下是否也有出現<code>Ollama is running</code>，例如：<code>http://192.168.1.10:11434</code>。</p><h2>透過Ollama下載LLM大型語言模型</h2><p>這次的目標對象是<code>LLAMA3模型</code>，從這個網址<code>https://ollama.com/library</code>觀察到Ollama已經開始提供<code>llama3</code>模型（Models）了，因此輸入指令：</p><pre><code class=language-txt>ollama pull llama3
+</code></pre><p>檔案有點大，所以要等一下才會下載完成。</p><h2>在Console透過Ollama執行LLM大型語言模型</h2><p>先透過下列指令，確定當前Ollama擁有哪些LLM大型語言模型？</p><pre><code class=language-txt>ollama list
+</code></pre><p>挑選你要運行的大型語言模型後，就可開始執行了，例如：</p><pre><code class=language-txt>ollama run llama3
+</code></pre><h2>透過API調用Ollama執行LLM大型語言模型</h2><p>依據Ollama文件<a href=https://github.com/ollama/ollama/blob/main/docs/api.md#generate-a-completion>Generate a completion</a>，使用JSON透過API送要求請LLAMA3分析處理，因為懶得再寫程式碼所以直接用POSTMAN驗證：</p><p><img src=https://content.slashview.com/img/2024/20240620_01.jpg alt="" /></p><p>看起來翻譯品質還是不錯的喔！</p><h3>相關連結</h3><ul><li><a href=/archive2024/20240418.html>不使用GPU在本機跑LLM大型語言模型：以TAIDE為例（Docker）</a></li><li><a href=/archive2024/20240419.html>透過ollama直接跑LLM大型語言模型：以llama3為例（Docker）</a></li><li><a href=/archive2024/20240620.html>在Linux下透過ollama直接跑LLM大型語言模型：以llama3為例</a></li></ul><h6>Windows NoGPU UseCPU Ollama HuggingFace LLM Model LocalHost ChatGPT Meta Facebook LLAMA3 llama3</h6></main><footer></footer><script src=/.file/site.js></script></body></html>
