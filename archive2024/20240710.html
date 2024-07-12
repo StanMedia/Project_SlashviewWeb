@@ -1,0 +1,51 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>透過wbadmin CLI指令介面進行Windows系統備份</h1><p>本來都是透過<code>備份與還原（Windows 7）</code>這個功能來進行我自己的Windows作業系統備份，但因為其<code>管理空間</code>的功能實在是爛到掉渣，無論怎麼設定系統最終一定會將<code>備份目標磁碟的空間占滿</code>（打開來會看到一堆歷史備份紀錄，必須手動刪除），再加上不定時會出現「STATUS_WAIT_1」錯誤，因此我決定把備份策略轉向到<code>wbadmin.exe</code>。</p><p><img src=https://content.slashview.com/img/2024/20240710_01.jpg alt="" /></p><h2>透過wbAdmin來進行Windows備份</h2><p><code>wbadmin</code>是一個命令行工具，用於在Windows操作系統中進行備份和還原，自Windows Server 2008開始取代了早期Windows使用的ntbackup工具，最大的特色就是可以透過CLI介面操作並且提供指令讓你可以管理備份儲存的版本，支援完整備份和VSS（Volume Shadow Copy Service）副本備份。</p><p>由於是CLI且指令充足，讓我得以透過程式碼的方式來控制完成我想要的備份策略。我建立了下列的批次檔案來執行，預設只保留<code>最後２次</code>的備份資料，過久的一律砍掉。如果有想要的人，可以針對下面程式碼中的<code>backupTarget</code>與<code>keepBackups</code>進行調整即可。</p><p>請將下列批次檔程式碼儲存成<code>WindowsBackup.bat</code>，由於內容有中文字元，檔案編碼請以<code>ANSI</code>（BIG-5）儲存比較不會出錯。</p><pre><code class=language-bat>@echo off
+
+setlocal enabledelayedexpansion
+
+:: 設定備份目標位置
+set "backupTarget=D:"
+:: 設定要保留的備份數量
+set "keepBackups=2"
+
+:: 執行備份命令
+wbadmin start backup -backupTarget:"%backupTarget%" -include:C: -allCritical -quiet
+echo 備份完成。
+
+:: 列出備份版本
+set "count=0"
+for /f "usebackq tokens=2" %%I in (`wbadmin get versions -backupTarget:"%backupTarget%" ^| findstr /C:"版本識別碼:"`) do (
+    set "fullLine=%%I"
+    set "versionID=!fullLine:~0,16!"
+    set /a "count+=1"
+    set "backup[!count!]=!versionID!"
+)
+echo 目前總共發現（!count!）個備份版本，系統將掃描是否需要移除舊備份版本...
+
+:: 移除備份版本
+if %count% gtr %keepBackups% (
+    set /a "deleteCount=count-keepBackups"
+    for /l %%J in (1,1,!deleteCount!) do (
+        set "oldBackup=!backup[%%J]!"
+        wbadmin delete backup -version:!oldBackup! -quiet
+    )
+) else (
+    echo 當前備份數量（!count!）不超過設定保留數量（!keepBackups!）故無需刪除。
+)
+
+endlocal
+</code></pre><p>無論是<code>wbadmin</code>或是這隻<code>WindowsBackup.bat</code>批次檔必須以<code>最高管理權限</code>執行，執行後會自動在備份磁碟（例如：<code>Ｄ槽</code>）開啟一個<code>WindowsImageBackup</code>資料夾進行備份，你可以把這個批次檔案設定到<code>Windows排程</code>即可達成定期備份的能力。此外，你也可以透過下列指令查看當前的備份情況：</p><pre><code class=language-bat>wbadmin get versions
+</code></pre><p>輸出訊息大致上會長得像下列（保留最末２個備份）：</p><pre><code class=language-txt>wbadmin 1.0 - 備份命令列工具
+(C) 著作權 Microsoft Corporation. 著作權所有，並保留一切權利。
+
+備份時間: 2024-07-09 03:00
+備份目標: 固定式磁碟 (標籤 本機磁碟(D:))
+版本識別碼: 07/08/2024-21:00
+可以復原: 磁碟區, 檔案, 應用程式, 裸機復原, 系統狀態
+快照識別碼: {6f475a12-5e9f-4d29-af1f-e999b9ae4d5d}
+
+備份時間: 2024-07-10 03:00
+備份目標: 固定式磁碟 (標籤 本機磁碟(D:))
+版本識別碼: 07/09/2024-21:00
+可以復原: 磁碟區, 檔案, 應用程式, 裸機復原, 系統狀態
+快照識別碼: {bcf417b1-04c3-48f8-862c-18804c5260c8}
+</code></pre><h3>相關連結</h3><ul><li><a href=/archive2021/20211128.html>利用陰影複製建立自動化系統還原點</a></li><li><a href=/archive2021/20211129.html>利用備份與還原建立自動化系統映像檔</a></li><li><a href=/archive2024/20240707.html>消除Windows Backup引發的「STATUS_WAIT_1」問題</a></li><li><a href=/archive2024/20240710.html>透過wbadmin CLI指令介面進行Windows系統備份</a></li></ul><h6>WindowsBackup WbAdmin Bat Scripts Schedule Scheduling AutoBackup Delete Remove BackupHistory BackupHistories BackupRecords</h6></main><footer></footer><script src=/.file/site.js></script></body></html>
