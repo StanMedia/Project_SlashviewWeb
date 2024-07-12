@@ -1,0 +1,26 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>對Windows系統的系統進行優化動作</h1><p>在網路上看到的指令，把一些用不到的<code>Windows用戶體驗</code>服務關閉，用以加速Windows開機後的速度，不再去浪費不必要的CPU資源。</p><p><img src=https://content.slashview.com/img/2024/20240709_01.jpg alt="" /></p><h2>關閉不必要的Windows資源耗用</h2><p>請將下列批次檔程式碼儲存成<code>WindowsSpeedUp.bat</code>，由於內容有中文字元，檔案編碼請以<code>ANSI</code>（BIG-5）儲存比較不會出錯。</p><pre><code class=language-bat>@echo off
+
+echo ----- 關閉Windows不必要的資源耗用（請用最高管理權限執行）-----
+
+:: 關閉並停用 Microsoft Compatibility Telemetry 服務
+sc stop DiagTrack
+sc config DiagTrack start=disabled
+
+:: 停用 Customer Experience Improvement Program (CEIP) 相關任務
+schtasks /change /tn "\Microsoft\Windows\Customer Experience Improvement Program\Consolidator" /disable
+schtasks /change /tn "\Microsoft\Windows\Customer Experience Improvement Program\KernelCeipTask" /disable
+schtasks /change /tn "\Microsoft\Windows\Customer Experience Improvement Program\UsbCeip" /disable
+
+:: 停用 Microsoft Compatibility Appraiser 任務並結束相關進程
+schtasks /change /tn "\Microsoft\Windows\Application Experience\Microsoft Compatibility Appraiser" /disable
+taskkill /IM compattelrunner.exe /F
+
+:: 停用其他相關任務
+schtasks /change /tn "\Microsoft\Windows\Application Experience\ProgramDataUpdater" /disable
+schtasks /change /tn "\Microsoft\Windows\Application Experience\AitAgent" /disable
+schtasks /change /tn "\Microsoft\Windows\Autochk\Proxy" /disable
+
+echo.
+echo | set /p="關閉完成，"
+pause
+</code></pre><p>儲存後請使用最高管理權限<code>以系統管理員身分執行</code>執行這支批次檔，重開機後應該多少可以感受到一點點增速的效果。</p><h6>Windows SpeedUp MicrosoftCompatibilityTelemetry CustomerExperienceImprovementProgram CEIP MicrosoftCompatibilityAppraiser Stop Disabled Closed</h6></main><footer></footer><script src=/.file/site.js></script></body></html>
