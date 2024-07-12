@@ -33,7 +33,7 @@ if %count% gtr %keepBackups% (
 )
 
 endlocal
-</code></pre><p>無論是<code>wbadmin</code>或是這隻<code>WindowsBackup.bat</code>批次檔必須以<code>最高管理權限</code>執行，執行後會自動在備份磁碟（例如：<code>Ｄ槽</code>）開啟一個<code>WindowsImageBackup</code>資料夾進行備份，你可以把這個批次檔案設定到<code>Windows排程</code>即可達成定期備份的能力。此外，你也可以透過下列指令查看當前的備份情況：</p><pre><code class=language-bat>wbadmin get versions
+</code></pre><p>無論是<code>wbadmin.exe</code>或是這隻<code>WindowsBackup.bat</code>批次檔必須以<code>最高管理權限</code>執行，執行後會自動在備份磁碟（例如：<code>Ｄ槽</code>）開啟一個<code>WindowsImageBackup</code>資料夾進行備份，你可以把這個批次檔案設定到<code>Windows排程</code>即可達成定期備份的能力。此外，你也可以透過下列指令查看當前的備份情況：</p><pre><code class=language-bat>wbadmin get versions
 </code></pre><p>輸出訊息大致上會長得像下列（保留最末２個備份）：</p><pre><code class=language-txt>wbadmin 1.0 - 備份命令列工具
 (C) 著作權 Microsoft Corporation. 著作權所有，並保留一切權利。
 
