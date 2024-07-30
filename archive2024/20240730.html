@@ -1,0 +1,12 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>System.IO.Directory.Delete引發「目錄不是空的」的錯誤</h1><p>System.IO.Directory.Delete方法從.NET Framework一開始就始終存在，近日發現某系統程式碼上面運行到這一行拋出<code>目錄不是空的</code>（The directory is not empty），在確認不存在任何系統級的咬檔、權限錯誤等問題後，再去翻閱一下MSDN發現誤會大了：<a href=https://learn.microsoft.com/en-us/dotnet/api/system.io.directory.delete>Directory.Delete Method</a>。</p><h2>System.IO.Directory.Delete只會刪除空白的目錄</h2><p>以下是錯誤的相關訊息：</p><pre><code class=language-txt>System.IO.IOException: '目錄不是空的。
+
+此例外狀況原先在此呼叫堆疊擲回: 
+    System.IO.__Error.WinIOError(int, string)
+    System.IO.Directory.DeleteHelper(string, string, bool, bool, ref Microsoft.Win32.Win32Native.WIN32_FIND_DATA)
+    System.IO.Directory.Delete(string, string, bool, bool)
+    ASP.ap_independentenroll_webservices_ajaxsystemsetting_aspx.ClearData(out string) 位於 YourCode.cs
+</code></pre><p>會引爆這行錯誤是程式設計師透過VisualStudio IntelliSense支援後，<code>直覺的</code>認為<code>Delete</code>方法就是將目錄刪除掉，這樣的認知在<code>語意上、語境上</code>其實是沒錯的，但.NET Framework提供的方法解釋卻是只刪除指定的<code>空目錄</code>，猜測大型框架的類別方法初始參數偏向謹慎之設計，應該也是為了遭到誤用的安全考量：</p><pre><code class=language-txt>Delete(String)	
+Deletes an empty directory from a specified path.
+</code></pre><p>其實要正確<code>不顧一切刪除某目錄</code>必須採用另外一種多載方法（Method Overloading），透過遞迴參數（parameters: recursive）的指派，由程式設計師<code>自己指定</code>確定要刪除<code>具備子目錄與檔案</code>的目錄：</p><pre><code class=language-cs>public static void Delete (string path, bool recursive);
+//Deletes the specified directory and, if indicated, any subdirectories and files in the directory.
+</code></pre><p>知道這個結果，我的下一步思路是「糟糕，那以前其他的地方用到這個API的方法呼叫，豈不是全部都錯了？」，後來清查程式碼後發現：並沒有，只有這一支程式碼是錯誤的，其他的都有正確的調用recursive參數（arguments: recursive）。</p><h2>感想</h2><p>只能說寫程式不要太相信自己的直覺，進行系統級還API操作，有時是得翻閱一下官方文件再確認一下會比較好。</p><h3>相關連結</h3><ul><li><a href=/archive2020/20201110.html>System.IO.File.Delete引發「路徑存取被拒」的錯誤</a></li><li><a href=/archive2024/20240730.html>System.IO.Directory.Delete引發「目錄不是空的」的錯誤</a></li><li><a href=https://stackoverflow.com/questions/329355/cannot-delete-directory-with-directory-deletepath-true>使用System.IO.Directory.Delete(path, true)仍然引爆「目錄不是空的」的錯誤</a></li></ul><h6>System.IO.Directory.Delete TheDirectoryIsNotEmpty TryCatch Error Recursive SubDirectories SubFiles</h6></main><footer></footer><script src=/.file/site.js></script></body></html>
