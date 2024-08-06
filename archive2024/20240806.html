@@ -18,7 +18,7 @@ WHERE
   AND o.name LIKE @Search
 ORDER BY 
   物件類別, 物件名稱;
-</code></pre><h2>物件內文指令搜尋</h2><p>我們都知道資料庫提供的<code>資料表</code>、<code>檢視表</code>、<code>純量函數</code>、<code>預存程序</code>、<code>觸發</code>等物件，背後其實都是一串SQL指令，那麼我們要如何知道<code>某字串</code>是否有出現在某<code>資料表</code>、<code>檢視表</code>、<code>純量函數</code>、<code>預存程序</code>、<code>觸發</code>的指令結構裡面呢？這時我們可以透過這個指令來快速查找，節省理解初期大量逐一判讀的時間：</p><pre><code class=language-sql>DECLARE @Search NVARCHAR(500) = '%YourObjectName%'
+</code></pre><h2>物件內文指令搜尋</h2><p>我們都知道資料庫提供的<code>資料表</code>、<code>檢視表</code>、<code>純量函數</code>、<code>預存程序</code>、<code>觸發</code>等物件，背後其實都是一串SQL指令，那麼我們要如何知道<code>某字串</code>是否有出現在某<code>資料表</code>、<code>檢視表</code>、<code>純量函數</code>、<code>預存程序</code>、<code>觸發</code>的指令結構裡面呢？這時我們可以透過這個指令來快速查找，節省理解初期大量逐一判讀的時間：</p><pre><code class=language-sql>DECLARE @Search NVARCHAR(500) = '%YourContent%'
 
 SELECT
   QUOTENAME(DB_NAME()) + '.' + QUOTENAME(s.name) + '.' + QUOTENAME(o.name) AS 物件名稱,
