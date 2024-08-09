@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>依據SQL TABLE Schema建立C#資料物件類別</h1><p>從網路上看到的文章，免安裝任何套件可以在SQL TABLE建立後透過純SQL指令產生出C#的ORM（Object Relational Mapping）或稱DTO（Data Transfer Object），基於該文章去除掉一些自己不會用到的冗餘部分並且把欄位註解也標註上去，拾人牙慧將資訊摘錄至此。</p><h2>SQL TABLE Schema to C# Class</h2><p>基本上把下面這一段貼到SSMS上面，設定好前兩行：CatalogName、TableName，按下執行後就可以把既有的SQL資料表轉換成C#類別了。</p><pre><code class=language-sql>USE YourSQLCatalogName
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>依據SQL TABLE Schema建立C#資料物件類別</h1><p>從網路上看到的文章，免安裝任何套件可以在SQL TABLE建立後透過純SQL指令產生出C#的ORM（Object Relational Mapping）、或稱DTO（Data Transfer Object）、或稱POCO（Plain Old CSharp Object），基於該文章去除掉一些自己不會用到的冗餘部分並且把欄位註解也標註上去，拾人牙慧將資訊摘錄至此。</p><h2>SQL TABLE Schema to C# Class</h2><p>基本上把下面這一段貼到SSMS上面，設定好前兩行：CatalogName、TableName，按下執行後就可以把既有的SQL資料表轉換成C#類別了。</p><pre><code class=language-sql>USE YourSQLCatalogName
 DECLARE @Table NVARCHAR(MAX) = 'YourSQLTableName'
 DECLARE @Result NVARCHAR(MAX) = ''
 SET @Result = 'public class ' + @Table + CHAR(13) + '{' + CHAR(13) + CHAR(10)
@@ -68,4 +68,4 @@ PRINT @Result
   //張貼日期
   public DateTime? dPost { get; set; }
 }
-</code></pre><p>原始出處：<a href=https://briancaos.wordpress.com/2022/06/24/create-c-class-from-sql/>Create C# Class from SQL</a></p><h3>20221116 更新備註</h3><p>修正當欄位描述（Description）為NULL引發無法產生任何DTO的BUG，並且加入原始欄位排序作為列舉依據。</p><h6>MSSQL SqlToCSharpClass SqlToC#Class SqlToDTO SqlToORM SqlToEntityModel</h6></main><footer></footer><script src=/.file/site.js></script></body></html>
+</code></pre><p>原始出處：<a href=https://briancaos.wordpress.com/2022/06/24/create-c-class-from-sql/>Create C# Class from SQL</a></p><h3>20221116 更新備註</h3><p>修正當欄位描述（Description）為NULL引發無法產生任何DTO的BUG，並且加入原始欄位排序作為列舉依據。</p><h6>MSSQL SqlToCSharpClass SqlToC#Class SqlToDTO SqlToORM SqlToPoco SqlToEntityModel</h6></main><footer></footer><script src=/.file/site.js></script></body></html>
