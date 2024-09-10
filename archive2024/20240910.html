@@ -1,0 +1,16 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>利用正規表示式實現現代密碼複雜度原則檢查</h1><p>儘管有一堆研究認為密碼的重點在於長度，不需要定期變換或是多複雜，但基於資訊安全的立場還是有一堆「資安專家」想要在密碼複雜度這一塊置喙，近年觀察國際各大廠的網站密碼複雜度，大多交集在下列條件。故此，將這些條件羅列並寫成正規表示式，供給日後參考。</p><h2>現代密碼複雜度原則檢查</h2><p>依據我本身的觀察，2024時期的當今，除了二階驗證之外，國外超級大廠對於密碼的原則規範大致上如下：</p><ul><li>密碼長度應於8-40個字元之間</li><li>密碼應至少包含1個小寫英文字元</li><li>密碼應至少包含1個大寫英文字元</li><li>密碼應至少包含1個數字字元</li><li>密碼應至少包含1個特殊字元</li><li>密碼僅限定ASCII字元</li></ul><p>有了上列的規範，自然的可以實作出單行的正規表示式：</p><pre><code class=language-cs>var cRegex = @"^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^a-zA-Z\d])[\x20-\x7E]{8,40}$";
+</code></pre><p>這樣的正規表示式雖然夠簡潔，但也很容易惹惱使用者，因為你把一堆錯誤的資訊全部隱含掉了，在這麼複雜的密碼原則狀況下，使用者自然會把怒氣發到程式設計師的身上。因此，逐條表列出違反哪些密碼原則或許是比較正確的做法。</p><pre><code class=language-cs>var oError = new System.Collections.Generic.List&lt;string>();
+
+if (cPassword.Length &lt; 8 || cPassword.Length > 40)
+{ oError.Add("密碼長度應於8-40個字元之間"); }
+if (!System.Text.RegularExpressions.Regex.IsMatch(cPassword, @"[a-z]"))
+{ oError.Add("密碼應至少包含1個小寫英文字元"); }
+if (!System.Text.RegularExpressions.Regex.IsMatch(cPassword, @"[A-Z]"))
+{ oError.Add("密碼應至少包含1個大寫英文字元"); }
+if (!System.Text.RegularExpressions.Regex.IsMatch(cPassword, @"\d"))
+{ oError.Add("密碼應至少包含1個數字字元"); }
+if (!System.Text.RegularExpressions.Regex.IsMatch(cPassword, @"[^a-zA-Z0-9]"))
+{ oError.Add("密碼應至少包含1個特殊字元"); }
+if (!System.Text.RegularExpressions.Regex.IsMatch(cPassword, @"^[\x20-\x7E]+$"))
+{ oError.Add("密碼僅限定ASCII字元"); }
+</code></pre><h6>PasswordPolicy C# Regex RegularExpression Check</h6></main><footer></footer><script src=/.file/site.js></script></body></html>
