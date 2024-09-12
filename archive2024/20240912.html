@@ -1,0 +1,39 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>透過Javascript在網頁中產生彩帶的歡樂效果</h1><p>寫習慣商業網站的處理，如果要通知使用者辦理某項事情完成，通常都是跳個訊息視窗告知就完成了，再了不起就是弄個比較動態的<code>SweetAlert</code>來處理也就完事了。今天突然想到可以活潑一點，可以使用拋射彩帶的效果來通知使用者完成了好不容易達成的工作，將JS備註在此供給日後參考。</p><h2>透過Javascript產生覆蓋全網頁可視畫面上的彩帶效果</h2><p>話不多說，直接看程式碼：</p><ol><li>Javascript端（我用JQuery寫）:</li></ol><pre><code class=language-js>let animationId;
+function createConfetti() {
+  $('#uConfetti').css({position:'fixed',top:0,left:0,width:'100%',height:'100%',zIndex:9999,pointerEvents:'none'});
+  const $canvas = $('#confetti').length ? $('#confetti') : $('&lt;canvas id="confetti">&lt;/canvas>').appendTo('#uConfetti');
+  const ctx = $canvas[0].getContext('2d'), W = $(window).width(), H = $(window).height();
+  $canvas.attr({ width: W, height: H });
+  const confetti = Array.from({ length: 200 }, () => ({
+    x: Math.random() * W,
+    y: Math.random() * H - H,
+    r: Math.random() * 5 + 2,
+    color: ['#ff6f61', '#6bdea5', '#73b3d8', '#ffe680', '#f3a6e8'][Math.floor(Math.random() * 5)],
+    o: 1,
+    sp: Math.random() * 15 + 8
+  }));
+  (function draw() {
+    ctx.clearRect(0, 0, W, H);
+    let particlesLeft = false;
+    confetti.forEach(p => {
+      p.y += p.sp;
+      if (p.y > H * 0.75) p.o -= 0.03;
+      if (p.y &lt;= H &amp;&amp; p.o > 0) {
+        particlesLeft = true;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.r, 0, 2 * Math.PI);
+        ctx.fillStyle = p.color.replace(')', `,${p.o})`).replace('rgb', 'rgba');
+        ctx.fill();
+      }
+    });
+    particlesLeft ? animationId = requestAnimationFrame(draw) : cancelAnimationFrame(animationId) &amp; $('#uConfetti').hide();
+  })();
+}
+function triggerConfetti() {
+  $('#uConfetti').show();
+  if (animationId) cancelAnimationFrame(animationId);
+  createConfetti();
+}
+$(window).resize(() => animationId &amp;&amp; cancelAnimationFrame(animationId) &amp; createConfetti());
+</code></pre><ol start=2><li>HTML端:</li></ol><pre><code class=language-html>&lt;div id="uConfetti">&lt;/div>
+</code></pre><ol start=3><li>再透過某個事件去觸發呼叫<code>triggerConfetti()</code>就大功告成嘍！</li></ol><h2>總結</h2><p>沒有什麼好說的了，放一顆按鈕來表示這一切。有些人可能會覺得這明明不是彩帶而是彩球，沒錯，但我不在乎，哈哈哈～</p><div id=uConfetti></div><p><button type=button class="btn btn-primary btn-lg" onclick=triggerConfetti()>按我拋彩帶</button></p><script>function createConfetti(){$("#uConfetti").css({position:"fixed",top:0,left:0,width:"100%",height:"100%",zIndex:9999,pointerEvents:"none"});const r=$("#confetti").length?$("#confetti"):$('<canvas id="confetti"><\/canvas>').appendTo("#uConfetti"),t=r[0].getContext("2d"),i=$(window).width(),n=$(window).height();r.attr({width:i,height:n});const u=Array.from({length:200},()=>({x:Math.random()*i,y:Math.random()*n-n,r:Math.random()*5+2,color:["#ff6f61","#6bdea5","#73b3d8","#ffe680","#f3a6e8"][Math.floor(Math.random()*5)],o:1,sp:Math.random()*15+8}));(function f(){t.clearRect(0,0,i,n);let r=!1;u.forEach(i=>{i.y+=i.sp,i.y>n*.75&&(i.o-=.03),i.y<=n&&i.o>0&&(r=!0,t.beginPath(),t.arc(i.x,i.y,i.r,0,2*Math.PI),t.fillStyle=i.color.replace(")",`,${i.o})`).replace("rgb","rgba"),t.fill())});r?animationId=requestAnimationFrame(f):cancelAnimationFrame(animationId)&$("#uConfetti").hide()})()}function triggerConfetti(){$("#uConfetti").show();animationId&&cancelAnimationFrame(animationId);createConfetti()}let animationId;$(window).resize(()=>animationId&&cancelAnimationFrame(animationId)&createConfetti())</script><h6>Javascript Confetti Happy 彩帶 彩球 煙火 歡樂 慶祝</h6></main><footer></footer><script src=/.file/site.js></script></body></html>
