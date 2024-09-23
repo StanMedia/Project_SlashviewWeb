@@ -8,7 +8,7 @@ DisplayName: 遠端桌面 - 使用者模式 (TCP-In)
 </code></pre><p>Step 2. 透過逐一取得防火牆規則真正的屬性值後，我們可以得到下列對應：</p><pre><code class=language-txt>遠端桌面 - 使用者模式 (TCP-In): RemoteDesktop-UserMode-In-TCP
 遠端桌面 - 使用者模式 (UDP-In): RemoteDesktop-UserMode-In-UDP
 遠端桌面 - 陰影 (TCP-In):       RemoteDesktop-Shadow-In-TCP
-</code></pre><p>Step 3. 接著我們就針對這些防火牆規則進行powershell script設計，當<code>遠端IP位址</code>為<code>Any</code>就改成指定的IP，當<code>遠端IP位址</code>不為<code>Any</code>時就改回<code>Any</code>。</p><pre><code class=language-ps1># Define the firewall rules
+</code></pre><p>Step 3. 接著我們就針對這些防火牆規則進行powershell script設計，當<code>遠端IP位址</code>為<code>Any</code>就改成指定的IP，當<code>遠端IP位址</code>不為<code>Any</code>時就改回<code>Any</code>，特別提醒，如果你要將這個存成<code>*.ps1</code>執行檔，記得執行的時候必須賦予<code>系統管理員</code>a.k.a.<code>Administrator</code>的權限才可以順利運作喔。</p><pre><code class=language-ps1># Define the firewall rules
 $ruleNames = @(
     "RemoteDesktop-UserMode-In-TCP",
     "RemoteDesktop-UserMode-In-UDP",
