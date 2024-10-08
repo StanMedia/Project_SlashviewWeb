@@ -1,0 +1,21 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>使用Microsoft Graph REST API設定Microsoft Entra成員密碼</h1><p>說實在這個問題不難，微軟的線上文件（<a href="https://learn.microsoft.com/en-us/graph/api/overview?view=graph-rest-1.0">Microsoft Graph REST API v1.0 endpoint reference</a>）都有說明要如何透過REST方法套用。但這個問題說起來也很難，難在文件有很多權限的設定並沒有說明白，導致要去網路找很多前輩留下來的心得，另外就是有很多Microsoft Entra權限的設定，並非你設定、套用、重新整理<code>確認已經設定完成</code>後就有效果，有些時候你必須等個<code>一小時</code>才可以驗證。（這個就是布局全球雲端的苦果）</p><p><img src=https://content.slashview.com/img/2024/20241008_01.jpg alt="" /></p><h2>變更使用者的密碼</h2><p>Microsoft Graph REST API有很多途徑可以變更使用者密碼，其中我們可以利用這個管道<code>Users</code>＞<code>User</code>＞<code>Update</code>＞<a href="https://learn.microsoft.com/en-us/graph/api/user-update?view=graph-rest-1.0&amp;tabs=http#example-3-update-the-passwordprofile-of-a-user-and-reset-their-password">Update the passwordProfile of a user and reset their password</a>來進行。</p><p>這文件說明表明必須具備下列兩個條件：</p><p>In delegated access, the calling app must be assigned the <code>Directory.AccessAsUser.All</code> delegated permission on behalf of the signed-in user.</p><p>In application-only access, the calling app must be assigned the <code>User.ReadWrite.All</code> (least privilege) or <code>Directory.ReadWrite.All</code> (higher privilege) application permission and at least the <code>User Administrator</code> Microsoft Entra role.</p><p>但事實上，必須增加賦予給應用程式<code>User-PasswordProfile.ReadWrite.All</code>權限才可以正常動作，這點說明文件並沒有載明。</p><p>而且，以上權限有可能必須設定一小時以上再去操作程式碼，才有效果。（盡管在管理畫面已經顯示具備權限了）</p><p>沒有了上述的條件，可能等候著你的就是這個<code>錯誤訊息</code>：</p><pre><code class=language-json>{
+  "error": {
+    "code": "Authorization_RequestDenied",
+    "message": "Insufficient privileges to complete the operation.",
+    "innerError": {
+      "date": "xxx",
+      "request-id": "xxx",
+      "client-request-id": "xxx"
+    }
+  }
+}
+</code></pre><p>另外值得一提之處，就是在Microsoft Graph REST API的<code>Update password request</code>，他在HTTP送出的是<code>PATCH</code>而非<code>POST</code>，這點應該要特別注意。</p><pre><code class=language-txt>PATCH https://graph.microsoft.com/v1.0/users/{id}
+Content-type: application/json
+
+{
+  "passwordProfile": {
+    "forceChangePasswordNextSignIn": false,
+    "password": "xWwvJ]6NMw+bWH-d"
+  }
+}
+</code></pre><p>以上經驗分享，只有老天才知道在這種煩人的權限設定上搞了多少時間！總之我確定這樣的權限指派是可以運行的，但就不知道是不是最小化了。</p><h6>MicrosoftGraphRESTAPI MicrosoftAzureAD MicrosoftActiveDirectory ChangeUserPassword Permission Privilege Role Setting Delegate</h6></main><footer></footer><script src=/.file/site.js></script></body></html>
