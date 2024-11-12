@@ -1,0 +1,32 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>統計：多因子變異數分析Two-Way ANOVA之適用範圍與SPSS操作</h1><p>皮爾森相關係數（Pearson Correlation）適用於測量<code>兩個連續變數之間的線性關聯性</code>，它可以幫助我們了解這兩個變數之間的關聯強度和方向。簡單來說，就是用來判斷<code>兩個變數之間是否存在某種程度的相互關聯</code>，並且這種關聯是<code>正向</code>還是<code>負向</code>？</p><p>皮爾森相關係數之線性關係區分強度（範圍在-1到+1之間），當相關係數接近1時表示兩者有強烈的正相關、接近-1時表示兩者有強烈的負相關、接近0則表示兩者之間沒有線性關聯。</p><h2>皮爾森相關係數的適用情境</h2><ul><li><p>研究某減重計畫的運動時間與體重變化之間是否存在正向相關，即運動時間越長，體重變化越顯著。</p></li><li><p>研究學生的學習時間與成績之間是否存在正相關，即學習時間越長，學習成效越好。</p></li><li><p>研究某款手機應用程式使用頻率與用戶滿意度之間的關聯，是否存在正向或負向的相關性。</p></li><li><p>研究員工的工時長度與工作滿意度之間的關係，是否存在負相關，即工時越長，員工滿意度是否會降低。</p></li><li><p>研究兩種教育方法的使用率與學生的學習成效之間的關聯，是否存在顯著的線性關聯。</p></li></ul><h2>SPSS操作範例</h2><p>某學校主張開設<code>證照輔導班</code>，就可以有效提升學生的<code>證照數量</code>，故我們想要得知<code>證照輔導班</code>與<code>證照數量</code>之間是否存在顯著的線性關聯？</p><p>Step 1. 在SPSS<code>變數視圖</code>中，預先定義資料欄位。</p><p><img src=https://content.slashview.com/img/2024/20241111_01.jpg alt="" /></p><p>Step 2. 將收集到的數據，複製到SPSS<code>資料視圖</code>內。</p><pre><code class=language-txt>學生 參加證照輔導班小時數 證照數量
+1    5                    3
+2    7                    4
+3    3                    2
+4    8                    5
+5    10                   6
+6    5                    4
+7    12                   7
+8    6                    6
+9    15                   8
+10   9                    5
+11   4                    3
+12   6                    5
+13   2                    2
+14   8                    6
+15   1                    8
+16   5                    3
+17   7                    5
+18   9                    7
+19   1                    9
+20   1                    10
+21   6                    4
+22   8                    5
+23   1                    7
+24   1                    8
+25   1                    7
+26   9                    6
+27   1                    8
+28   1                    9
+29   7                    5
+30   5                    3
+</code></pre><p>Step 3. 點選<code>分析</code>＞<code>相關</code>＞<code>雙變異數</code>。</p><p><img src=https://content.slashview.com/img/2024/20241111_02.jpg alt="" /></p><p>Step 4. 將<code>參加證照輔導班小時數</code>與<code>證照數量</code>放入<code>變數</code>欄位，並勾選<code>Pearson</code>（皮爾森相關係數）。</p><p><img src=https://content.slashview.com/img/2024/20241111_03.jpg alt="" /></p><p>Step 6. 最後SPSS就會將統計分析後的數據報告呈現給我們看了。</p><p><img src=https://content.slashview.com/img/2024/20241111_4.jpg alt="" /></p><h2>分析報告</h2><p>以上面的例子，我們的獲取的分析報告資訊大致上如下：</p><ul><li><p>皮爾森相關係數（Pearson Correlation）：</p><ul><li><p>參加證照輔導班小時數與證照數量之間的皮爾森相關係數為 0.879，這是一個強烈且正向的相關性。</p></li><li><p>這意味著，隨著學生參與證照輔導班的時間增加，他們所獲得的證照數量也顯著增加。兩者之間呈現出明顯的正相關。</p></li></ul></li><li><p>顯著性（Significance）：</p><ul><li>顯著性值（p值）為 0.000，小於 0.01，這表示兩者之間的相關性在 0.01 水準上是顯著的。換句話說，可以推斷出，證照輔導班的參與時間與證照數量之間的關聯並非由隨機機會所導致，而是具有統計學上的顯著意義。</li></ul></li></ul><p>⭐結論</p><p>學生參與證照輔導班的時間與他們獲得的證照數量之間存在<code>強烈的正相關</code>，這項相關性具有<code>顯著性</code>，因此可以合理推論，學生參與證照輔導班的時間越長，他們獲得的證照數量越多。</p><h6>SPSS Analysis Operation Flow StepByStep Pearson Correlation</h6></main><footer></footer><script src=/.file/site.js></script></body></html>
