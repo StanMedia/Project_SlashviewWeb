@@ -1,0 +1,20 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>統計：多因子變異數分析Two-Way ANOVA之適用範圍與SPSS操作</h1><p>多因子變異數分析（Two-Way ANOVA）適用於<code>同時比較兩個或更多因子</code>對於結果變數的影響，並評估不同因子之間是否存在交互作用。換句話說，是用來檢驗<code>多組、多種或多層次的分類</code>中，是否各自和彼此之間的差異具顯著性。</p><h2>多因子變異數分析Two-Way ANOVA的適用情境</h2><ul><li><p>某減重計畫，在不同的飲食控制（低碳飲食、低脂飲食）與不同運動強度（低、中、高強度）的組合下，對體重變化是否有顯著差異，且是否存在飲食和運動強度的交互作用。</p></li><li><p>某教學方法，在不同性別（男性、女性）與不同年級（低、中、高年級）的學生中，學習成效是否有顯著差異，並且性別和年級間是否存在交互作用。</p></li><li><p>某紓壓App，在不同焦慮程度（輕度、中度、重度）與不同使用頻率（每天使用、每週使用）下，對焦慮指數的影響是否顯著，並且焦慮程度與使用頻率間是否存在交互作用。</p></li><li><p>彈性工時制度，在不同的班別（早班、午班、晚班）與不同職位（管理層、非管理層）之間，對工作滿意度是否有顯著差異，並且班別與職位之間是否存在交互作用。</p></li><li><p>使用某款空氣清淨機，在不同空間（客廳、臥室、書房）與不同使用時間（早上、下午、晚上）的組合下，對空氣品質的影響是否顯著，並且空間與使用時間之間是否存在交互作用。</p></li></ul><h2>SPSS操作範例</h2><p>某學校宣稱ＯＯ措施可以<code>有效平衡</code>各學院之男女性別學生的證照數量，故我們想要得知這個ＯＯ措施是否真如宣稱般的具備顯著效果？</p><p>Step 1. 在SPSS<code>變數視圖</code>中，預先定義資料欄位。其中可以去指定<code>值</code>欄位，讓後續報告中令人困惑的<code>代表值</code>可以透過<code>標籤</code>來還原與表明。</p><p><img src=https://content.slashview.com/img/2024/20241110_01.jpg alt="" /></p><p><img src=https://content.slashview.com/img/2024/20241110_02.jpg alt="" /></p><p>Step 2. 將收集到的數據，複製到SPSS<code>資料視圖</code>內，請預先將<code>學院取代成數值</code>、<code>性別取代成數值</code>。（亦可進入SPSS中進行取代，但實在是太麻煩了，勸你在外部的資料編輯環境中做會簡單很多）</p><pre><code class=language-txt>學院 性別 證照數
+1    1    15
+1    1    17
+1    1    14
+1    2    12
+1    2    10
+1    2    13
+2    1    8
+2    1    9
+2    1    7
+2    2    11
+2    2    10
+2    2    12
+3    1    6
+3    1    5
+3    1    7
+3    2    9
+3    2    8
+3    2    10
+</code></pre><p>Step 3. 點選<code>分析</code>＞<code>一般線性模型</code>＞<code>單變異數</code>。</p><p><img src=https://content.slashview.com/img/2024/20241110_03.jpg alt="" /></p><p>Step 4. 將<code>證照數</code>放入<code>應變數</code>欄位（依變數；Dependent Variable），<code>學院</code>與<code>性別</code>放入<code>固定因子</code>欄位（Fixed Factor）。</p><p><img src=https://content.slashview.com/img/2024/20241110_04.jpg alt="" /></p><p>Step 5. 點選<code>事後</code>，將因子<code>學院</code>放入<code>此項目的事後檢定</code>欄位，並勾選<code>Tukey</code>、<code>Scheffe</code>（作為回收樣本數量不同之校正）。</p><p><img src=https://content.slashview.com/img/2024/20241110_05.jpg alt="" /></p><p>Step 6. 最後SPSS就會將統計分析後的數據報告呈現給我們看了。</p><p><img src=https://content.slashview.com/img/2024/20241110_06.jpg alt="" /></p><p><img src=https://content.slashview.com/img/2024/20241110_07.jpg alt="" /></p><h2>分析報告</h2><p>以上面的例子，我們的獲取的分析報告資訊大致上如下：</p><ul><li><p>主效果分析</p><ul><li>學院的主效果</li></ul></li></ul><p>學院的主效果在證照數上具有顯著差異（F(2,12)=38.769, p=.000）。這表示在不同學院之間，學生持有的證照數量存在顯著差異。</p><ul><li>性別的主效果</li></ul><p>性別的主效果不顯著（F(1,12)=1.885, p=.195）。這表示在男性與女性之間，證照數量沒有顯著差異。</p><ul><li><p>交互作用分析</p><ul><li>學院 * 性別的交互作用</li></ul></li></ul><p>學院與性別之間的交互作用顯著（F(2,12)=15.385, p=.000），表示學院與性別共同影響證照數量，顯示不同學院的男性與女性在持有證照數上存在顯著差異。</p><ul><li>事後檢定（Post Hoc Tests）</li></ul><p>使用Tukey HSD與Scheffe法的結果一致，發現：</p><ul><li>工院與商院之間的平均證照數量差異顯著（p=.000），工院學生的平均證照數量顯著高於商院。</li><li>工院與法院之間的平均證照數量差異顯著（p=.000），工院學生的平均證照數量顯著高於法院。</li><li>商院與法院之間的平均證照數量差異也顯著（p=.034），商院學生的平均證照數量高於法院。</li></ul><p>⭐結論</p><p>本研究結果將顯示ＯＯ措施對於平衡各院、各性別之學生證照數量的影響：</p><ul><li>各學院之間的證照數量存在顯著差異，因此「未達到在學院層級平衡證照數量的目標」。</li><li>各性別之間的證照數量不存在顯著差異，因此「達到在性別層級平衡證照數量的目標」。</li><li>發現：學院與性別之間存在顯著的交互作用。工院學生的證照數量顯著高於其他學院，顯示該措施對不同學院的效果有所差異。</li></ul><h6>SPSS Analysis Operation Flow StepByStep Univariate Analysis Two-Way TwoWay ANOVA</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

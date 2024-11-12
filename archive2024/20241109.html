@@ -1,33 +1,32 @@
-﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>統計：單因子變異數分析One-Way ANOVA之適用範圍與SPSS操作</h1><p>單因子變異數分析（One-Way ANOVA）適用於<code>比較三組或以上的獨立樣本</code>平均數之間是否有顯著差異的情境。簡單的說，就是量測<code>已經、既有、存在、已施行</code>的制度或方法，針對<code>三個或更多不同族群</code>是否有顯著的差異？</p><h2>單因子變異數分析One-Way ANOVA的適用情境</h2><ul><li><p>某減重計畫，對於青年組、中年組與老年組的體重變化是否有顯著差異。</p></li><li><p>某教學方法，對於低年級、中年級、高年級學生的學習成效是否有顯著差異。</p></li><li><p>某紓壓App，對於輕度、中度、重度焦慮者的焦慮指數是否有顯著差異。</p></li><li><p>彈性工時制度，對於早班、午班、晚班員工的工作滿意度是否有顯著差異。</p></li><li><p>使用某款空氣清淨機，對於客廳、臥室、書房的空氣品質是否有顯著差異。</p></li></ul><h2>SPSS操作範例</h2><p>某學校宣稱ＯＯ措施可以有效提升學生證照數量並通用各學院，故我們想要得知這個ＯＯ措施是否真如宣稱般的如此泛用於各學院？</p><p>Step 1. 在SPSS<code>變數視圖</code>中，預先定義資料欄位。其中可以去指定<code>值</code>欄位，讓令人混亂的數值可以透過<code>標籤</code>來表明。</p><p><img src=https://content.slashview.com/img/2024/20241109_01.jpg alt="" /></p><p>Step 2. 將收集到的數據，複製到SPSS<code>資料視圖</code>內，請預先將<code>工院取代成1</code>、<code>商院取代成2</code>、<code>法院取代成3</code>。（亦可進入SPSS中進行取代，但實在是太麻煩了，勸你在外部的資料編輯環境中做會簡單很多）</p><pre><code class=language-txt>學院   證照數
-1	4
-1	3
-1	5
-1	4
-1	3
-1	4
-1	5
-1	3
-1	4
-1	5
-2	3
-2	2
-2	4
-2	3
-2	2
-2	3
-2	4
-2	2
-2	3
-2	3
-3	2
-3	1
-3	3
-3	2
-3	1
-3	2
-3	3
-3	2
-3	1
-3	2
-
-</code></pre><p>Step 3. 點選<code>分析</code>＞<code>比較平均數法</code>＞<code>單因數變異數分析</code>。</p><p><img src=https://content.slashview.com/img/2024/20241109_02.jpg alt="" /></p><p>Step 4. 在後續彈出的設定視窗中，將<code>依變數清單</code>填入<code>證照數</code>，將<code>因子</code>填入<code>學院</code>。</p><p><img src=https://content.slashview.com/img/2024/20241109_03.jpg alt="" /></p><p>Step 5. 點擊<code>選項</code>按鈕，勾選<code>敘述統計</code>、<code>變異同質性檢定</code>。</p><p><img src=https://content.slashview.com/img/2024/20241109_04.jpg alt="" /></p><p>Step 6. 點擊<code>事後</code>按鈕，勾選<code>Tukey</code>、<code>Scheffe法</code>（作為回收樣本數量不同之校正）。</p><p><img src=https://content.slashview.com/img/2024/20241109_05.jpg alt="" /></p><p>Step 7. 最後SPSS就會將統計分析後的數據報告呈現給我們看了。</p><p><img src=https://content.slashview.com/img/2024/20241109_06.jpg alt="" /></p><h2>分析報告</h2><p>以上面的例子，我們的獲取的分析報告資訊大致上如下：</p><p>根據Tukey HSD和Scheffe檢定結果，三個學院的學生證照數呈現明顯的階層差異：工學院 > 商學院 > 法學院：</p><ul><li><p>工院與商院：</p><ul><li>兩組間的平均值差異為1.100，且顯著性水準（p值）小於0.05，達到顯著水準。</li><li>這表示在證照數上，工院的平均證照數顯著高於商院，兩者間存在顯著差異。</li></ul></li><li><p>工院與法院：</p><ul><li>兩組間的平均值差異為2.100，顯著性水準（p值）同樣小於0.05，達到顯著水準。</li><li>工院在證照數上的平均數顯著高於法院，顯示兩組間的差異非常顯著。</li></ul></li><li><p>商院與法院：</p><ul><li>兩組間的平均值差異為1.000，顯著性水準（p值）小於0.05，顯著不同。</li><li>商院的平均證照數顯著高於法院，顯示法院學生在證照數上相對商院也較少。</li></ul></li></ul><p>⭐結論</p><p>從分析結果看，該校宣稱的「ＯＯ措施」在提升各學院的學生證照數量上的效果有限，且在不同學院間的證照數分布呈現顯著差異。</p><h6>SPSS Analysis Operation Flow StepByStep One-Way OneWay ANOVA</h6></main><footer></footer><script src=/.file/site.js></script></body></html>
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>統計：單因子變異數分析One-Way ANOVA之適用範圍與SPSS操作</h1><p>單因子變異數分析（One-Way ANOVA）適用於<code>比較三組或以上的獨立樣本</code>平均數之間是否有顯著差異的情境。簡單的說，就是量測<code>已經、既有、存在、已施行</code>的制度或方法，針對<code>三個或更多不同族群</code>是否有顯著的差異？</p><h2>單因子變異數分析One-Way ANOVA的適用情境</h2><ul><li><p>某減重計畫，對於青年組、中年組與老年組的體重變化是否有顯著差異。</p></li><li><p>某教學方法，對於低年級、中年級、高年級學生的學習成效是否有顯著差異。</p></li><li><p>某紓壓App，對於輕度、中度、重度焦慮者的焦慮指數是否有顯著差異。</p></li><li><p>彈性工時制度，對於早班、午班、晚班員工的工作滿意度是否有顯著差異。</p></li><li><p>使用某款空氣清淨機，對於客廳、臥室、書房的空氣品質是否有顯著差異。</p></li></ul><h2>SPSS操作範例</h2><p>某學校宣稱ＯＯ措施可以<code>有效平衡</code>各學院之學生證照數量，我們想要得知這個ＯＯ措施是否真如宣稱般的如此泛用於各學院？</p><p>Step 1. 在SPSS<code>變數視圖</code>中，預先定義資料欄位。其中可以去指定<code>值</code>欄位，讓後續報告中令人困惑的<code>代表值</code>可以透過<code>標籤</code>來還原與表明。</p><p><img src=https://content.slashview.com/img/2024/20241109_01.jpg alt="" /></p><p>Step 2. 將收集到的數據，複製到SPSS<code>資料視圖</code>內，請預先將<code>工院取代成1</code>、<code>商院取代成2</code>、<code>法院取代成3</code>。（亦可進入SPSS中進行取代，但實在是太麻煩了，勸你在外部的資料編輯環境中做會簡單很多）</p><pre><code class=language-txt>學院 證照數
+1    4
+1    3
+1    5
+1    4
+1    3
+1    4
+1    5
+1    3
+1    4
+1    5
+2    3
+2    2
+2    4
+2    3
+2    2
+2    3
+2    4
+2    2
+2    3
+2    3
+3    2
+3    1
+3    3
+3    2
+3    1
+3    2
+3    3
+3    2
+3    1
+3    2
+</code></pre><p>Step 3. 點選<code>分析</code>＞<code>比較平均數法</code>＞<code>單因數變異數分析</code>。</p><p><img src=https://content.slashview.com/img/2024/20241109_02.jpg alt="" /></p><p>Step 4. 在後續彈出的設定視窗中，將<code>依變數清單</code>填入<code>證照數</code>，將<code>因子</code>填入<code>學院</code>。</p><p><img src=https://content.slashview.com/img/2024/20241109_03.jpg alt="" /></p><p>Step 5. 點擊<code>選項</code>按鈕，勾選<code>敘述統計</code>、<code>變異同質性檢定</code>。</p><p><img src=https://content.slashview.com/img/2024/20241109_04.jpg alt="" /></p><p>Step 6. 點擊<code>事後</code>按鈕，並勾選<code>Tukey</code>、<code>Scheffe</code>（作為回收樣本數量不同之校正）。</p><p><img src=https://content.slashview.com/img/2024/20241109_05.jpg alt="" /></p><p>Step 7. 最後SPSS就會將統計分析後的數據報告呈現給我們看了。</p><p><img src=https://content.slashview.com/img/2024/20241109_06.jpg alt="" /></p><h2>分析報告</h2><p>以上面的例子，我們的獲取的分析報告資訊大致上如下：</p><p>根據Tukey HSD和Scheffe檢定結果，三個學院的學生證照數呈現明顯的階層差異：工學院 > 商學院 > 法學院：</p><ul><li><p>工院與商院：</p><ul><li>兩組間的平均值差異為1.100，且顯著性水準（p值）小於0.05，達到顯著水準。</li><li>這表示在證照數上，工院的平均證照數顯著高於商院，兩者間存在顯著差異。</li></ul></li><li><p>工院與法院：</p><ul><li>兩組間的平均值差異為2.100，顯著性水準（p值）同樣小於0.05，達到顯著水準。</li><li>工院在證照數上的平均數顯著高於法院，顯示兩組間的差異非常顯著。</li></ul></li><li><p>商院與法院：</p><ul><li>兩組間的平均值差異為1.000，顯著性水準（p值）小於0.05，顯著不同。</li><li>商院的平均證照數顯著高於法院，顯示法院學生在證照數上相對商院也較少。</li></ul></li></ul><p>⭐結論</p><p>從分析結果看，該校宣稱的「ＯＯ措施」在平衡各學院的學生證照數量上的效果有限，且在不同學院間的證照數分布呈現顯著差異。</p><h6>SPSS Analysis Operation Flow StepByStep One-Way OneWay ANOVA</h6></main><footer></footer><script src=/.file/site.js></script></body></html>
