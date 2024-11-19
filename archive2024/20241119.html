@@ -60,6 +60,42 @@ namespace Slashview.WebSocket
     private readonly System.Collections.Concurrent.ConcurrentDictionary&lt;string, Slashview.WebSocket.SessionORM> _oConnections = new System.Collections.Concurrent.ConcurrentDictionary&lt;string, Slashview.WebSocket.SessionORM>();
 
     /// &lt;summary>
+    /// 發送訊息到指定的WebSocket
+    /// &lt;/summary>
+    private async System.Threading.Tasks.Task MessageToWebSocket(
+      System.Func&lt;System.Collections.Generic.KeyValuePair&lt;string, Slashview.WebSocket.SessionORM>, bool> funcFilter,
+      string cMessage,
+      System.Threading.CancellationToken oCancellationToken)
+    { //空訊息就返回
+      if (string.IsNullOrEmpty(cMessage)) { return; }
+      //建立死亡連線集合
+      var oDeadConnections = new System.Collections.Concurrent.ConcurrentBag&lt;string>();
+      //發送訊息
+      var oSendTasks = _oConnections
+        .Where(funcFilter)
+        .Select(async oKVP => {
+          try
+          {
+            var oSocket = oKVP.Value.oSocket;
+            if (oSocket.State == System.Net.WebSockets.WebSocketState.Open)
+            { await Slashview.WebSocket.Operate.Send(oSocket, cMessage, oCancellationToken).ConfigureAwait(false); }
+            else
+            { oDeadConnections.Add(oKVP.Key); }
+          }
+          catch
+          { oDeadConnections.Add(oKVP.Key); }
+        });
+      //等待所有發送完成
+      await System.Threading.Tasks.Task.WhenAll(oSendTasks).ConfigureAwait(false);
+      //清理斷線的連接
+      if (!oDeadConnections.IsEmpty)
+      {
+        foreach (var cConnectionId in oDeadConnections.Distinct())
+        { RemoveConnection(cConnectionId); }
+      }
+    }
+
+    /// &lt;summary>
     /// 新增連線
     /// &lt;/summary>
     public string AddConnection(Slashview.WebSocket.SessionORM oSession)
@@ -82,32 +118,24 @@ namespace Slashview.WebSocket
     /// 廣播訊息
     /// &lt;/summary>
     public async System.Threading.Tasks.Task BroadcastMessage(string cMessage, System.Threading.CancellationToken oCancellationToken)
-    { //空訊息就返回
-      if (string.IsNullOrEmpty(cMessage)) { return; }
-      //建立死亡連線集合
-      var oDeadConnections = new System.Collections.Concurrent.ConcurrentBag&lt;string>();
-      //發送訊息
-      var oSendTasks = _oConnections.Select(async oKVP =>
-      {
-        try
-        {
-          var oSocket = oKVP.Value.oSocket;
-          if (oSocket.State == System.Net.WebSockets.WebSocketState.Open)
-          { await Slashview.WebSocket.Operate.Send(oSocket, cMessage, oCancellationToken).ConfigureAwait(false); }
-          else
-          { oDeadConnections.Add(oKVP.Key); }
-        }
-        catch
-        { oDeadConnections.Add(oKVP.Key); }
-      });
-      //等待所有發送完成
-      await System.Threading.Tasks.Task.WhenAll(oSendTasks).ConfigureAwait(false);
-      //清理斷線的連接
-      if (!oDeadConnections.IsEmpty)
-      {
-        foreach (var cConnectionId in oDeadConnections.Distinct())
-        { RemoveConnection(cConnectionId); }
-      }
+    {
+      await MessageToWebSocket(
+        x => true,
+        cMessage,
+        oCancellationToken
+      );
+    }
+
+    /// &lt;summary>
+    /// 傳送訊息給特定人員
+    /// &lt;/summary>
+    public async System.Threading.Tasks.Task SingleMessage(string cTargetUserId, string cMessage, System.Threading.CancellationToken oCancellationToken)
+    {
+      await MessageToWebSocket(
+        x => x.Value.cUserId == cTargetUserId,
+        cMessage,
+        oCancellationToken
+      );
     }
 
     /// &lt;summary>
@@ -131,7 +159,7 @@ namespace Slashview.WebSocket
     public System.Net.WebSockets.WebSocket oSocket { get; set; }
   }
 }
-</code></pre><h2>透過ASHX建置WebSocket伺服端應用</h2><p>接著重頭戲就是在ASHX建立一個<code>支援WebSocket通訊協定</code>的高效能存取頁面，在這個頁面我們準備達成下列的功能項目：</p><ul><li>具備CORS檢查，避免外部資源盜用與輕度阻止CSRF攻擊。</li><li>具備Session檢查（身分驗證）避免外部資源惡意使用。</li><li>僅支援WebSocket協定（拒絕HTTP協定）。</li><li>伺服器有能力自動推送訊息（固定秒數）。</li><li>伺服器有能力接收前端送過來的訊息，並推送使用者所發出之訊息。</li><li>若使用者於固定秒數內未傳送訊息，則被視為閒置狀態，伺服器有能力直接切斷連線。</li></ul><pre><code class=language-cs>&lt;%@ WebHandler Language="C#" Class="WebSocket" %>
+</code></pre><h2>透過ASHX建置WebSocket伺服端應用</h2><p>接著重頭戲就是在ASHX建立一個<code>支援WebSocket通訊協定</code>的高效能存取頁面，在這個頁面我們準備達成下列的功能項目：</p><ul><li>具備CORS檢查，避免外部資源盜用與輕度阻止CSRF攻擊。</li><li>具備Session檢查（身分驗證）避免外部資源惡意使用。</li><li>僅支援WebSocket協定（拒絕HTTP協定）。</li><li>伺服器有能力針對所有的WebSocket連線進行廣播推送訊息（自動；固定秒數）。</li><li>伺服器有能力接收前端接收的訊息，並針對使用者本人、特定使用者推送訊息。</li><li>若使用者於固定秒數內未傳送訊息，則被視為閒置狀態，伺服器有能力直接切斷連線。</li></ul><pre><code class=language-cs>&lt;%@ WebHandler Language="C#" Class="WebSocket" %>
 
 using System.Linq;
 
