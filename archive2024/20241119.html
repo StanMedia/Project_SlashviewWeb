@@ -1,0 +1,377 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>在IIS伺服器下透過ASP.NET ASHX建置WebSocket通訊協定範例</h1><p>最近在研究WebSocket的通訊協定，過程中順手建置了一下WebSocket訊號源，藉此掌控一下相關的設計技巧，並記錄於此供給日後參考。</p><h2>IIS開啟WebSocket通訊協定支援</h2><p>一般來說IIS預設是沒有安裝WebSocket通訊協定模組的，在這個狀況下如果你透過前端JS去調用後端的WebSocket應用，則會統一吐出通訊失敗的錯誤，因此第一步就是要先讓你的IIS擁有支援WebSocket通訊協定的能力。安裝方式：</p><p>Step 1. 開啟Windows Server的<code>伺服器管理員</code>。</p><p>Step 2. 點選<code>管理</code>＞<code>新增角色及功能</code>，然後一直<code>下一步</code>到<code>Step 3</code>顯示的畫面。</p><p>Step 3. 在<code>網頁伺服器（IIS）</code>＞<code>網頁伺服器</code>＞<code>應用程式開發</code>目錄下，有一個<code>WebSocket通訊協定</code>，請把這個選項勾選起來並安裝。</p><p><img src=https://content.slashview.com/img/2024/20241119_01.jpg alt="" /></p><p>Step 4. 安裝後重新開機，這樣基本上就已經把<code>WebSocket通訊協定</code>模組裝好了，此時IIS已擁有<code>WebSocket</code>通訊能力。</p><h2>建置WebSocket通訊時期的類別</h2><p>其實WebSocket涉及到很多底層的TCP連線觀念，如果沒有引進專業的套件，幾乎所有的網路資源管理都要自己顧慮到，因此寫起程式碼來需要特別戰戰兢兢，在這裡我們建立了一個類別來稍微集中WebSocket必須用到的功能。</p><pre><code class=language-cs>using System.Linq;
+
+/// &lt;summary>
+/// WebSocket 類別
+/// &lt;/summary>
+namespace Slashview.WebSocket
+{
+  /// &lt;summary>
+  /// （靜態）公開類別：WebSocket操作輔助
+  /// &lt;/summary>
+  public static class Operate
+  {
+    /// &lt;summary>
+    /// 發送訊息
+    /// &lt;/summary>
+    public static async System.Threading.Tasks.Task Send(System.Net.WebSockets.WebSocket oSocket, string cMessage, System.Threading.CancellationToken oToken)
+    {
+      try
+      {
+        if (oSocket.State == System.Net.WebSockets.WebSocketState.Open)
+        {
+          await oSocket.SendAsync(
+            new System.ArraySegment&lt;byte>(System.Text.Encoding.UTF8.GetBytes(cMessage)),
+            System.Net.WebSockets.WebSocketMessageType.Text,
+            true,
+            oToken
+          );
+        }
+      }
+      catch
+      { /* Do Nothing */ }
+    }
+
+    /// &lt;summary>
+    /// 關閉連線
+    /// &lt;/summary>
+    public static async System.Threading.Tasks.Task Close(System.Net.WebSockets.WebSocket oSocket, string cMessage = "Closing WebSocket")
+    {
+      try
+      {
+        if (oSocket.State == System.Net.WebSockets.WebSocketState.Open)
+        {
+          await oSocket.CloseOutputAsync(
+            System.Net.WebSockets.WebSocketCloseStatus.NormalClosure,
+            cMessage,
+            System.Threading.CancellationToken.None
+          );
+        }
+      }
+      catch
+      { /* Do Nothing */ }
+    }
+  }
+
+  /// &lt;summary>
+  /// 公開類別：WebSocket連線池管理
+  /// &lt;/summary>
+  public class ConnectionManager : System.IDisposable
+  {
+    private readonly System.Collections.Concurrent.ConcurrentDictionary&lt;string, Slashview.WebSocket.SessionORM> _oConnections = new System.Collections.Concurrent.ConcurrentDictionary&lt;string, Slashview.WebSocket.SessionORM>();
+
+    /// &lt;summary>
+    /// 新增連線
+    /// &lt;/summary>
+    public string AddConnection(Slashview.WebSocket.SessionORM oSession)
+    {
+      var cConnectionId = System.Guid.NewGuid().ToString();
+      _oConnections.TryAdd(cConnectionId, oSession);
+      return cConnectionId;
+    }
+
+    /// &lt;summary>
+    /// 移除連線
+    /// &lt;/summary>
+    public void RemoveConnection(string cConnectionId)
+    {
+      if (_oConnections.TryRemove(cConnectionId, out var oSession))
+      { oSession.oSocket.Dispose(); }
+    }
+
+    /// &lt;summary>
+    /// 廣播訊息
+    /// &lt;/summary>
+    public async System.Threading.Tasks.Task BroadcastMessage(string cMessage, System.Threading.CancellationToken oCancellationToken)
+    { //空訊息就返回
+      if (string.IsNullOrEmpty(cMessage)) { return; }
+      //建立死亡連線集合
+      var oDeadConnections = new System.Collections.Concurrent.ConcurrentBag&lt;string>();
+      //發送訊息
+      var oSendTasks = _oConnections.Select(async oKVP =>
+      {
+        try
+        {
+          var oSocket = oKVP.Value.oSocket;
+          if (oSocket.State == System.Net.WebSockets.WebSocketState.Open)
+          { await Slashview.WebSocket.Operate.Send(oSocket, cMessage, oCancellationToken).ConfigureAwait(false); }
+          else
+          { oDeadConnections.Add(oKVP.Key); }
+        }
+        catch
+        { oDeadConnections.Add(oKVP.Key); }
+      });
+      //等待所有發送完成
+      await System.Threading.Tasks.Task.WhenAll(oSendTasks).ConfigureAwait(false);
+      //清理斷線的連接
+      if (!oDeadConnections.IsEmpty)
+      {
+        foreach (var cConnectionId in oDeadConnections.Distinct())
+        { RemoveConnection(cConnectionId); }
+      }
+    }
+
+    /// &lt;summary>
+    /// 實作IDispose
+    /// &lt;/summary>
+    public void Dispose()
+    {
+      foreach (var oConn in _oConnections.Values)
+      { oConn.oSocket.Dispose(); }
+      _oConnections.Clear();
+    }
+  }
+
+  /// &lt;summary>
+  /// 公開類別：WebSocket會話時期物件包
+  /// &lt;/summary>
+  public class SessionORM
+  {
+    public string cWebSocketKey { get; set; }
+    public string cUserId { get; set; }
+    public System.Net.WebSockets.WebSocket oSocket { get; set; }
+  }
+}
+</code></pre><h2>透過ASHX建置WebSocket伺服端應用</h2><p>接著重頭戲就是在ASHX建立一個<code>支援WebSocket通訊協定</code>的高效能存取頁面，在這個頁面我們準備達成下列的功能項目：</p><ul><li>具備CORS檢查，避免外部資源盜用與輕度阻止CSRF攻擊。</li><li>具備Session檢查（身分驗證）避免外部資源惡意使用。</li><li>僅支援WebSocket協定（拒絕HTTP協定）。</li><li>伺服器有能力自動推送訊息（固定秒數）。</li><li>伺服器有能力接收前端送過來的訊息，並推送使用者所發出之訊息。</li><li>若使用者於固定秒數內未傳送訊息，則被視為閒置狀態，伺服器有能力直接切斷連線。</li></ul><pre><code class=language-cs>&lt;%@ WebHandler Language="C#" Class="WebSocket" %>
+
+using System.Linq;
+
+public class WebSocket : System.Web.IHttpHandler, System.IDisposable, System.Web.SessionState.IReadOnlySessionState
+{
+  //網路連線管理
+  private static readonly Slashview.WebSocket.ConnectionManager _oConnectionManager = new Slashview.WebSocket.ConnectionManager();
+  //間隔秒數廣播一次
+  private static readonly System.TimeSpan _oTimerIntervalSeconds = System.TimeSpan.FromSeconds(1);
+  //若無回傳封包就於規定秒數後斷線
+  private static readonly System.TimeSpan _oMaxDisconnectionWaitingSeconds = System.TimeSpan.FromSeconds(10);
+  //允許最大傳入封包bytes
+  private static readonly int _iMaxMessageSize = 1024;
+  //廣播計時器
+  private static readonly System.Lazy&lt;System.Threading.Timer> _oLazyTimerBroadcast = new System.Lazy&lt;System.Threading.Timer>(() =>
+  {
+    return new System.Threading.Timer(async x => await _oConnectionManager.BroadcastMessage($"{System.DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss")}", System.Threading.CancellationToken.None), null, System.TimeSpan.Zero, _oTimerIntervalSeconds);
+  }, System.Threading.LazyThreadSafetyMode.ExecutionAndPublication);
+  //同源標頭管理
+  private static readonly System.Collections.Generic.HashSet&lt;string> _oAllowedOrigins = new System.Collections.Generic.HashSet&lt;string>()
+  {
+    "http://localhost",
+    "http://127.0.0.1",
+    "http://YourDomain",
+    "https://YourDomain",
+  };
+  //WebSocket連線ID
+  private string _cConnectionId;
+
+  /// &lt;summary>
+  /// 處理傳入的HTTP或WebSocket請求
+  /// &lt;/summary>
+  public void ProcessRequest(System.Web.HttpContext oContext)
+  {
+    try
+    { //同源檢查
+      var cOrigin = oContext?.Request.Headers["Origin"];
+      var bOrigin = !string.IsNullOrEmpty(cOrigin) &amp;&amp; _oAllowedOrigins.Any(x => cOrigin.StartsWith(x));
+      if (!bOrigin)
+      { throw new System.Exception("Same-Origin policy issue."); }
+
+      //身分驗證
+      var oSession = System.Web.HttpContext.Current.Session["YourSession"];
+      if (oSession == null || SomethingOfYourVerify)
+      { throw new System.Exception("Authentication issue."); }
+
+      //是否為WebSocket連線
+      if (!oContext.IsWebSocketRequest)
+      { throw new System.Exception("WebSocket protocol issue."); }
+
+      //確認無誤開始執行
+      var oTimerBroadcast = _oLazyTimerBroadcast.Value;
+      oContext.AcceptWebSocketRequest(x => ProcessWebSocketRequest(x, YourUserId));
+    }
+    catch (System.Exception oEx)
+    {
+      oContext.Response.StatusCode = (int)System.Net.HttpStatusCode.BadRequest;
+      oContext.Response.TrySkipIisCustomErrors = true;
+      oContext.Response.Headers.Add("X-Message", $"Error: {oEx.Message}");
+      oContext.Response.SuppressContent = true;
+      oContext.ApplicationInstance.CompleteRequest();
+    }
+  }
+
+  /// &lt;summary>
+  /// 處理WebSocket請求並維護連線狀態
+  /// &lt;/summary>
+  private async System.Threading.Tasks.Task ProcessWebSocketRequest(System.Web.WebSockets.AspNetWebSocketContext oContext, string cUserId)
+  {
+    var oSocket = oContext.WebSocket;
+    var oSession = new Slashview.WebSocket.SessionORM()
+    {
+      cWebSocketKey = oContext.SecWebSocketKey,
+      cUserId = cUserId,
+      oSocket = oSocket,
+    };
+    _cConnectionId = _oConnectionManager.AddConnection(oSession);
+
+    try
+    {
+      using var oCTS = new System.Threading.CancellationTokenSource();
+      oCTS.CancelAfter(_oMaxDisconnectionWaitingSeconds);
+
+      using var oMS = new System.IO.MemoryStream();
+      var bytBuffer = new byte[_iMaxMessageSize];
+
+      while (oSocket.State == System.Net.WebSockets.WebSocketState.Open)
+      {
+        var oSocketResult = await oSocket.ReceiveAsync(new System.ArraySegment&lt;byte>(bytBuffer), oCTS.Token);
+        switch (oSocketResult.MessageType)
+        { //文字型態
+          case System.Net.WebSockets.WebSocketMessageType.Text:
+            //有互動就延長
+            oCTS.CancelAfter(_oMaxDisconnectionWaitingSeconds);
+            //輸出資料
+            oMS.Write(bytBuffer, 0, oSocketResult.Count);
+            //檢查輸入長度是否違法
+            if (oMS.Length > _iMaxMessageSize)
+            { throw new System.Exception($"Message exceeds {_iMaxMessageSize} bytes."); }
+            if (oSocketResult.EndOfMessage)
+            {
+              var cMessage = System.Text.Encoding.UTF8.GetString(oMS.ToArray());
+              oMS.SetLength(0); //清空緩衝區
+              await HandleMessage(oSession, cMessage, oCTS.Token);
+            }
+            break;
+          //關閉型態
+          case System.Net.WebSockets.WebSocketMessageType.Close:
+            await HandleClose(oSession);
+            break;
+          default:
+            break;
+        }
+      }
+    }
+    catch (System.Exception oEx)
+    { await HandleError(oSession, oEx); }
+    finally
+    { _oConnectionManager.RemoveConnection(_cConnectionId); }
+  }
+
+  /// &lt;summary>
+  /// 處理WebSocket收到的訊息
+  /// &lt;/summary>
+  private async System.Threading.Tasks.Task HandleMessage(Slashview.WebSocket.SessionORM oSession, string cMessage, System.Threading.CancellationToken oToken)
+  { await Slashview.WebSocket.Operate.Send(oSession.oSocket, $"{oSession.cUserId} send: {cMessage}", oToken); }
+
+  /// &lt;summary>
+  /// 處理WebSocket發生的錯誤
+  /// &lt;/summary>
+  private async System.Threading.Tasks.Task HandleError(Slashview.WebSocket.SessionORM oSession, System.Exception oEx)
+  {
+    await Slashview.WebSocket.Operate.Send(oSession.oSocket, $"Error / {oEx.Message}", System.Threading.CancellationToken.None);
+    await Slashview.WebSocket.Operate.Close(oSession.oSocket);
+  }
+
+  /// &lt;summary>
+  /// 處理WebSocket的關閉
+  /// &lt;/summary>
+  private async System.Threading.Tasks.Task HandleClose(Slashview.WebSocket.SessionORM oSession)
+  { await Slashview.WebSocket.Operate.Close(oSession.oSocket); }
+
+  /// &lt;summary>
+  /// 實作IDispose
+  /// &lt;/summary>
+  public void Dispose()
+  {
+    if (_oLazyTimerBroadcast.IsValueCreated)
+    { _oLazyTimerBroadcast.Value?.Dispose(); }
+  }
+
+  public bool IsReusable => false;
+}
+</code></pre><h2>撰寫客戶端Javascript對接程序</h2><p>最後就是前端的WebSocket通訊測試頁面，值得注意的是有透過網址來判斷是否要透過加密連線，也就是<code>http</code>就走<code>ws</code>、<code>https</code>就走<code>wss</code>。其他的部分沒啥技術性，參考一下即可。</p><pre><code class=language-html>&lt;!DOCTYPE html>
+&lt;html>
+&lt;head>
+    &lt;title>WebSocket Demo&lt;/title>
+    &lt;script>
+      let socket;
+
+      function connectWebSocket() {
+        if (socket) return;
+
+        const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
+        const wsUrl = `${protocol}//${location.host}/webSocket.ashx`;
+        appendMessage('連接：' + wsUrl);
+
+        socket = new WebSocket(wsUrl);
+
+        socket.onopen = () => {
+          appendMessage('WebSocket連接已建立');
+          toggleButtons(true);
+        };
+
+        socket.onmessage = (event) => appendMessage('接收：' + event.data);
+
+        socket.onclose = (event) => {
+          appendMessage(`WebSocket已關閉（代碼:${event.code}）`);
+          resetUI();
+        };
+
+        socket.onerror = () => {
+          appendMessage('WebSocket連接錯誤');
+          resetUI();
+        };
+      }
+
+      function disconnectWebSocket() {
+        if (socket) {
+          socket.close(1000, "用戶主動斷開連接");
+          appendMessage('WebSocket連接正在關閉...');
+        } else {
+          appendMessage('尚未建立連接');
+        }
+      }
+
+      function sendMessage() {
+        if (socket &amp;&amp; socket.readyState === WebSocket.OPEN) {
+          const message = document.getElementById('txtMessage').value;
+          socket.send(message);
+          appendMessage('發送：' + message);
+          document.getElementById('txtMessage').value = '';
+        } else {
+          appendMessage('WebSocket未連接');
+        }
+      }
+
+      function resetUI() {
+        toggleButtons(false);
+        socket = null;
+      }
+
+      function toggleButtons(connected) {
+        document.getElementById('btnConnect').disabled = connected;
+        document.getElementById('btnDisconnect').disabled = !connected;
+        document.getElementById('btnSend').disabled = !connected;
+      }
+
+      function appendMessage(message) {
+        const messagesDiv = document.getElementById('messages');
+        const timestamp = new Date().toLocaleTimeString();
+        messagesDiv.innerHTML += `［${timestamp}］${message}&lt;br>`;
+        messagesDiv.scrollTop = messagesDiv.scrollHeight;
+      }
+    &lt;/script>
+    &lt;style>
+        body { font-family: Arial, sans-serif; max-width: 800px; margin: 20px auto; }
+        .control-panel { margin-bottom: 10px; }
+        #messages { height: 300px; overflow-y: auto; border: 1px solid #ccc; padding: 10px; background: #f9f9f9; }
+        .message-box, .button { padding: 5px; margin-right: 5px; }
+    &lt;/style>
+&lt;/head>
+&lt;body>
+    &lt;div class="control-panel">
+        &lt;button id="btnConnect" onclick="connectWebSocket()" class="button">連接Server&lt;/button>
+        &lt;button id="btnDisconnect" onclick="disconnectWebSocket()" class="button" disabled>斷開Server&lt;/button>
+        &lt;input type="text" id="txtMessage" class="message-box" placeholder="Input message..." />
+        &lt;button id="btnSend" onclick="sendMessage()" class="button" disabled>發送訊息&lt;/button>
+    &lt;/div>
+    &lt;div id="messages">&lt;/div>
+&lt;/body>
+&lt;/html>
+</code></pre><h6>ASP.NET ASHX WebSocket Lab Test Simple Example</h6></main><footer></footer><script src=/.file/site.js></script></body></html>
