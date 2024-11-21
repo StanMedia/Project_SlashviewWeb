@@ -1,0 +1,28 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>Microsoft Windows 11與Office 2024安裝與啟用指南</h1><p>申明：本頁面的Windows 11專業版金鑰（Professional）與Office 2024標準版（Standard）金鑰都是從Microsoft官方公開網站合法取得。</p><h2>Windows 11下載點、金鑰與安裝</h2><p>Step 1. 請到<a href=https://www.microsoft.com/zh-tw/software-download/windows11>Windows 11 安裝小幫手</a>下載ISO，然後可以透過<a href=https://slashview.com/archive2019/20191007.html>Rufus軟體</a>來製作USB可開機隨身碟。</p><p>Step 2. 拿到Windows 11專業版金鑰（GVLK, Generic Volume License Key）：<a href="https://learn.microsoft.com/en-us/windows-server/get-started/kms-client-activation-keys?tabs=server2025%2Cwindows1110ltsc%2Cversion1803%2Cwindows81#windows-11-and-windows-10-semi-annual-channel">Windows 11 and Windows 10 Semi-Annual Channel</a></p><pre><code class=language-txt>Windows 11 Pro：W269N-WFGWX-YVC9B-4J6C9-T83GX
+</code></pre><p>Step 3. 在網路找到<a href=https://www.orcy.net.cn/1802.html>ＫＭＳ服務</a>，用<code>最高管理權限</code>打開<code>cmd</code>後輸入：</p><pre><code class=language-txt>slmgr -ipk W269N-WFGWX-YVC9B-4J6C9-T83GX
+slmgr -skms kms.0t.net.cn
+slmgr -ato
+</code></pre><h2>Office 2024下載點、金鑰與安裝</h2><p>Step 1. 請到<a href="https://www.microsoft.com/en-us/download/details.aspx?id=49117">Office Deployment Tool</a>下載Office線上部署工具，下載後的執行檔案其實是一個壓縮檔，我們可以透過7-zip之類的工具直接將裡面的<code>setup.exe</code>取出，等一下會用到。</p><p>Step 2. <a href=https://config.office.com/deploymentsettings>Office 自訂工具</a>產生<code>客製化腳本</code>設定檔，或者直接複製下方腳本（該腳本只安裝Word、Excel、PowerPoint，可參考：<a href=/archive2022/20220713.html>只想安裝Office 365（含2019、2021之後版本）的三套軟體：Word、Excel、PowerPoint</a>），並將腳本檔案取名為<code>Office2024Config.xml</code>：</p><pre><code class=language-xml>&lt;Configuration ID="3358368a-5e69-4c44-b9a8-548a22b2f95f">
+  &lt;Add OfficeClientEdition="64" Channel="PerpetualVL2024">
+    &lt;Product ID="Standard2024Volume" PIDKEY="V28N4-JG22K-W66P8-VTMGK-H6HGR">
+      &lt;Language ID="zh-tw" />
+      &lt;ExcludeApp ID="OneDrive" />
+      &lt;ExcludeApp ID="OneNote" />
+      &lt;ExcludeApp ID="Outlook" />
+      &lt;ExcludeApp ID="Publisher" />
+    &lt;/Product>
+  &lt;/Add>
+  &lt;Property Name="SharedComputerLicensing" Value="0" />
+  &lt;Property Name="FORCEAPPSHUTDOWN" Value="FALSE" />
+  &lt;Property Name="DeviceBasedLicensing" Value="0" />
+  &lt;Property Name="SCLCacheOverride" Value="0" />
+  &lt;Property Name="AUTOACTIVATE" Value="1" />
+  &lt;Updates Enabled="TRUE" />
+  &lt;RemoveMSI />
+&lt;/Configuration>
+</code></pre><p>※註：透過微軟官方的<code>Office 自訂工具</code>就會自動將Office版本對應的金鑰填入到XML<code>客製化腳本</code>設定檔，不需要你去記憶或尋找，但如果你想要知道Office的GVLK，其實網路上也是有人整理出來：<a href=https://massgrave.dev/online_kms#office-2024>Online KMS Activation</a></p><p>Step 3. 將剛才取出的<code>setup.exe</code>與<code>Office2024Config.xml</code>兩個檔案放在同一個目錄，用<code>最高管理權限</code>打開<code>cmd</code>進入到該目錄後輸入下列指令，就會自動進行線上安裝：</p><pre><code class=language-txt>setup.exe /configure Office2024Config.xml
+</code></pre><p>Step 4. 安裝Office 2024過後，用<code>最高管理權限</code>打開<code>cmd</code>輸入下列指令：</p><pre><code class=language-txt>cd /d "%ProgramFiles%\Microsoft Office\Office16"
+cscript ospp.vbs /sethst:kms.0t.net.cn
+cscript ospp.vbs /inpkey:V28N4-JG22K-W66P8-VTMGK-H6HGR
+cscript ospp.vbs /act
+</code></pre><h6></h6></main><footer></footer><script src=/.file/site.js></script></body></html>
