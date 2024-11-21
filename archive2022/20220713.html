@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>只想安裝Office 365（含2019、2021之後版本）的三套軟體：Word、Excel、PowerPoint</h1><p>Microsoft Office自從2019版之後就開始走向純網路安裝，這樣的好處是可以讓使用者隨時以最新的修正後程式來進行安裝，進而規避傳統安裝Office之後，伴隨著大量的後續更新問題，缺點就是精簡到連開頭安裝挑選的程序都省了，導致於使用者的電腦中裝了一大堆不必要的軟體，本篇文章就是教你怎麼只安裝一般人最常用的三套軟體：Word、Excel、PowerPoint就好。</p><h2>限定安裝：Word、Excel、PowerPoint</h2><p>這篇文章以Office 365為例，若是你處於企業大量授權KMS環境，一樣可以使用這個方法來進行限定安裝。</p><p>Step 1. 到<a href=https://www.office.com/>Office官方網站</a>登入具備合法Office365身分的帳號，點選右上角的「安裝Office」按鈕，就可以拿到一個名為「OfficeSetup.exe」的檔案。</p><p><img src=https://content.slashview.com/img/2022/20220713_01.jpg alt="" /></p><p>Step 2. 打開記事本將下列文字全選複製貼上後，存檔取名為「Office365Config.xml」。</p><pre><code class=language-xml>&lt;Configuration ID="f4bffa3b-9c48-43cd-8705-510dbadad70f">
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>只想安裝Office 365（含2019、2021之後版本）的三套軟體：Word、Excel、PowerPoint</h1><p>Microsoft Office自從2019版之後就開始走向純網路安裝，這樣的好處是可以讓使用者隨時以最新的修正後程式來進行安裝，進而規避傳統安裝Office之後，伴隨著大量的後續更新問題，缺點就是精簡到連開頭安裝挑選的程序都省了，導致於使用者的電腦中裝了一大堆不必要的軟體，本篇文章就是教你怎麼只安裝一般人最常用的三套軟體：Word、Excel、PowerPoint就好。</p><h2>限定安裝：Word、Excel、PowerPoint</h2><p>這篇文章以Office 365為例，若是你處於企業大量授權KMS環境，一樣可以使用這個方法來進行限定安裝。</p><p>Step 1. 到<a href=https://www.office.com/>Office官方網站</a>登入具備合法Office365身分的帳號，點選右上角的「安裝Office」按鈕，就可以拿到一個名為<code>OfficeSetup.exe</code>的檔案。</p><p><img src=https://content.slashview.com/img/2022/20220713_01.jpg alt="" /></p><p>Step 2. 打開記事本將下列文字全選複製貼上後，存檔取名為<code>Office365Config.xml</code>。</p><pre><code class=language-xml>&lt;Configuration ID="f4bffa3b-9c48-43cd-8705-510dbadad70f">
   &lt;Add OfficeClientEdition="64" Channel="Current">
     &lt;Product ID="O365ProPlusRetail">
       &lt;Language ID="zh-tw" />
@@ -15,7 +15,7 @@
   &lt;/Add>
   &lt;Updates Enabled="TRUE" />
 &lt;/Configuration>
-</code></pre><p>Step 3. 打開記事本將下列文字全選複製貼上後，取名為「INSTALL.BAT」，請注意若記事本儲存字元編碼預設為UTF-8請改成為ANSI字元編碼，不然CMD會精神錯亂看不懂指令。（CMD預設還是走ANSI字元集，微軟這部分已經擺爛超久了）</p><pre><code class=language-bat>@ECHO OFF
+</code></pre><p>Step 3. 打開記事本將下列文字全選複製貼上後，取名為<code>INSTALL.BAT</code>，請注意若記事本儲存字元編碼預設為UTF-8請改成為ANSI字元編碼，不然CMD會精神錯亂看不懂指令。（CMD預設還是走ANSI字元集，微軟這部分已經擺爛超久了）</p><pre><code class=language-bat>@ECHO OFF
 chcp 65001 > nul
 ECHO －－－－－
 
@@ -23,4 +23,4 @@ ECHO 本批次只執行限定安裝Word、Excel、PowerPoint三套軟體，Offic
 
 ECHO －－－－－
 OfficeSetup /configure Office365Config.xml
-</code></pre><p>將上述三個檔案放在同一個資料夾中，然後對「INSTALL.BAT」點兩下執行，開始進行網路安裝即可。</p><h2>補充說明：安裝Outlook軟體</h2><p>有些人可能會想要安裝Office Outlook這個信件管理軟體，若有這個需求其實只要在Setp 2階段把這行<code>&lt;ExcludeApp ID="Outlook" /></code>刪除，Office安裝時就會自動幫你安裝Outlook。以下圖來舉例，上面顯示了四個軟體的ICON，代表在現在的安裝階段，就包含了Word、Excel、PowerPoint、Outlook等四套軟體。</p><p><img src=https://content.slashview.com/img/2022/20220713_02.jpg alt="" /></p><h6>OnlyInstall Office365 Office2019 Office2021 Word Excel PowerPoint 三件套 三組合 三套軟體</h6></main><footer></footer><script src=/.file/site.js></script></body></html>
+</code></pre><p>Step 4. 將上述三個檔案放在同一個資料夾中，然後使用<code>系統管理員</code>權限開啟<code>cmd.exe</code>後，進入這個目錄執行<code>INSTALL.BAT</code>，就可以開始進行自動化網路安裝。</p><h2>補充說明：安裝Outlook軟體</h2><p>有些人可能會想要安裝Office Outlook這個信件管理軟體，若有這個需求其實只要在Setp 2階段把這行<code>&lt;ExcludeApp ID="Outlook" /></code>刪除，Office安裝時就會自動幫你安裝Outlook。以下圖來舉例，上面顯示了四個軟體的ICON，代表在現在的安裝階段，就包含了Word、Excel、PowerPoint、Outlook等四套軟體。</p><p><img src=https://content.slashview.com/img/2022/20220713_02.jpg alt="" /></p><h6>OnlyInstall Office365 Office2019 Office2021 Word Excel PowerPoint 三件套 三組合 三套軟體</h6></main><footer></footer><script src=/.file/site.js></script></body></html>
