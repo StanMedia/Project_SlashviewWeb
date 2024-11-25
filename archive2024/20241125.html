@@ -1,0 +1,137 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>檢測水果與維生素之排列組合，是否符合營養師建議之維生素量問題</h1><p>先前遇到一個排列組合的問題，我將其替換成水果與維生素的關聯，以下是問題的簡單描述。</p><ol><li>每一種水果都有可能具備<code>１～Ｎ種</code>的維生素。（酪梨：AE）</li><li>每一種水果若經當下認定<code>適用於某一種維生素</code>，就必須<code>拋棄其他維生素</code>之存在性。（若認定酪梨在當下排列組合中適用A，則就不可以又被認定為E。與生活中的規範違背，但這是問題的規定）</li><li>營養師最後需要所有的維生素排列組合，來看看是否符合建議的每日維生素攝取量。</li></ol><h2>水果排列組合類別</h2><p>首先撰寫一個排列組合的類別，將傳入的水果透過遞迴產生出需求中的排列組合清單。</p><pre><code class=language-cs>class Combination
+{
+  private readonly System.Collections.Generic.Dictionary&lt;string, string> _oFruitList;
+  private readonly System.Collections.Generic.Dictionary&lt;string, char> _oCurrentCombination;
+  private readonly System.Collections.Generic.List&lt;Dictionary&lt;string, char>> _oTotalCombinations;
+  private readonly System.Collections.Generic.List&lt;string> _oFruit;
+
+  public Combination(Dictionary&lt;string, string> _oTempFruitList)
+  {
+    _oFruitList = _oTempFruitList;
+    _oCurrentCombination = new System.Collections.Generic.Dictionary&lt;string, char>();
+    _oTotalCombinations = new System.Collections.Generic.List&lt;System.Collections.Generic.Dictionary&lt;string, char>>();
+    _oFruit = _oTempFruitList.Keys.ToList();
+  }
+
+  /// &lt;summary>
+  /// 生成並返回所有可能的水果維生素組合
+  /// &lt;/summary>
+  public System.Collections.Generic.List&lt;System.Collections.Generic.Dictionary&lt;string, char>> Generate()
+  {
+    CombinationsRecursive();
+    return _oTotalCombinations;
+  }
+
+  /// &lt;summary>
+  /// 遞迴生成組合的核心方法
+  /// &lt;/summary>
+  private void CombinationsRecursive(int iIndex = 0)
+  {
+    if (iIndex == _oFruit.Count)
+    {
+      _oTotalCombinations.Add(new System.Collections.Generic.Dictionary&lt;string, char>(_oCurrentCombination));
+      return;
+    }
+    var cFruit = _oFruit[iIndex];
+    foreach (char vitamin in _oFruitList[cFruit])
+    {
+      _oCurrentCombination[cFruit] = vitamin;
+      CombinationsRecursive(iIndex + 1);
+      _oCurrentCombination.Remove(cFruit);
+    }
+  }
+}
+</code></pre><h2>透過Main方法調用排列組合類別，產生水果排列組合結果</h2><pre><code class=language-cs>static void Main(string[] args)
+{ //水果與維生素清單
+  var oFruitList = new System.Collections.Generic.Dictionary&lt;string, string>()
+  {
+    { "酪梨", "AE" },
+    { "楊桃", "BC" },
+    { "桑椹", "B" },
+    { "柿子", "AC" },
+    { "蘋果", "A" },
+  };
+
+  var oCG = new Combination(oFruitList);
+  var oResult = oCG.Generate();
+
+  //取得所有水果中可能出現的維生素集合
+  var oVitaminList = oFruitList.Values
+    .SelectMany(x => x)
+    .Distinct()
+    .OrderBy(x => x);
+
+  for (int i = 0; i &lt; oResult.Count; i++)
+  { //當前排列組合的維生素組合總表
+    var oCombination = oResult[i].Values
+      .Distinct()
+      .OrderBy(x => x);
+
+    Console.WriteLine($"排列組合＃{i + 1}：（{string.Join("、", oCombination)}）");
+    Console.WriteLine("－－－－－");
+
+    var oVitaminGroups = oResult[i]
+      .GroupBy(oKVP => oKVP.Value)
+      .ToDictionary(
+        g => g.Key,
+        g => g.Select(oKVP => oKVP.Key).ToList()
+      );
+
+    foreach (char cVitamin in oVitaminList)
+    {
+      var oFruits = oVitaminGroups.GetValueOrDefault(cVitamin, new System.Collections.Generic.List&lt;string>());
+      Console.WriteLine($"{cVitamin, -8} {oFruits.Count, -8} {string.Join(", ", oFruits)}");
+    }
+  }
+
+  Console.Read();
+}
+</code></pre><p>透過上面的類別呼叫，我們就可以得到下列結果：</p><pre><code class=language-txt>排列組合＃1：（A、B）
+－－－－－
+A        3        酪梨, 柿子, 蘋果
+B        2        楊桃, 桑椹
+C        0
+E        0
+排列組合＃2：（A、B、C）
+－－－－－
+A        2        酪梨, 蘋果
+B        2        楊桃, 桑椹
+C        1        柿子
+E        0
+排列組合＃3：（A、B、C）
+－－－－－
+A        3        酪梨, 柿子, 蘋果
+B        1        桑椹
+C        1        楊桃
+E        0
+排列組合＃4：（A、B、C）
+－－－－－
+A        2        酪梨, 蘋果
+B        1        桑椹
+C        2        楊桃, 柿子
+E        0
+排列組合＃5：（A、B、E）
+－－－－－
+A        2        柿子, 蘋果
+B        2        楊桃, 桑椹
+C        0
+E        1        酪梨
+排列組合＃6：（A、B、C、E）
+－－－－－
+A        1        蘋果
+B        2        楊桃, 桑椹
+C        1        柿子
+E        1        酪梨
+排列組合＃7：（A、B、C、E）
+－－－－－
+A        2        柿子, 蘋果
+B        1        桑椹
+C        1        楊桃
+E        1        酪梨
+排列組合＃8：（A、B、C、E）
+－－－－－
+A        1        蘋果
+B        1        桑椹
+C        2        楊桃, 柿子
+E        1        酪梨
+</code></pre><p>假設營養師建議每日維生素攝取量為：維生素A / 1份、維生素B / 2份、維生素C / 1份、維生素E / 1份。透過上面的結果顯示在第６種排列組合就可以達成這個效果，故可以得知該使用者此次的營養攝取是否有符合營養師的每日建議攝取量的。</p><p>此類的問題可以應用某些特定場合，如果有需要的人可以自行發想。例如：</p><ol><li>某班因應校方之證照檢視，想要知道該班學生考取證照種類是否平均分散於各類專業，而非單一集中在某領域。校方提出某班應出具<code>學生 / 證照 / 證照種類</code>清單來證明其廣泛性。</li><li>假設某班學生每人手中均持有各領域證照，那麼就可以透過這支程式運算，並依照結果取出最大化分布與數據資料。</li></ol><h6>C# 排列 組合 問題 難題 Permutation Combination</h6></main><footer></footer><script src=/.file/site.js></script></body></html>
