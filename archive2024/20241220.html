@@ -1,0 +1,66 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>GIT筆記：使用cli，10分鐘快速學完本地端git指令</h1><p>其實實務應用上Git會遭遇到很多詭異突發狀況的問題（工作時期發生的需求），10分鐘不可能學會Git複雜的全功能指令。但是如果鎖定透過<code>20%的指令</code>完成<code>80%的日常需求</code>，由這個觀點出發的話，那麼10分鐘來認知Git是蠻合理的。</p><h2>安裝Git程式</h2><p>Git是一個本地端的版本控管系統，要實現這個功能你必須要安裝Git程式，請至<a href=https://git-scm.com/downloads>Git Downloads</a>來進行下載與安裝，如果是Windows的使用者可以選用<code>64-bit Git for Windows Setup</code>來進行，下載後基本上一路點選下一步就完成了。</p><p><img src=https://content.slashview.com/img/2024/20241220_01.jpg alt="" /></p><p>另外如果你比較要求cli視窗的色彩美化，可以參考這篇：<a href=/archive2024/20241207.html>在Windows Terminal下美化PowerShell指令輸入列</a>來進行<code>oh-my-posh</code>安裝，之後所有的cli操作我們一律會在<code>powershell</code>下進行。</p><p>安裝完成git後，打開powershell輸入<code>git --version</code>如果有看到版本資訊，如果有看到版本號（例如：2.47.1）代表已經安裝成功。</p><p><img src=https://content.slashview.com/img/2024/20241220_02.jpg alt="" /></p><p>##　設定操作者變數</p><p>初始我們要先來設定全局的使用者參數：姓名、電子郵件，好讓Git日後可以記錄這個變更異動是誰弄的？</p><pre><code class=language-txt>#使用者名稱
+git config --global user.name "slashview"
+#使用者電子郵件
+git config --global user.email "slashview@slashview"
+#列出當前設定參數
+git config --list
+</code></pre><p><img src=https://content.slashview.com/img/2024/20241220_03.jpg alt="" /></p><p>這個檔案一旦經過建立，會存放在<code>C:\Users\slashview\.gitconfig</code>（當然，slashview是我這台電腦的使用者名稱），可以從下圖看出路徑關係。</p><p><img src=https://content.slashview.com/img/2024/20241220_04.jpg alt="" /></p><p>⚠ 除了<code>--global</code>全局參數之外，也可以在每一個受到Git管理的資料夾下，另建立<code>--local</code>區域參數。</p><h2>開始進行版控：將某個資料夾託管給Git</h2><p>我們可以在Windows根目錄建立一個名為<code>gitlab</code>的資料夾，切換到該資料夾後透過下列指令將資料夾託管給Git，讓Git來協助我們針對這個資料夾進行<code>版本控制</code>。</p><p><img src=https://content.slashview.com/img/2024/20241220_05.jpg alt="" /></p><pre><code class=language-txt>#起始版本控制
+git init
+</code></pre><p><img src=https://content.slashview.com/img/2024/20241220_06.jpg alt="" /></p><p>透過上面的圖片我們可以發現指令完成後，他會在這個資料夾建立一個名為<code>.git</code>的隱藏資料夾，所有關於這個資料夾的Git設定、管理、資料等東西，日後都會被存放在這個資料夾下。如果任務結束不想要再對這個資料夾進行版本控制，那麼直接把這個<code>.git</code>隱藏資料夾刪除掉就可以了。</p><h2>開始追蹤檔案：將檔案放入暫存區（Staging Area）</h2><p>我們可以在資料夾下隨意建立三個檔案且內容隨意（helloN.txt），然後輸入下列指令查看狀態：</p><pre><code class=language-txt>#查看git狀態
+git status
+</code></pre><p><img src=https://content.slashview.com/img/2024/20241220_07.jpg alt="" /></p><p>從上圖我們可以發現，有三個檔案呈現<code>Untracked</code>狀態，這意味著這些檔案都不受到Git的異動狀態追蹤，因此我們要告訴Git將這些檔案加入追蹤控制，也就是將檔案加入暫存區（Staging Area）：</p><pre><code class=language-txt>#將個別檔案加入暫存區
+git add hello1.txt
+#將全部檔案加入暫存區（實務上會輸入這個比較快）
+git add .
+</code></pre><p>⚠ 思想誤區：其實我認為Git用<code>Tracked</code>、<code>Untracked</code>有點名過其實，因為實際上的動作意思比較偏向<code>認列</code>、<code>承認</code>才對。追蹤會讓人誤會日後暫存區裡面這個檔案Git會<code>自動追蹤</code>異動狀況，然而其實是日後每次、每個檔案的<code>新增、修改、刪除、更名</code>，使用者都要<code>自己手動</code>將這些檔案再加入暫存區一次，這就是為何一般都會採用<code>git add .</code>來處理的原因。</p><p>經過<code>git add .</code>後，我們再一次觀察當前的狀態，就可以發現三個檔案都被加入可準備<code>commit</code>了。</p><p><img src=https://content.slashview.com/img/2024/20241220_08.jpg alt="" /></p><p>⚠ 將某個檔案解除追蹤，可以使用<code>git rm hello1.txt --cached</code>來將檔案踢出暫存區。</p><h2>排除特定檔案：不想被放入暫存區進而被提交的檔案</h2><p>透過<code>.gitignore</code>檔案，我們可以將不想被Git管理的檔案列表成黑名單，如此一來當我們輸入<code>git add .</code>之後，這些檔案就不會被追蹤進暫存區了。特別注意的是當你設定這個檔案之後的add動作才會生效，例如：之前就已經add過password.txt的檔案，但之後才將其列入.gitignore，此時Git是不會自動幫你移除這個檔案的。以下是簡單的黑名單範例：</p><pre><code class=language-txt>#忽略SecretKey.txt檔案
+SecretKey.txt
+#忽略config⽬錄下的database.setup檔案
+config/database.setup
+#忽略所有db目錄下的檔案
+/db/*
+#忽略所有附檔名是.key的檔案
+*.key
+</code></pre><p>如果你就是想要強制把某一個黑名單排除的檔案上傳，可以使用這指令強制加入：</p><pre><code class=language-txt>git add –f TheSecreThatDoNotCare.key
+</code></pre><h2>將檔案提交入庫（Repository）</h2><p>當我們確定這次的工作，都已經把要修改、整理的檔案處理好，也確定都已經<code>增加到暫存區</code>後，接著就是進行提交（commit）到儲存庫的行為了。一旦提交到儲存庫，我們日後就可以藉由Git的復原能力，將檔案狀態內容恢復到某個時間點。</p><pre><code class=language-txt>#提交當前的暫存區使其入庫
+git commit -m "你想要的註解"  #沒打註解的話Git會使用預設的文字編輯器跳出要你打字儲存
+#查看Git歷程
+git log --oneline --graph
+</code></pre><p><img src=https://content.slashview.com/img/2024/20241220_09.jpg alt="" /></p><p>⚠ 透過<code>git log</code>指令，可以查看Git詳細的歷史紀錄，讓你了解狀況。</p><p>⚡ 提交後的反悔（註解）：</p><pre><code class=language-txt>#改註解
+git commit --amend –m "你想要的新註解"
+</code></pre><p>⚡ 提交後的反悔（新增、修改、刪除檔案）：</p><pre><code class=language-txt>#改註解
+git add .
+git commit --amend –m "你想要的新註解"
+</code></pre><h2>將檔案復原回最後一次commit的結果</h2><p>這個功能我認為是最常用、最好用的功能，一般來說我的習慣會在正常的開發環境下測試某些檔案，這時候可能會去異動已經被提交過的檔案，變成新的實驗程式碼，最後可能會把最初整理好的環境弄得亂七八糟（程式碼到處改、類別到處亂刪），這時候我們只要下一個指令就可以瞬間<code>回到最後一次commit</code>的狀態。</p><pre><code class=language-txt>#將檔案狀態恢復到最後一次提交時刻
+git checkout .
+#將某個檔案狀態恢復到最後一次提交時刻
+git checkout hello1.txt
+</code></pre><h2>退回之前的版本</h2><ol><li>假設我有一個新想法，把所有的hello檔案都移動到一個histroy目錄，然後根目錄新增一個hello4.txt且已經commit完成。</li></ol><p><img src=https://content.slashview.com/img/2024/20241220_10.jpg alt="" /></p><ol start=2><li>然而我反悔了，想要恢復原本根目錄下有hello1~3.txt的檔案，這時候我只要下指令回到上一版即可。</li></ol><pre><code class=language-txt>#將檔案與目錄狀態恢復到前一個版本
+#一個^符號代表回上１個版本，兩個^^符號代表回上２個版本
+#太多個版本可用~N代替，或者直接用git log顯示的雜湊序號
+#--hard會把工作目錄與暫存區的東西都砍掉，我自己是比較偏好這種模式
+git reset master^ --hard
+</code></pre><p><img src=https://content.slashview.com/img/2024/20241220_11.jpg alt="" /></p><ol start=3><li>然而我又反悔了，我又覺得之前的新想法比較好，這時候我們可以使用<code>git log -g</code>這個參數來調閱先前版本的雜湊碼，再透過<code>git reset</code>來完成即可，例如：</li></ol><pre><code class=language-txt>#透過-g參數查詢完全歷史紀錄（否則看不到先前退回的雜湊碼）
+git log -g --oneline
+#跳回去某個版本號
+git reset 1ad0060 --hard
+</code></pre><ol start=4><li>經過上面的指令可以看到現在的工作目錄，又回到剛才第一步驟的目錄與檔案內容了。</li></ol><p><img src=https://content.slashview.com/img/2024/20241220_12.jpg alt="" /></p><h2>分支機制：查詢分支、開啟分支、切換分支、重新命名分支</h2><p>Git另外一個特色就是允許系統進行多版本開發，這個需求大都發生在多人協作且系統足夠龐大的時候才會出現。</p><pre><code class=language-txt>#查詢當前分支列表
+git branch
+#開啟新分支名為slave
+git branch slave
+#切換至分支slave
+git checkout slave
+#更改分支名稱
+git branch -m slave newSlave
+</code></pre><p><img src=https://content.slashview.com/img/2024/20241220_13.jpg alt="" /></p><p>⚠ 當你切換到某分支後，整個工作目錄的結構會回到當時建立該分支最後commit的狀態。</p><h2>刪除分支</h2><p>刪除分支時，本身的Worktree一定不可以在該分支類。此外，刪除分支有兩種模式，普通的模式下，Git會強制你必須要先合併後才可以刪除，否則你辛苦寫的程式碼不就全毀了？</p><pre><code class=language-txt>#普通刪除分支
+git branch –d newSlave
+#強制刪除分支
+git branch –D newSlave
+</code></pre><h2>合併分支</h2><ol><li>假設在master分支上有一個檔案<code>hello.txt</code>。</li></ol><p><img src=https://content.slashview.com/img/2024/20241220_14.jpg alt="" /></p><ol start=2><li>假設在slave分支上有一個檔案<code>hello2.txt</code>。</li></ol><p><img src=https://content.slashview.com/img/2024/20241220_15.jpg alt="" /></p><ol start=3><li>切換回master分支後下指令進行分支合併，這時候Git會啟用快速合併模式（Fast-forward）進行合併，master分支下會出現<code>hello2.txt</code>檔案，且<code>git log --graph</code>不會有分支圖出現。</li></ol><pre><code class=language-txt>#合併slave分支
+git merge slave -m "你的合併註解"
+</code></pre><p><img src=https://content.slashview.com/img/2024/20241220_16.jpg alt="" /></p><p>⚠ 如果你不想要用快速合併模式（也就是你想要有分支圖出現），可以使用<code>git merge slave –no-ff</code>參數來取消快速合併模式。</p><h2>合併分支：文字檔衝突</h2><ol><li>假設在master分支上有一個檔案<code>hello.txt</code>且有更改過的文字內容。</li></ol><p><img src=https://content.slashview.com/img/2024/20241220_17.jpg alt="" /></p><ol start=2><li>假設在slave分支上有一個檔案<code>hello.txt</code>且有更改過的文字內容。</li></ol><p><img src=https://content.slashview.com/img/2024/20241220_18.jpg alt="" /></p><ol start=3><li>切換回master分支後下指令進行分支合併，這時候Git會警告合併出現衝突（conflicts），這時候用記事本打開來會看到Git把master與slave的衝突內容寫在上面，此時請兩造雙方自己花時間解決問題，看要怎麼寫比較好？寫完後請存檔。</li></ol><p><img src=https://content.slashview.com/img/2024/20241220_19.jpg alt="" /></p><ol start=4><li>更改檔案內容後，請再次commit即可。這時候我們透過<code>git log --oneline --graph</code>指令可以觀察到，由於沒有辦法透過快速合併來執行，因此果然出現了分支圖。</li></ol><p><img src=https://content.slashview.com/img/2024/20241220_20.jpg alt="" /></p><h2>合併分支：二進制檔衝突</h2><ol><li>假設在master分支上有一個檔案<code>最可愛動物.jpg</code>，內容是一隻<code>貓</code>。</li></ol><p><img src=https://content.slashview.com/img/2024/20241220_21.jpg alt="" /></p><ol start=2><li>假設在slave分支上有一個檔案<code>最可愛動物.jpg</code>，內容是一隻<code>狗</code>。</li></ol><p><img src=https://content.slashview.com/img/2024/20241220_22.jpg alt="" /></p><ol start=3><li>切換回master分支後下指令進行分支合併，這時候Git會警告合併出現衝突（conflicts），但因為這個是二進制檔案Git無法幫你解析衝突點，所以你要自己處理，錯誤訊息為<code>warning: Cannot merge binary files: brabra... (HEAD vs. slave)</code>。</li></ol><p><img src=https://content.slashview.com/img/2024/20241220_23.jpg alt="" /></p><ol start=4><li>經過團隊討論，最後決定採用slave的看法（最可愛的動物是狗），由於目前處於<code>master分支</code>，因此可以使用<code>他們</code>這個屬性來指定更換檔案內容。更換檔案內容後，可以透過檔案總管看到照片內容變成<code>狗的圖案</code>。</li></ol><pre><code class=language-txt>git checkout --theirs 最可愛動物.jpg
+</code></pre><p><img src=https://content.slashview.com/img/2024/20241220_24.jpg alt="" /></p><ol start=5><li>再次經過團隊討論，最後決定採用master的看法（最可愛的動物是貓），由於目前處於<code>master分支</code>，因此可以使用<code>我們</code>這個屬性來指定更換檔案內容。更換檔案內容後，可以透過檔案總管看到照片內容變成<code>貓的圖案</code>。</li></ol><pre><code class=language-txt>git checkout --ours 最可愛動物.jpg
+#提交順便看分支圖
+git add .
+git commit -m "最後決定貓是最可愛的動物"
+git log --oneline --graph
+</code></pre><h6>Git GitHub Windows Powershell Cli CommandLine Local</h6></main><footer></footer><script src=/.file/site.js></script></body></html>
