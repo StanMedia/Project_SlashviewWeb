@@ -1,0 +1,29 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>取得ASP.NET web.config裡面的RSA金鑰的資訊（金鑰位元數）</h1><p>今天遇到有某專家針對web.config檔案的加密金鑰提出質疑，他一直宣稱加密的web.config的內容中，xml的EncryptionMethod Algorithm區段，上面載明了<code>aes256-cbc</code>字眼，就是代表網站的加解密就是AES-256方法，這意味著不足夠安全，建議往更高的位元前進。</p><p>我試圖提出這是XML加密規範的表達格式，並非真正當初建立RSA金鑰的真正長度。但一切有點流於徒勞無功（畢竟人家是專家），故直接用程式碼跑或許是一個更好的證明手法。</p><h2>求得ASP.NET網站當時建立RSA金鑰的位元長度與相關資訊</h2><p>話不多說，直接上程式碼：</p><pre><code class=language-cs>try
+{ //你的RSA金鑰名稱
+  var cProviderName = "RSAProvider";
+  var oProvider = System.Configuration.ProtectedConfiguration.Providers[cProviderName] as System.Configuration.RsaProtectedConfigurationProvider;
+  if (oProvider != null)
+  {
+    var oCspPara = new System.Security.Cryptography.CspParameters
+    {
+      KeyContainerName = oProvider.KeyContainerName,
+      Flags = oProvider.UseMachineContainer ? System.Security.Cryptography.CspProviderFlags.UseMachineKeyStore : 0
+    };
+    using var oRSA = new System.Security.Cryptography.RSACryptoServiceProvider(oCspPara);
+    Console.WriteLine(@$"
+RSA金鑰長度: {oRSA.KeySize} bits
+提供者名稱: {oRSA.CspKeyContainerInfo.ProviderName}
+金鑰容器名稱: {oRSA.CspKeyContainerInfo.KeyContainerName}
+金鑰容器鍵值: {oRSA.CspKeyContainerInfo.UniqueKeyContainerName}
+");
+  }
+}
+catch (Exception ex)
+{
+  Console.WriteLine($"錯誤: {Server.HtmlEncode(ex.Message)}");
+}
+</code></pre><p>以我來說，上面的程式碼我跑出來的結果，當初的RSA金鑰長度就很明顯的輸出在上面了：</p><pre><code class=language-txt>RSA金鑰長度: 2048 bits
+提供者名稱: Microsoft Enhanced RSA and AES Cryptographic Provider
+金鑰容器名稱: RSA
+金鑰容器鍵值: ...略...
+</code></pre><p>這下問題就會回到專家身上，你確定你要挑戰程式碼的可信度？</p><h3>相關連結</h3><ul><li><a href=/archive2021/20211215.html>ASP.NET web.config資料庫連線字串分離設定</a></li><li><a href=/archive2023/20231105.html>ASP.NET web.config資料庫連線字串加密與解密</a></li><li><a href=/archive2024/20241224.html>取得ASP.NET web.config裡面的RSA金鑰的資訊（金鑰位元數）</a></li></ul><h6>ASP.NET AspNet_RegIIS Web.Config Configuration ConnectionStrings Encode Encryption Decode Decryption RSA Key Length</h6></main><footer></footer><script src=/.file/site.js></script></body></html>
