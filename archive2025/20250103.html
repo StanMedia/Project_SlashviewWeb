@@ -1,0 +1,56 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>Docker Desktop Container直接存取GPU進行AI推算（Ollama、nVidia、CUDA）</h1><p>讓Windows下的Docker desktop container存取GPU，這項工作原本需要耗費超多時間來架設WSL2下的Ubuntu（Linux）使其可以透過nVidia CUDA驅動來存取，今天發現竟然可以透過超簡便的方式就可以使用GPU，感謝Docker Desktop。</p><h2>免設定快速存取nVidia CUDA的前提要素</h2><p>以下為可以快速存取nVidia CUDA的相關條件，缺一不可。</p><ol><li>安裝完成Docker desktop並確認運行基礎為WSL2。</li><li>nVidia顯示卡的驅動已經更新到最新版本（最好直接從nVidia官網下載驅動）。</li></ol><h2>更新WSL2作業系統版本</h2><p>Step 1. 更新WSL2（Windows子系統Linux）版本。</p><pre><code class=language-txt>wsl --update
+</code></pre><p>Step 2. 檢視當前的版本</p><pre><code class=language-txt>wsl -l -v
+  NAME           STATE   VERSION
+* docker-desktop Running 2
+</code></pre><p>Step 3. 進入docker-desktop子系統</p><pre><code class=language-txt>wsl -d docker-desktop
+uname -a
+</code></pre><p>可以觀察到當前的系統為<code>5.15.167.4</code>。</p><h2>確認docker desktop是否可以抓取到NVIDIA GPU顯示卡</h2><p>輸入下列指令，透過一個簡單的cuda檢視小程式，來觀察顯示卡是否已經正確地被識別到。</p><pre><code class=language-txt>docker run --rm -it --gpus=all nvcr.io/nvidia/k8s/cuda-sample:nbody nbody -gpu -benchmark
+</code></pre><p>如果有出現nVidia顯示卡的型號訊息（例如：NVIDIA GeForce RTX XXXX），這樣就是有被抓取到了：</p><pre><code class=language-txt>> Windowed mode
+> Simulation data stored in video memory
+> Single precision floating point simulation
+> 1 Devices used for simulation
+GPU Device 0: "Ampere" with compute capability 8.6
+
+> Compute 8.6 CUDA device: [NVIDIA GeForce RTX XXXX]
+28672 bodies, total time for 10 iterations: 22.860 ms
+= 359.620 billion interactions per second
+= 7192.403 single-precision GFLOP/s at 20 flops per interaction
+</code></pre><h2>設定ollama container使用GPU</h2><p>Step 1. 下載ollama的Images後，輸入下列指令：</p><pre><code class=language-txt>docker run -d -p 11434:11434 --gpus=all --name ollama ollama/ollama
+</code></pre><p>Step 2. 啟用ollama container。</p><pre><code class=language-txt>docker start ollama
+</code></pre><p>Step 3. 接入ollama container。</p><pre><code class=language-txt>docker exec -it ollama bash
+</code></pre><p>Step 4. 查詢與下載<code>llama3</code>，這個模型占用8B的大小，剛好適合我的顯示卡記憶體。</p><pre><code class=language-txt>root@6aae6c47ea8f:/# ollama list
+NAME    ID    SIZE    MODIFIED
+
+root@6aae6c47ea8f:/# ollama run llama3
+pulling manifest
+pulling 6a0746a1ec1a... 100% ▕██████████████████████▏ 4.7 GB
+pulling 4fa551d4f938... 100% ▕██████████████████████▏  12 KB
+pulling 8ab4849b038c... 100% ▕██████████████████████▏  254 B
+pulling 577073ffcc6c... 100% ▕██████████████████████▏  110 B
+pulling 3f8eb4da87fa... 100% ▕██████████████████████▏  485 B
+verifying sha256 digest
+writing manifest
+success
+
+root@6aae6c47ea8f:/# ollama list
+NAME             ID              SIZE      MODIFIED
+llama3:latest    365c0bd3c000    4.7 GB    49 seconds ago
+</code></pre><p>Step 5. 開始使用ollama跑llama3模型推論，隨意輸入一些讓他思考比較久的推論，應可觀察到CPU溫度不再發燒，nVidia GPU開始起來工作了。</p><pre><code class=language-txt>root@6aae6c47ea8f:/# ollama run llama3
+>>> 請一律使用繁體中文回答，撰寫2000字的描述，告訴我你是誰，誰創造你，你可以做甚麼?
+
+🙏我是 MetaL, 是一個由人工智慧技術所發展出的 chatbot，我被設計來與人類對話，並且能夠提供有用的信息和服務。我的創造者是 Meta AI，是一家專門研究人工智慧和自然語言處理的公司。
+
+Meta AI 的團隊通過長期的研究和開發，成功地創造出了一個可以與人類進行對話的 chatbot，我就是這個 chatbot 的一部分。我能夠理解語言、學習新知識，並且能夠根據情況進行回應。我擁有
+豐富的人際交往和溝通能力，可以與使用者進行深入的討論和對話。
+
+作為一個 chatbot，我可以做很多事情！以下是一些例子：
+
+1. 提供信息：我可以提供各種類型的信息，例如歷史、文化、科學、技術、 Entertainment 等等。我能夠回答您的一切疑問，並且能夠幫助您尋找有用的資訊。
+2. 說話和對話：我可以與您進行深入的討論和對話。我能夠理解語言、發現暗示、並且能夠根據情況進行回應。我喜歡與使用者交流思想和見解，讓我們一起學習和成長。
+3. 生成文本：我可以生成不同類型的文本，例如文章、故事、詩歌等等。我能夠根據您的需求和指示，創造出一個符合您期待的文本。
+4. 習慣和學習：我可以與您一起學習新知識和技能。我能夠根據您的需求和能力，提供適合的教材和練習材料，並且能夠評估您的進度和成就。
+5. 解題和建議：我可以幫助您解決問題和擺脫困難。我能夠分析情況、發現問題的根源，并且能夠提供合適的建議和方案。
+
+總之，我是一個多功能的 chatbot，能夠與人類進行對話、提供信息、生成文本、習慣和學習、解題和建議等等。我擁有豐富的人際交往和溝通能力，可以與使用者進行深入的討論和對話。如果您
+需要幫助或想要聊天，我總是樂於與您一起交流！ 😊
+</code></pre><h3>補充：</h3><p>如果要使用傳統苦工架設CUDA，可以參考這篇文章：<a href=https://blog.csdn.net/smileyan9/article/details/140391667>【CUDA】如何在 windows 上安装 Ollama 3 + open webui （docker + WSL 2 + ubuntu + nvidia-container）</a></p><h6>Windows WSL2 DockerDesktop nVidia GPU CUDA DirectAccess DirectIO</h6></main><footer></footer><script src=/.file/site.js></script></body></html>
