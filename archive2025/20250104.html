@@ -1,0 +1,14 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>Linux系統下程式常用的載入等候動畫（Loading）</h1><p>使用Linux下的相關程式，當需要進行載入等候的階段，常常會使用盲人點字符號繪製動畫（早期是使用<code>/</code>、<code>|</code>、<code>\</code>三個符號旋轉），想說蠻有趣的所以在C#環境下也實作一個來試看看。</p><h2>透過C#實作Linux慣用的載入動畫</h2><p>盲人點字符號事實上稱為布萊葉點字符號，下列的C# Console程式碼貼上去就可以看到動畫了，按下鍵盤的任意按鈕就可以結束程式。</p><pre><code class=language-cs>Console.CursorVisible = false;
+Console.OutputEncoding = System.Text.Encoding.UTF8;
+//監控鍵盤
+var bShouldExit = false;
+_ = Task.Run(() => bShouldExit = Console.ReadKey(true).KeyChar != '\0');
+//布萊葉點字符號陣列
+var cSpinnerChars = "⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏";
+//迴圈
+for (var i = 0; !bShouldExit; i = (i + 1) % cSpinnerChars.Length)
+{
+  Console.Write($"\r{cSpinnerChars[i]} Loading ...");
+  Thread.Sleep(100);
+}
+</code></pre><p>執行結果如下圖：</p><p><img src=https://content.slashview.com/img/2025/20250104_01.gif alt="" /></p><h6>Linux CentOS Ubuntu Programs Apps Loading Waiting</h6></main><footer></footer><script src=/.file/site.js></script></body></html>
