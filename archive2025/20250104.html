@@ -2,13 +2,13 @@
 Console.OutputEncoding = System.Text.Encoding.UTF8;
 //監控鍵盤
 var bShouldExit = false;
-_ = Task.Run(() => bShouldExit = Console.ReadKey(true).KeyChar != '\0');
+_ = System.Threading.Tasks.Task.Run(() => bShouldExit = Console.ReadKey(true).KeyChar != '\0');
 //布萊葉點字符號陣列
 var cSpinnerChars = "⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏";
 //迴圈
 for (var i = 0; !bShouldExit; i = (i + 1) % cSpinnerChars.Length)
 {
   Console.Write($"\r{cSpinnerChars[i]} Loading ...");
-  Thread.Sleep(100);
+  System.Threading.Thread.Sleep(100);
 }
 </code></pre><p>執行結果如下圖：</p><p><img src=https://content.slashview.com/img/2025/20250104_01.gif alt="" /></p><h6>Linux CentOS Ubuntu Programs Apps Loading Waiting</h6></main><footer></footer><script src=/.file/site.js></script></body></html>
