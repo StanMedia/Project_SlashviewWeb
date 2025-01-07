@@ -15,8 +15,8 @@ GPU Device 0: "Ampere" with compute capability 8.6
 28672 bodies, total time for 10 iterations: 22.860 ms
 = 359.620 billion interactions per second
 = 7192.403 single-precision GFLOP/s at 20 flops per interaction
-</code></pre><h2>設定ollama container使用GPU</h2><p>Step 1. 下載ollama的Images後，輸入下列指令：</p><pre><code class=language-txt>docker run -d -p 11434:11434 --gpus=all --name ollama ollama/ollama
-</code></pre><p>Step 2. 啟用ollama container。</p><pre><code class=language-txt>docker start ollama
+</code></pre><h2>設定ollama container使用GPU</h2><p>Step 1. 下載ollama的Images後，輸入下列指令：</p><pre><code class=language-txt>docker run -d -p 11434:11434 -e OLLAMA_KEEP_ALIVE=-1 --gpus=all --name ollama ollama/ollama
+</code></pre><p>※ <code>--gpus</code>可以控制是否直接使用GPU；<code>OLLAMA_KEEP_ALIVE</code>可以命令ollama不要過5分鐘就自動卸載模型。</p><p>Step 2. 啟用ollama container。</p><pre><code class=language-txt>docker start ollama
 </code></pre><p>Step 3. 接入ollama container。</p><pre><code class=language-txt>docker exec -it ollama bash
 </code></pre><p>Step 4. 查詢與下載<code>llama3</code>，這個模型占用8B的大小，剛好適合我的顯示卡記憶體。</p><pre><code class=language-txt>root@6aae6c47ea8f:/# ollama list
 NAME    ID    SIZE    MODIFIED
