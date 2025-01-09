@@ -1,0 +1,23 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>修改Ollama預設的上下文長度（ContextLength）</h1><p>很多人不知道的事情是，Ollama預設載入模型進行問答時，預設的Context長度是<code>2K</code>（2048），只要輸入稍微長一點的文章立刻就爆炸了，本篇就是教導你如何透過Modefile來修正這個問題，畢竟舉例來說，2024年07月發表的<code>llama3.1</code>支援的上下文長度就已經高達<code>128K</code>。</p><h2>透過Docker建立ollama container</h2><pre><code>docker run -d -p 11434:11434 -e OLLAMA_KEEP_ALIVE=-1 -v E:\DockerSharedFolder:/shared --gpus=all --name ollama ollama/ollama
+</code></pre><h2>製作Modefile</h2><p>這裡ollama container已經透過<a href=/archive2024/20241231.html>Bind Mounts</a>方法，在裡面掛載一個名為<code>shared</code>目錄，目錄裡面將存在這個Modefile內容，檔案名稱為<code>ModefileForContext32K</code>，可以在Windows系統下編輯該檔案：</p><pre><code class=language-txt># 重設上下文長度至32K
+FROM llama3.1
+PARAMETER num_ctx 32768
+</code></pre><h2>製作LLAMA3.1:8b模型</h2><pre><code class=language-txt>ollama create -f \shared\ModefileForContext32K llama3.1
+</code></pre><p>接著ollama就會自動下載關於llama3.1模型必要的檔案後，依照Modefile的指示製造成上下文32K的模型。完成後，可以輸入下列指令確認：</p><pre><code class=language-txt>~ ollama show llama3.1
+  Model
+    architecture        llama
+    parameters          8.0B
+    context length      131072
+    embedding length    4096
+    quantization        Q4_K_M
+
+  Parameters
+    num_ctx    32768
+    stop       "&lt;|start_header_id|>"
+    stop       "&lt;|end_header_id|>"
+    stop       "&lt;|eot_id|>"
+
+  License
+    LLAMA 3.1 COMMUNITY LICENSE AGREEMENT
+    Llama 3.1 Version Release Date: July 23, 2024
+</code></pre><p>從上面的輸出結果，我們可以看到<code>Parameters - num_ctx</code>參數，已經被指定成<code>32768</code>嘍。</p><h6>Docker Image Container Ollama Context CTX ContextLength Adjust Modify</h6></main><footer></footer><script src=/.file/site.js></script></body></html>
