@@ -2,7 +2,7 @@
 </code></pre><h2>製作Modelfile</h2><p>這裡ollama container已經透過<a href=/archive2024/20241231.html>Bind Mounts</a>方法，在裡面掛載一個名為<code>shared</code>目錄，目錄裡面將存在這個Modelfile內容，檔案名稱為<code>ModelfileForContext32K</code>，可以在Windows系統下編輯該檔案：</p><pre><code class=language-txt># 重設上下文長度至32K
 FROM llama3.1
 PARAMETER num_ctx 32768
-</code></pre><h2>製作LLAMA3.1:8b模型</h2><pre><code class=language-txt>ollama create -f \shared\ModelfileForContext32K llama3.1
+</code></pre><h2>製作LLAMA3.1:8b模型</h2><pre><code class=language-txt>ollama create llama3.1 -f /shared/ModelfileForContext32K
 </code></pre><p>接著ollama就會自動下載關於llama3.1模型必要的檔案後，依照Modelfile的指示製造成上下文32K的模型。完成後，可以輸入下列指令確認：</p><pre><code class=language-txt>~ ollama show llama3.1
   Model
     architecture        llama
