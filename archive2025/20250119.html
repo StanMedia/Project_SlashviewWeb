@@ -1,0 +1,6 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>變更VMware下的Linux Ubuntu預設螢幕解析度</h1><p>在VMware下的<code>Ubuntu 24.04 LTS</code>安裝完成後，Console的解析度預設是<code>1280x800</code>，這對於我來說顯得解析度太高，因為我習慣使用VMware下的Console且透過<a href=/archive2024/20240702.html>Stretch Guest</a>來進行螢幕的縮放，因此需要進行解析度的降低來讓我操作指令的時候眼睛更舒服。</p><h2>降低Ubuntu預設螢幕解析度</h2><p>Step 1. 執行系統最高權限<code>sudo -i</code>。</p><p>Step 2. 查看目前的解析度，可以看到Ubuntu 24.04 LTS的預設解析度為<code>1280x800</code>。</p><pre><code class=language-txt>cat /sys/class/graphics/fb0/modes
+U:1280x800p-0
+</code></pre><p>Step 3. 透過nano修改<code>/etc/default/grub</code>檔案，找到將<code>GRUB_CMDLINE_LINUX_DEFAULT=""</code>參數加入<code>video=800x600</code>。</p><pre><code class=language-txt>GRUB_CMDLINE_LINUX_DEFAULT="video=800x600"
+</code></pre><p>Step 4. 執行<code>update-grub</code>更新grub設定。</p><pre><code class=language-txt>update-grub
+</code></pre><p>Step 5. 重新啟動Ubuntu，可以看到解析度已經降低為<code>800x600</code>。</p><pre><code class=language-txt>reboot
+</code></pre><h6>VMware Linux Ubuntu Screen Resolution Change 1280x800 1024x768 800x600 640x480</h6></main><footer></footer><script src=/.file/site.js></script></body></html>
