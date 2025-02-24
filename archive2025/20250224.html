@@ -1,0 +1,5 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>瀏覽器另存JPG格式圖片會提示存成JFIF格式圖片</h1><p>今天同事發現如果在瀏覽器上另存JPG圖片時，瀏覽器的提示方況會提示存成JFIF格式圖片，而不是JPG格式圖片。經過另外一位同事的提醒這應該是Windows作業系統本身的問題，可以透過修正註冊檔案來解決，以下就是將提示方框的副檔名改回JPG之教學。</p><h2>將瀏覽器的圖片另存新檔，從.jfif改回.jpg</h2><p>其實直接把圖片的副檔名改回.jpg就可以了，不過這樣的話，下次另存新檔時還是會出現JFIF格式的提示方框，為了擺脫這種<code>很惱人</code>的情況，我們可以透過修正註冊檔案來解決這個問題。</p><pre><code class=language-reg>Windows Registry Editor Version 5.00
+
+[HKEY_CLASSES_ROOT\MIME\Database\Content Type\image/jpeg]
+"Extension"=".jpg"
+</code></pre><ol><li>首先，將上面的程式碼複製到記事本中，並將檔案存成<code>FixJPG.reg</code>儲存於桌面上。</li><li>雙擊桌面上的<code>FixJPG.reg</code>，並按照提示訊息來修正註冊檔案。</li><li>重新開機就可以看到另存新檔時就會出現JPG格式的提示方框了。</li></ol><h6>Windows, Browser, JFIF, JPG, MIME, Registry, Fix</h6></main><footer></footer><script src=/.file/site.js></script></body></html>
