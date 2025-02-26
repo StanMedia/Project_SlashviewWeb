@@ -10,6 +10,7 @@
   Read();
 }
 </code></pre><p>經過這樣的程式碼後，我們就可以將oBlocks清單裡面的成員排除掉了，另外建議若是比對資料量很大的情況下，建議用<a href=/archive2022/20220210.html>Except()</a>，輸出的結果如下：</p><pre><code class=language-txt>aaa、ccc、fff
+</code></pre><p>※ 補充一下隱式陣列初始化（Implicit Array Initialization）寫法，如果懶得再宣告一次oBlocks黑名單，可以在LINQ裡面直接寫入陣列，有興趣可以參考<a href=/archive2020/20200429.html>C#多重字串（陣列）比對的寫法</a>，程式碼化簡後如下：</p><pre><code class=language-cs>var oAllows = oUsers.Where(x => !new[] { "bbb", "ddd", "eee" }.Any(y => y.Contains(x)));
 </code></pre><h2>利用LINQ ANY()尋找是否有在黑名單裡</h2><p>有時候我們需要的並不是合法的清冊，而是有出現一筆不合法的都不可以。舉例來說，一個旅行團有10個人，裡面出現一個危險人物可能整團都會被海關帶去問話。以下是範例：</p><pre><code class=language-cs>//旅行團清單
 var oUsers = new System.Collections.Generic.List&lt;string>() { "王小明", "李小華", "陳小英", "JOHNNY" };
 //海關黑名單

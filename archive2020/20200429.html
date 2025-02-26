@@ -9,4 +9,6 @@ if (new string[] {"John1", "John2", "Marry", "Adam"}.Any(x => x == cSearch))
 { Console.WriteLine($"找到{cSearch}了。"); }
 else
 { Console.WriteLine($"找不到{cSearch}。"); }
+</code></pre><p>補充一點，這個寫法可以套入C# 3.0的隱式陣列初始化（Implicit Array Initialization），程式碼可以更簡化如下：</p><pre><code class=language-cs>if (new[] {"John1", "John2", "Marry", "Adam"}.Any(x => x == cSearch))
+{ ... }
 </code></pre><h6>C# CSharp MultiString StringArray Search Compare System.Linq Any()</h6></main><footer></footer><script src=/.file/site.js></script></body></html>
