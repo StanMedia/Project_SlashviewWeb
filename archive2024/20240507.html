@@ -11,6 +11,10 @@ apt-get install -y mssql-server
 
 Enter the collation: Chinese_Taiwan_Stroke_CI_AS
 </code></pre><p>設定之後重新將SQL Server開啟即可</p><pre><code class=language-txt>systemctl start mssql-server
-</code></pre><h2>查看SQL Server 2022是否運行</h2><p>如果在Console中有看到綠色的<code>active (runnung)</code>就代表有跑起來了。</p><pre><code class=language-txt>systemctl status mssql-server
+</code></pre><h2>查看SQL Server 2022運行狀態</h2><p>透過下列指令，如果在Console中有看到綠色的<code>active (runnung)</code>就代表有跑起來了。</p><pre><code class=language-txt>systemctl status mssql-server
+</code></pre><p>重新啟動SQL Server</p><pre><code class=language-txt>systemctl restart mssql-server
+</code></pre><p>關閉SQL Server</p><pre><code class=language-txt>systemctl stop mssql-server
+</code></pre><p>如果伺服器上面有SQL Server的且需要關機的話，最好先將SQL Server服務停止再進行關機比較不會造成寫入中斷之類的問題。</p><pre><code class=language-txt>systemctl stop mssql-server
+shutdown -h now
 </code></pre><h2>透過SSMS進行連線測試</h2><p>首先在Ubuntu查詢本機IP，取得IP位址後以便連線SSMS。</p><pre><code class=language-txt>ip address
 </code></pre><p>開啟SSMS輸入<code>sa</code>帳號與剛才設定的<code>密碼</code>，證明進行資料庫的連線沒有錯誤。（若有問題請檢查防火牆是否有阻擋）</p><p><img src=https://content.slashview.com/img/2024/20240507_01.jpg alt="" /></p><h6>Linux Ubuntu Install Setup MicrosoftSqlServer MsSQL MS-SQL Mssql-Server 2017 2019 2022 StepByStep</h6></main><footer></footer><script src=/.file/site.js></script></body></html>
