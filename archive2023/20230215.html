@@ -21,7 +21,7 @@ public class BaseX
   /// &lt;summary>
   /// 當前進制數的最大編碼長度
   /// &lt;/summary>
-  public static int GetEncodeMaxLength => (int)System.Math.Ceiling(64 / System.Math.Log2(_iLength));
+  public static int GetEncodeMaxLength => (int)System.Math.Ceiling(64 / System.Math.Log(_iLength, 2));
 
   /// &lt;summary>
   /// 將數值轉換成X進制編碼
