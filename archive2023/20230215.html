@@ -1,79 +1,129 @@
-﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>將正整數數值轉換成任意進制編碼之方法</h1><p>因為專案上有一個計量並縮短表述之需求，故需要將大型的整數轉換成某進制的編碼，因而寫下這篇文章記錄。其實人類習慣的十進制系統，說穿了就是用0-9這10種符號來進行代表，也就是說，我們可以創造一個隨意且不重複的符號序列，就可以達成編碼的需求，且符號數量長度（字元數）就恰好代表的進制的位數。舉例來說，利用我們常見的「0-9」+「a-z」的符號共36個字元，若將其應用在編碼上，就相當於是36進制系統了。若還是想不透的話請再想想16進制，其數據資訊表示字元不就是「0-9」+「a-f」嗎？</p><h2>將數值轉換成任意進制（任意符號）類別</h2><p>這個類別最主要的用意，就是將認知中的正整數數值，轉換成任意進制（任意符號）的編碼與解碼，在這邊輸入的正整數我們將採用C#裡面的ulong，也就是System.UInt64，其最大值MaxValue可達18446744073709551615，相當於18.4 * 1018，連中文我都不會唸了，我想是夠了。</p><p>不再採用更上去的Decimal型別是因為我本身覺得這樣的數字代表量非常夠了，再上去的數字也不是我想要處理與思考的重點，因此我將這個對轉的需求包裝成一個類別，程式碼如下：</p><pre><code class=language-cs>public class BaseX
-{ //定義編碼要使用的符號，多少符號字數就相當於多少進制，舉例來說「0-9|A-Z」，就是36進制
-  private const string _cSymbols = @"0123456789abcdefghijklmnopqrstuvwxyz";
-  private static char[] _arySymbols = _cSymbols.ToCharArray();
-  private static ulong _iLength = (ulong)_cSymbols.Length;
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>將正整數數值轉換成任意進制編碼之方法</h1><p>因為專案上有一個計量並縮短表述之需求，故需要將大型的整數轉換成某進制的編碼，因而寫下這篇文章記錄。其實人類習慣的十進制系統，說穿了就是用0-9這10種符號來進行代表，也就是說，我們可以創造一個隨意且不重複的符號序列，就可以達成編碼的需求，且符號數量長度（字元數）就恰好代表的進制的位數。舉例來說，利用我們常見的「0-9」+「a-z」的符號共36個字元，若將其應用在編碼上，就相當於是36進制系統了。若還是想不透的話請再想想16進制，其數據資訊表示字元不就是「0-9」+「a-f」嗎？</p><h2>將數值轉換成任意進制（任意符號）類別</h2><p>這個類別最主要的用意，就是將認知中的正整數數值，轉換成任意進制（任意符號）的編碼與解碼，在這邊輸入的正整數我們將採用C#裡面的ulong，也就是System.UInt64，其最大值MaxValue可達18446744073709551615，相當於18.4 * 1018，連中文我都不會唸了，我想是夠了。</p><p>不再採用更上去的Decimal型別是因為我本身覺得這樣的數字代表量非常夠了，再上去的數字也不是我想要處理與思考的重點，因此我將這個對轉的需求包裝成一個類別，程式碼如下：</p><pre><code class=language-cs>using System.Linq;
 
-  //顯示當前編碼字元數
-  public static int GetBaseNumber => (int)_iLength;
+public class BaseX
+{ //定義編碼要使用的符號，多少符號字數就相當於多少進制，舉例下方定義字元來說：「0-9|a-z」即為36進制編碼
+  private const string _cSymbols = "0123456789abcdefghijklmnopqrstuvwxyz";
+  private static readonly ulong _iLength = (ulong)_cSymbols.Length;
+  private static readonly System.Collections.Generic.Dictionary&lt;char, int> _symbolLookup;
 
-  //顯示當前編碼套用在ulong.MaxValue，最大占用字元長度
-  public static int GetEncodeMaxLength => (int)System.Math.Ceiling(System.Math.Log(ulong.MaxValue) / System.Math.Log(_iLength));
+  static BaseX()
+  {
+    _symbolLookup = _cSymbols
+      .Select((c, i) => new { c, i })
+      .ToDictionary(x => x.c, x => x.i);
+  }
 
   /// &lt;summary>
-  /// 將數值轉換成編碼
+  /// 取得當前的進制數
   /// &lt;/summary>
-  /// &lt;param name="iValue">數值&lt;/param>
-  /// &lt;param name="bAutoPadding">是否自動補位&lt;/param>
-  /// &lt;returns>編碼&lt;/returns>
-  public static string DecimalToBase(ulong iValue, bool bAutoPadding = false)
-  { 
-    var cResult = new System.Text.StringBuilder();
+  public static int GetBaseNumber => (int)_iLength;
+
+  /// &lt;summary>
+  /// 當前進制數的最大編碼長度
+  /// &lt;/summary>
+  public static int GetEncodeMaxLength => (int)System.Math.Ceiling(64 / System.Math.Log2(_iLength));
+
+  /// &lt;summary>
+  /// 將數值轉換成X進制編碼
+  /// &lt;/summary>
+  public static string DecimalToBase(ulong iValue, int? iEncodeLength = null)
+  {
     if (iValue == 0)
-    { cResult.Append("0"); }
+    {
+      return iEncodeLength.HasValue
+          ? new string(_cSymbols[0], iEncodeLength.Value)
+          : "0";
+    }
+    var cResult = new System.Text.StringBuilder();
     while (iValue > 0)
     {
       var iPoint = iValue % _iLength;
-      cResult.Insert(0, _arySymbols[iPoint]);
-      iValue = iValue / _iLength;
+      cResult.Insert(0, _cSymbols[(int)iPoint]);
+      iValue /= _iLength;
     }
-    return bAutoPadding switch
-    {
-      true => cResult.ToString().PadLeft(GetEncodeMaxLength, '0'),
-      _ => cResult.ToString(),
-    };
+    if (iEncodeLength.HasValue)
+    { return cResult.ToString().PadLeft(iEncodeLength.Value, _cSymbols[0]); }
+    return cResult.ToString();
   }
 
   /// &lt;summary>
-  /// 將編碼轉換成數值
+  /// 將X進制編碼轉回數值
   /// &lt;/summary>
-  /// &lt;param name="cValue">編碼&lt;/param>
-  /// &lt;returns>數值&lt;/returns>
   public static ulong BaseToDecimal(string cValue)
   {
+    if (string.IsNullOrEmpty(cValue))
+    { throw new System.ArgumentException("輸入值不能為空", nameof(cValue)); }
     ulong iResult = 0;
-    var aryValue = cValue.ToCharArray();
-    for (int i = 0; i &lt; aryValue.Length; i++)
-    { iResult = (iResult * _iLength) + (ulong)_cSymbols.IndexOf(aryValue[i]); }
+    foreach (char c in cValue)
+    {
+      if (!_symbolLookup.ContainsKey(c))
+      { throw new System.ArgumentException($"無效的字元: {c}"); }
+      try
+      { //檢查是否溢位
+        checked
+        { iResult = (iResult * _iLength) + (ulong)_symbolLookup[c]; }
+      }
+      catch (System.OverflowException)
+      {
+        throw new System.OverflowException($"數值超過 ulong 的最大值: {ulong.MaxValue}");
+      }
+    }
+    //回傳解碼後的數值
     return iResult;
   }
 }
-</code></pre><h2>執行與結果</h2><p>執行的範例程式碼如下：</p><pre><code class=language-cs>var oRND = new System.Random();
-ulong iValue = (ulong)oRND.NextInt64(0, long.MaxValue);
-WriteLine($"當前編碼位元：BASE {BaseX.GetBaseNumber}");
+</code></pre><h2>執行與結果</h2><p>執行的範例程式碼如下：</p><pre><code class=language-cs>WriteLine($"當前編碼位元：BASE {BaseX.GetBaseNumber}");
 WriteLine($"ulong MAX編碼後最大長度：{BaseX.GetEncodeMaxLength}");
-WriteLine($"數值：{iValue}");
-var cCode = BaseX.DecimalToBase(iValue, bAutoPadding:true);
-WriteLine($"編碼：{cCode}");
-WriteLine($"解碼：{BaseX.BaseToDecimal(cCode)}");
+    
+ulong iMaxValue = ulong.MaxValue;
+WriteLine($"最大數值：{iMaxValue}");
+var cCode2 = BaseX.DecimalToBase(iMaxValue);
+WriteLine($"最大數值編碼：{cCode2}");
+WriteLine($"最大數值解碼：{BaseX.BaseToDecimal(cCode2)}");
+
+var oRND = new System.Random();
+ulong iValue = (ulong)oRND.NextInt64(0, long.MaxValue);
+WriteLine($"亂數數值：{iValue}");
+var cCode1 = BaseX.DecimalToBase(iValue);
+WriteLine($"亂數數值編碼：{cCode1}");
+WriteLine($"亂數數值解碼：{BaseX.BaseToDecimal(cCode1)}");
+
+ulong iCustom = 9487;
+WriteLine($"自訂數值：{iCustom}");
+var cCode3 = BaseX.DecimalToBase(iCustom, 5);
+WriteLine($"自訂數值編碼：{cCode3}");
+WriteLine($"自訂數值解碼：{BaseX.BaseToDecimal(cCode3)}");
 </code></pre><p>範例Ａ：假設編碼符號是採用可在URL通行的BASE64編碼（0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_-），那麼結果會如下所示：</p><pre><code class=language-txt>當前編碼位元：BASE 64
 ulong MAX編碼後最大長度：11
-數值：2714104429535159729
-編碼：2mGrVB5MumN
-解碼：2714104429535159729
+最大數值：18446744073709551615
+最大數值編碼：f----------
+最大數值解碼：18446744073709551615
+亂數數值：3372523721750796468
+亂數數值編碼：2XdD7jvydyQ
+亂數數值解碼：3372523721750796468
+自訂數值：9487
+自訂數值編碼：002kf
+自訂數值解碼：9487
 </code></pre><p>範例Ｂ：假設編碼符號是採用常規認知，不區分大小寫字元的BASE36編碼（0123456789abcdefghijklmnopqrstuvwxyz），那麼結果會如下所示：</p><pre><code class=language-txt>當前編碼位元：BASE 36
 ulong MAX編碼後最大長度：13
-數值：6002481443502488317
-編碼：19lqu37e767lp
-解碼：6002481443502488317
-</code></pre><p>範例Ｃ：示範基於BASE36編碼與自動補位，那麼結果會如下所示：</p><pre><code class=language-txt>當前編碼位元：BASE 36
+最大數值：18446744073709551615
+最大數值編碼：3w5e11264sgsf
+最大數值解碼：18446744073709551615
+亂數數值：8544628438935772127
+亂數數值編碼：1sx1tzmslskin
+亂數數值解碼：8544628438935772127
+自訂數值：9487
+自訂數值編碼：007bj
+自訂數值解碼：9487
+</code></pre><p>範例Ｃ：這次作法比較「中二」點，採用注音符號（ㄅㄆㄇㄈㄉㄊㄋㄌㄍㄎㄏㄐㄑㄒㄓㄔㄕㄖㄗㄘㄙㄚㄛㄜㄝㄞㄟㄠㄡㄢㄣㄤㄥㄦㄧㄨㄩ）37個字母進行火星文編碼，那麼結果會如下所示：</p><pre><code class=language-txt>當前編碼位元：BASE 37
 ulong MAX編碼後最大長度：13
-數值：99887766554433
-編碼：0000zent16ibl
-解碼：99887766554433
-</code></pre><p>範例Ｄ：這次作法比較「中二」點，採用注音符號（ㄅㄆㄇㄈㄉㄊㄋㄌㄍㄎㄏㄐㄑㄒㄓㄔㄕㄖㄗㄘㄙㄚㄛㄜㄝㄞㄟㄠㄡㄢㄣㄤㄥㄦㄧㄨㄩ）37個字母進行火星文編碼，那麼結果會如下所示：</p><pre><code class=language-txt>當前編碼位元：BASE 37
-ulong MAX編碼後最大長度：13
-數值：1114873564797214516
-編碼：ㄋㄎㄤㄖㄚㄚㄖㄢㄡㄟㄤㄍ
-解碼：1114873564797214516
+最大數值：18446744073709551615
+最大數值編碼：ㄇㄢㄞㄌㄢㄢㄡㄤㄎㄑㄡㄠㄐ
+最大數值解碼：18446744073709551615
+亂數數值：4775774187612834216
+亂數數值編碼：ㄟㄤㄋㄘㄨㄢㄖㄡㄍㄔㄈㄨ
+亂數數值解碼：4775774187612834216
+自訂數值：9487
+自訂數值編碼：ㄅㄅㄋㄧㄔ
+自訂數值解碼：9487
 </code></pre><p>最後還是要特別提醒一下，編碼不是密碼，就算你採用注音符號或是將字符打亂順序後再進行編碼，其實對現代電腦系統來說要反推算出規則簡直易如反掌，若想要套用到正式用途上強烈建議審慎評估！</p><h6>C# Integer BigInteger ConvertTo EncodeTo BASE32 BASE36 BASE64 BaseAnyNumber</h6></main><footer></footer><script src=/.file/site.js></script></body></html>
