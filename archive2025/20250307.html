@@ -21,7 +21,7 @@ public static class NamedPipe
       {
         if (_oClients.Count >= iMaxClients)
         {
-          System.Threading.Monitor.Wait(_oLock, 100); // 暫停 100ms 再檢查
+          System.Threading.Monitor.Wait(_oLock, 100);
           continue;
         }
       }
@@ -46,7 +46,6 @@ public static class NamedPipe
     }
   }
 
-  // 監控 client 是否斷線，斷線後即釋放資源
   private static async System.Threading.Tasks.Task MonitorClient(System.IO.Pipes.NamedPipeServerStream oClient)
   {
     try
@@ -67,10 +66,10 @@ public static class NamedPipe
     }
   }
 
-  ///&lt;summary>
-  ///將指定的文字訊息發送給所有連線中的客戶端
-  ///&lt;/summary>
-  ///&lt;param name="cMessage">欲傳送的文字訊息&lt;/param>
+  /// &lt;summary>
+  /// 將指定的文字訊息發送給所有連線中的客戶端
+  /// &lt;/summary>
+  /// &lt;param name="cMessage">欲傳送的文字訊息&lt;/param>
   public static void Write(string cMessage)
   {
     byte[] buffer = System.Text.Encoding.UTF8.GetBytes(cMessage);
