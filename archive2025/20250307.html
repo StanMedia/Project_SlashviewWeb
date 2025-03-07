@@ -103,7 +103,7 @@ public static class NamedPipe
 </code></pre><h2>在C#中使用具名管道伺服器（NamePipe Server）</h2><p>接著我們就可以輕易地在C# Console應用程式中使用具名管道來進行訊息的傳遞。</p><pre><code class=language-cs>while (true)
 {
   var cDate = $"{System.DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss.fff")}\n";
-  Recapn.NamedPipe.Write(cDate);
+  NamedPipe.Write(cDate);
   Console.Write(cDate);
   System.Threading.Thread.Sleep(100); //測試高速輸出（間接驗證類別效能）
 }
