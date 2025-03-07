@@ -1,0 +1,236 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>透過C#實作Windows具名管道（Named Pipes）</h1><p>在設計Console類型的應用程式，對於輸出訊息我們通常會使用<code>Console.WriteLine()</code>來輸出，更進一步頂多就是使用Log之類的概念來輸出到文字檔紀錄，但是有時候在沒有介面的情況下（例如：Windows Services 服務）執行會變得很像瞎子摸象，這時候我們可以透過Windows的具名管道（Named Pipes）來達到這個目的。依據微軟對於<code>Named Pipes</code>的解釋如下：具名管道是一個命名、單向或雙工管道，用於管道伺服器與一或多個管道用戶端之間的通訊。 具名管道的所有實例都會共用相同的管道名稱，但每個實例都有自己的緩衝區和控制碼，並提供個別的管道供用戶端/伺服器通訊使用。 實例的使用可讓多個管道用戶端同時使用相同的具名管道。</p><h2>建立具名管道類別（NamePipe Class）</h2><pre><code class=language-cs>/// &lt;summary>
+/// 透過NamePipe命名管道來實作共用訊息
+/// &lt;/summary>
+public sealed class NamedPipe : System.IDisposable
+{
+  private static readonly System.Lazy&lt;NamedPipe> _oInstance = new System.Lazy&lt;NamedPipe>(() => new NamedPipe());
+  public static NamedPipe Instance => _oInstance.Value;
+  private const string _cFunctionName = "NamedPipe";
+  private const int _iBufferSize = 4096;
+  private const int _iClientTasksCleanupThreshold = 10;
+  private const int _iDisposeTimeoutMs = 3000;
+  private readonly object _oLock = new object();
+  private readonly System.Collections.Concurrent.ConcurrentQueue&lt;string> _oQueue = new System.Collections.Concurrent.ConcurrentQueue&lt;string>();
+  private readonly System.Threading.CancellationTokenSource _oCancellationTokenSource;
+  //等待消息的客戶端請求池
+  private readonly System.Collections.Generic.List&lt;System.Threading.Tasks.TaskCompletionSource&lt;string>> _oClients = new System.Collections.Generic.List&lt;System.Threading.Tasks.TaskCompletionSource&lt;string>>(16);
+  //追蹤客戶端處理任務的列表
+  private readonly System.Collections.Generic.List&lt;System.Threading.Tasks.Task> _oClientTasks = new System.Collections.Generic.List&lt;System.Threading.Tasks.Task>(16);
+  private bool _bDisposed;
+  private int _iRetryCount;
+  private const int _iMaxRetryAttempts = 5;
+
+  private NamedPipe()
+  {
+    _oCancellationTokenSource = new System.Threading.CancellationTokenSource();
+    System.Threading.Tasks.Task.Run(() => AcceptClientsAsync(_oCancellationTokenSource.Token));
+    System.AppDomain.CurrentDomain.ProcessExit += (sender, e) => Dispose();
+  }
+
+  public static void Write(string cMessage)
+  {
+    if (string.IsNullOrEmpty(cMessage))
+    { return; }
+    Instance.WriteToBuffer(cMessage);
+  }
+
+  private void WriteToBuffer(string cMessage)
+  {
+    _oQueue.Enqueue(cMessage);
+    BroadcastMessage(cMessage);
+  }
+
+  private void BroadcastMessage(string cMessage)
+  {
+    System.Collections.Generic.List&lt;System.Threading.Tasks.TaskCompletionSource&lt;string>> oClientsCopy = null;
+    lock (_oLock)
+    {
+      if (_oClients.Count == 0)
+      { return; }
+      oClientsCopy = new System.Collections.Generic.List&lt;System.Threading.Tasks.TaskCompletionSource&lt;string>>(_oClients);
+      _oClients.Clear();
+    }
+    foreach (var oItem in oClientsCopy)
+    { oItem.TrySetResult(cMessage); }
+    oClientsCopy = null;
+  }
+
+  private async System.Threading.Tasks.Task AcceptClientsAsync(System.Threading.CancellationToken oCancellationToken)
+  {
+    _iRetryCount = 0;
+    while (!oCancellationToken.IsCancellationRequested)
+    {
+      System.IO.Pipes.NamedPipeServerStream oServer = null;
+      try
+      {
+        oServer = new System.IO.Pipes.NamedPipeServerStream(
+          "MyNamedPipeTest",
+          System.IO.Pipes.PipeDirection.Out,
+          System.IO.Pipes.NamedPipeServerStream.MaxAllowedServerInstances,
+          System.IO.Pipes.PipeTransmissionMode.Byte,
+          System.IO.Pipes.PipeOptions.Asynchronous
+        );
+
+        await oServer.WaitForConnectionAsync(oCancellationToken).ConfigureAwait(false);
+        System.Console.WriteLine($"{_cFunctionName}｜{System.DateTime.Now:yyyy-MM-dd HH:mm:ss}客戶端連接");
+
+        var oClientTask = ProcessClientAsync(oServer, oCancellationToken);
+        _oClientTasks.Add(oClientTask);
+        //成功建立連接故重置重試計數
+        _iRetryCount = 0;
+        if (_oClientTasks.Count > _iClientTasksCleanupThreshold)
+        { //清理已完成的任務避免記憶體洩漏
+          int iRemovedCount = _oClientTasks.RemoveAll(x => x.IsCompleted);
+          if (iRemovedCount > 0)
+          { System.Console.WriteLine($"{_cFunctionName}｜已清理 {iRemovedCount} 個完成的客戶端任務"); }
+        }
+      }
+      catch (System.OperationCanceledException)
+      {
+        oServer?.Dispose();
+        break;
+      }
+      catch (System.Exception oEx)
+      {
+        System.Console.WriteLine($"{_cFunctionName}｜{System.DateTime.Now:yyyy-MM-dd HH:mm:ss} 連接錯誤: {oEx.Message}");
+        oServer?.Dispose();
+        _iRetryCount++;
+        int iDelayMs = System.Math.Min(1000 * (1 &lt;&lt; System.Math.Min(_iRetryCount, 10)), 30000);
+        if (_iRetryCount > _iMaxRetryAttempts)
+        {
+          System.Console.WriteLine($"{_cFunctionName}｜超過最大重試次數（{_iMaxRetryAttempts}），暫停重試10秒");
+          await System.Threading.Tasks.Task.Delay(10000, oCancellationToken).ConfigureAwait(false);
+          _iRetryCount = 0;
+        }
+        else
+        {
+          System.Console.WriteLine($"{_cFunctionName}｜等待{iDelayMs}ms後重試 (嘗試{_iRetryCount}/{_iMaxRetryAttempts})");
+          await System.Threading.Tasks.Task.Delay(iDelayMs, oCancellationToken).ConfigureAwait(false);
+        }
+      }
+    }
+  }
+
+  private async System.Threading.Tasks.Task ProcessClientAsync(System.IO.Pipes.NamedPipeServerStream oServer, System.Threading.CancellationToken oCancellationToken)
+  {
+    using (oServer)
+    using (var oWriter = new System.IO.StreamWriter(oServer, System.Text.Encoding.UTF8, _iBufferSize, true))
+    {
+      try
+      {
+        while (oServer.IsConnected &amp;&amp; !oCancellationToken.IsCancellationRequested)
+        {
+          System.Collections.Generic.List&lt;string> oMessages = new System.Collections.Generic.List&lt;string>(10);
+          for (int i = 0; i &lt; 10 &amp;&amp; _oQueue.TryDequeue(out string cQueuedMessage); i++)
+          { oMessages.Add(cQueuedMessage); }
+          if (oMessages.Count == 0)
+          { 
+            var cMessage = await WaitForNextMessageAsync(oCancellationToken).ConfigureAwait(false);
+            oMessages.Add(cMessage);
+          }
+          foreach (var cMessage in oMessages)
+          { await oWriter.WriteLineAsync(cMessage).ConfigureAwait(false); }
+          await oWriter.FlushAsync().ConfigureAwait(false);
+        }
+      }
+      catch (System.OperationCanceledException)
+      { /* 正常取消，不需要特別處理 */ }
+      catch (System.IO.IOException oEx) when ((oEx.HResult &amp; 0x0000FFFF) == 109 || (oEx.HResult &amp; 0x0000FFFF) == 232)
+      { //管道斷開連接
+        //HResult 0x80070109 (109) = 管道已結束
+        //HResult 0x800700E8 (232) = 管道被關閉
+        System.Console.WriteLine($"{_cFunctionName}｜{System.DateTime.Now:yyyy-MM-dd HH:mm:ss} 管道連接已關閉");
+      }
+      catch (System.Exception oEx)
+      {
+        System.Console.WriteLine($"{_cFunctionName}｜{System.DateTime.Now:yyyy-MM-dd HH:mm:ss} 處理客戶端錯誤: {oEx.Message}");
+      }
+    }
+  }
+
+  private async System.Threading.Tasks.Task&lt;string> WaitForNextMessageAsync(System.Threading.CancellationToken oCancellationToken)
+  {
+    if (_oQueue.TryDequeue(out string cMessage))
+    { return cMessage; }
+    var oTSC = new System.Threading.Tasks.TaskCompletionSource&lt;string>(System.Threading.Tasks.TaskCreationOptions.RunContinuationsAsynchronously);
+    System.Threading.CancellationTokenRegistration oRegistration = default;
+    try
+    {
+      oRegistration = oCancellationToken.Register(() => oTSC.TrySetCanceled(), useSynchronizationContext: false);
+      lock (_oLock)
+      { _oClients.Add(oTSC); }
+      return await oTSC.Task.ConfigureAwait(false);
+    }
+    finally
+    { oRegistration.Dispose(); }
+  }
+
+  public void Dispose()
+  {
+    if (_bDisposed)
+    { return; }
+
+    if (!_oCancellationTokenSource.IsCancellationRequested)
+    {
+      _oCancellationTokenSource.Cancel();
+      try
+      {
+        // 只創建一次陣列
+        var aoTasks = _oClientTasks.ToArray();
+        System.Console.WriteLine($"{_cFunctionName}｜開始等待 {aoTasks.Length} 個客戶端任務完成（超時：{_iDisposeTimeoutMs}ms）");
+        System.Threading.Tasks.Task.WaitAll(aoTasks, _iDisposeTimeoutMs);
+      }
+      catch (System.AggregateException oEx)
+      {
+        foreach (var oInnerEx in oEx.Flatten().InnerExceptions)
+        { System.Console.WriteLine($"{_cFunctionName}｜處理任務錯誤：{oInnerEx.Message}"); }
+      }
+      catch (System.Exception oEx)
+      { System.Console.WriteLine($"{_cFunctionName}｜關閉過程錯誤：{oEx.Message}"); }
+      finally
+      {
+        _oCancellationTokenSource.Dispose();
+        System.Console.WriteLine($"{_cFunctionName}｜伺服器已成功關閉");
+      }
+    }
+    _bDisposed = true;
+  }
+}
+</code></pre><h2>在C#中使用具名管道伺服器（NamePipe Server）</h2><p>接著我們就可以輕易地在C# Console應用程式中使用具名管道來進行訊息的傳遞。</p><pre><code class=language-cs>while (true)
+{
+  var cDate = System.DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss.fff");
+  //寫入具名管道
+  NamedPipe.Write(cDate);
+  //只為了讓前端執行時能夠看到訊息而已
+  Console.WriteLine(cDate);
+  System.Threading.Thread.Sleep(1000);
+}
+</code></pre><h2>在C#中使用具名管道客戶端（NamePipe Client）</h2><p>假設NamePipe Server已經在執行中，我們可以透過以下程式碼來建立NamePipe Client來接收Server端的訊息。</p><pre><code class=language-cs>using var oClient = new System.IO.Pipes.NamedPipeClientStream(".", "MyNamedPipeTest", System.IO.Pipes.PipeDirection.In);
+oClient.Connect();
+using var oSR = new System.IO.StreamReader(oClient);
+while (true)
+{
+  var cLog = oSR.ReadLine();
+  if (cLog == null) break;
+  //輸出Server端傳遞過來的訊息
+  Console.WriteLine(cLog);
+}
+</code></pre><h2>在PowerShell中使用具名管道接收伺服器端的訊息</h2><p>如果已經採用了NamePipe具名管道，這代表我們可以用各式的終端機工具來接收Server端的訊息，這反而是最常見的方法，舉例來說我們可以使用PowerShell來接收伺服器端的訊息。</p><pre><code class=language-ps>$pipeName = "MyNamedPipeTest"
+while ($true) {
+  try {
+    $pipe = New-Object System.IO.Pipes.NamedPipeClientStream(".", $pipeName, "In")
+    $reader = New-Object System.IO.StreamReader($pipe)
+    $pipe.Connect(5000)
+    Write-Host "NamedPipe connect success!"
+    while ($pipe.IsConnected -and -not $reader.EndOfStream) {
+      $line = $reader.ReadLine()
+      if ($line -and $line -ne "") {
+        Write-Host "$line"
+      }
+    }
+  } catch {
+    Write-Host "Can't connect NamedPipe, wait for Server initial..."
+    Start-Sleep -Seconds 2
+  }
+}
+</code></pre><h6>Windows Console Services C# Class NamedPipes NamedPipeServer NamedPipesClient NamedPipePowerShell</h6></main><footer></footer><script src=/.file/site.js></script></body></html>
