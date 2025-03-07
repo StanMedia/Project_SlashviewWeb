@@ -196,7 +196,7 @@ while (true)
   //輸出Server端傳遞過來的訊息
   Console.WriteLine(cLog);
 }
-</code></pre><h2>在PowerShell中使用具名管道接收伺服器端的訊息</h2><p>如果已經採用了NamePipe具名管道，這代表我們可以用各式的終端機工具來接收Server端的訊息，這反而是最常見的方法，舉例來說我們可以使用PowerShell來接收伺服器端的訊息。</p><pre><code class=language-ps>$pipeName = "MyNamedPipeTest"
+</code></pre><h2>在PowerShell中使用具名管道接收伺服器端的訊息</h2><p>如果已經採用了NamePipe具名管道，這代表我們可以用各式的終端機工具來接收Server端的訊息，這反而是最常見的方法，舉例來說我們可以使用PowerShell來接收伺服器端的訊息。</p><pre><code class=language-txt>$pipeName = "MyNamedPipeTest"
 while ($true) {
   try {
     $pipe = New-Object System.IO.Pipes.NamedPipeClientStream(".", $pipeName, "In")
