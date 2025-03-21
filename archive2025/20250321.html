@@ -1,0 +1,14 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>變更Ubuntu的IP位址</h1><p>沒有任何營養，純粹記錄一下如何在Ubuntu上變更IP位址（IP Address）。</p><h2>變更Ubuntu IP Address</h2><p>Step 1. 先<code>sudo -i</code>取得最高管理權限。</p><p>Step 2. 切換目錄到<code>/etc/netplan</code>。</p><pre><code class=language-txt>cd /etc/netplan
+</code></pre><p>Step 3. 透過nano之類的文字編輯器，編輯名稱類似<code>00-installer-config.yaml</code>這種檔案，打開後會看到類似以下的內容：</p><pre><code class=language-txt>network:
+  version: 2
+  ethernets:
+    ens32 :
+      dhcp4: false
+      addresses:
+      - 192.168.1.2/24
+      routes:
+      - to: default
+        via: 192.168.1.1
+      nameservers :
+        addresses: [8.8.8.8, 1.1.1.1]
+</code></pre><p>改成這樣格式的優點就是很好理解每一個參數的意義，<code>ens32</code>是網路介面的名稱，<code>dhcp4</code>是指定是否使用DHCP，<code>addresses</code>是指定IP位址，<code>routes</code>是指定路由，<code>nameservers</code>是指定DNS伺服器。缺點就是我竟然連要改一個IP位址都不會，只好去網路找資料。</p><p>Step 4. 儲存後重新開機應該就可以套用到新的IP位址。</p><h3>感想</h3><p>最後純粹發牢騷，Linux不同的發行版本就有不同的指令操作（我的知識還停留在ifconfig時代），在不想要安裝套件的狀態下唯一解就是去網路找新的指令，實在有夠討厭的。</p><h6>Linux CentOS Ubuntu IP Address Change Modify</h6></main><footer></footer><script src=/.file/site.js></script></body></html>
