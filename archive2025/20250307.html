@@ -142,4 +142,22 @@ catch {
 finally {
   if ($pipe) { $pipe.Dispose() }
 }
+</code></pre><h2>跨主機的具名管道說明</h2><p>如果需要跨主機使用具名管道，類別程式碼就需要添加安全性的參數，例如：</p><pre><code class=language-cs>//設定具名管道的安全性（WellKnownSidType.WorldSid = Everyone）
+var oSecurity = new System.IO.Pipes.PipeSecurity();
+oSecurity.AddAccessRule(new System.IO.Pipes.PipeAccessRule(
+    new System.Security.Principal.SecurityIdentifier(System.Security.Principal.WellKnownSidType.WorldSid, null),
+    System.IO.Pipes.PipeAccessRights.FullControl,
+    System.Security.AccessControl.AccessControlType.Allow
+));
+
+var oNamedPipeServer = new System.IO.Pipes.NamedPipeServerStream(
+    cPipeName,
+    System.IO.Pipes.PipeDirection.Out,
+    iMaxClients,
+    System.IO.Pipes.PipeTransmissionMode.Message,
+    System.IO.Pipes.PipeOptions.Asynchronous,
+    4096,
+    4096,
+    oSecurity  //在此添加安全性參數
+);
 </code></pre><h6>Windows Console Services C# Class NamedPipes NamedPipeServer NamedPipesClient NamedPipePowerShell</h6></main><footer></footer><script src=/.file/site.js></script></body></html>
