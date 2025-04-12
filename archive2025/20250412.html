@@ -1,0 +1,18 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>Microsoft SQL Server之資料桶（Catalog）備份與異地還原</h1><p>今天有一個小需求，必須針對mssql-server的資料桶（Catalog）進行備份（之後簡稱Sql-A），並還原到另外一台mssql-server（之後簡稱Sql-B），這裡記錄一下過程。</p><h2>透過SSMS備份Sql-A資料庫</h2><p>Step 1. 進入SSMS連線到Sql-A，在資料桶（Catalog）右鍵點選工作＞備份，備份類型選擇<code>完整</code>，路徑是預設的<code>/var/opt/mssql/data/mydb.bak</code>，點選確定後，應該就可以在對應的目錄看到<code>mydb.bak</code>。</p><p>Step 2. 接著透過類似<code>lftp</code>之類的工具，將<code>mydb.bak</code>先拉到FTP主機，以利之後放到Sql-B的對應目錄。</p><pre><code class=language-txt>lftp ftp://user:password@yourftp.server.com
+put mydb.bak
+</code></pre><h2>將資料庫備份檔案上傳到Sql-B</h2><p>Step 1. 在Sql-B的機器上，透過<code>lftp</code>將<code>mydb.bak</code>上傳到Sql-B的對應目錄。</p><pre><code class=language-txt>lftp ftp://user:password@yourftp.server.com
+lcd /var/opt/mssql/data
+get mydb.bak
+</code></pre><p>Step 2. 記得更改<code>mydb.bak</code>的檔案權限，讓它屬於<code>mssql</code>這個使用者。</p><pre><code class=language-txt>sudo chown mssql:mssql /var/opt/mssql/data/mydb.bak
+</code></pre><h2>透過SSMS將備份檔案還原到Sql-B</h2><p>Step 1. 進入SSMS連線到Sql-B，檢查備份檔案相關資訊。</p><pre><code class=language-sql>RESTORE FILELISTONLY 
+FROM DISK = N'/var/opt/mssql/data/mydb.bak';
+</code></pre><p>理論上你應該可以看到相關資訊，例如<code>mydb：/var/opt/mssql/data/mydb.mdf</code>、<code>mydb_log：/var/opt/mssql/data/mydb_log.ldf</code>。</p><p>Step 2. 接著就可以開始還原了，這裡的<code>WITH REPLACE</code>是為了強制覆蓋原有的資料庫。</p><pre><code class=language-sql>RESTORE DATABASE mydb
+FROM DISK = N'/var/opt/mssql/data/mydb.bak'
+WITH MOVE N'mydb' TO N'/var/opt/mssql/data/mydb.mdf',
+     MOVE N'mydb_log' TO N'/var/opt/mssql/data/mydb_log.ldf',
+     REPLACE;
+</code></pre><p>經過這樣一番操作後，應該就可以看到Sql-B的資料庫中有<code>mydb</code>這個資料桶（Catalog）了。</p><h2>資料庫使用者的重建</h2><p>一般來說還原完後，我們會需要重新指定使用者，可是尷尬的是原本的Sql-A機器上假設有一個<code>user</code>有權限針對<code>mydb</code>這個資料庫進行操作，那麼他會隨著<code>mydb.bak</code>檔案被帶過來Sql-B上，但這個使用者的密碼等資訊限不會被帶過來，因此我們在Sql-B上就必須重新建立這個使用者並且給予權限。</p><pre><code class=language-sql>USE mydb;
+DROP USER [user];
+</code></pre><p>後續你可以透過SSMS的使用者介面，重新建立這個使用者並指派其為<code>db_owner</code>。</p><p>如果權限設計得很複雜，也可以考慮先在Sql-B上建立一個<code>user</code>並賦予密碼後，然後透過指令直接將原先Sql-A的使用者指派為Sql-B。</p><pre><code class=language-sql>USE mydb;
+EXEC sp_change_users_login 'Auto_Fix', 'user';
+</code></pre><h6>MicrosoftSqlServer Linux Ubuntu Backup Restore BakFiles</h6></main><footer></footer><script src=/.file/site.js></script></body></html>
