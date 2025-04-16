@@ -119,28 +119,58 @@ while (oClient.IsConnected)
 
 $pipeName = "MyNamedPipeTest"
 $bufferSize = 1024
+$disconnectTimeout = 180  # 若三分鐘無法連接上就會自動退出
 
-try {
-  Write-Host "*** NamedPipe Client ***"
-  $pipe = New-Object System.IO.Pipes.NamedPipeClientStream(".", $pipeName, [System.IO.Pipes.PipeDirection]::In)
-  Write-Host "Connecting to named pipe ($pipeName)..."
-  $pipe.Connect()
-  Write-Host "Connected, starting to receive messages...`n"
-  while ($pipe.IsConnected) {
-    $buffer = New-Object byte[] $bufferSize
-    $bytesRead = $pipe.Read($buffer, 0, $bufferSize)
-    if ($bytesRead -gt 0) {
-      $receivedData = [System.Text.Encoding]::UTF8.GetString($buffer, 0, $bytesRead)
-      [Console]::Write($receivedData)
+Write-Host "*** NamedPipe Client ***`n"
+
+$disconnectStartTime = $null
+
+while ($true) {
+  Write-Host ("Connecting to named pipe ($pipeName)...")
+  try {
+    $pipe = New-Object System.IO.Pipes.NamedPipeClientStream(".", $pipeName, [System.IO.Pipes.PipeDirection]::In)
+    $pipe.Connect(5000)  # 每五秒鐘嘗試連線一次
+
+    # 若連接上就重設斷線時間
+    $disconnectStartTime = $null
+
+    Write-Host "Connected, starting to receive messages...`n"
+
+    while ($pipe.IsConnected) {
+      $buffer = New-Object byte[] $bufferSize
+      $bytesRead = $pipe.Read($buffer, 0, $bufferSize)
+      if ($bytesRead -gt 0) {
+        $receivedData = [System.Text.Encoding]::UTF8.GetString($buffer, 0, $bytesRead)
+        [Console]::Write($receivedData)
+      }
+    }
+
+    Write-Host "`nServer disconnected.`n"
+    $pipe.Dispose()
+
+    # 記錄這次斷線發生的時間
+    $disconnectStartTime = Get-Date
+  }
+  catch {
+    # 嘗試連線失敗
+    if (-not $disconnectStartTime) {
+      $disconnectStartTime = Get-Date
+    }
+
+    if ($pipe) {
+      $pipe.Dispose()
     }
   }
-  Write-Host "`nServer disconnected, stopping reception."
-}
-catch {
-  Write-Host "An error occurred: " $_.Exception.Message
-}
-finally {
-  if ($pipe) { $pipe.Dispose() }
+
+  $elapsed = (Get-Date) - $disconnectStartTime
+  if ($elapsed.TotalSeconds -ge $disconnectTimeout) {
+    Write-Host ("Disconnection time exceeded $disconnectTimeout seconds. Exiting.")
+    break
+  }
+  else {
+    Write-Host ("Waiting for next connection. Elapsed time: {0:N0} seconds.`n" -f $elapsed.TotalSeconds)
+    Start-Sleep -Seconds 5
+  }
 }
 </code></pre><h2>跨主機的具名管道說明</h2><p>如果需要跨主機使用具名管道，類別程式碼就需要添加安全性的參數，例如：</p><pre><code class=language-cs>//設定具名管道的安全性（WellKnownSidType.WorldSid = Everyone）
 var oSecurity = new System.IO.Pipes.PipeSecurity();
