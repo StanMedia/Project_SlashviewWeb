@@ -1,0 +1,13 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>在Ubuntu上面安裝Guest Additions</h1><p>紀錄一下在Ubuntu（Linux）下安裝<code>Guest Additions</code>的過程。</p><h2>在Ubuntu下安裝Guest Additions的步驟</h2><p>Step 1. 你的HostOS一定要先安裝<code>Guest Additions (VirtualBox Extension Pack)</code>。</p><p>Step 2. 進入GuestOS後，先進行<code>sudo -i</code>切換到最高權限。</p><p>Step 3. 更新apt：</p><pre><code class=language-txt>apt update
+apt upgrade -y
+</code></pre><p>Step 4. Guest Additions需要自行編譯核心模組：</p><pre><code class=language-txt>apt install build-essential dkms linux-headers-$(uname -r) -y
+</code></pre><p>Step 5. 掛載Guest Additions ISO 映像檔：請到GuestOS＞裝置＞插入Guest Additions CD 映像。</p><p>Step 6. 在GuestOS中輸入下列指令：</p><pre><code class=language-txt>lsblk
+</code></pre><p>應該會出現下列類似的訊息，這代表VBoxGuestAdditions.iso已插入但是尚未掛載：</p><pre><code class=language-txt>sr0      11:0    1  57.4M  0 rom
+</code></pre><p>將光碟掛載上去：</p><pre><code class=language-txt>mount /dev/sr0 /cdrom
+</code></pre><p>Step 7. 執行安裝Guest Additions</p><pre><code class=language-txt>cd /cdrom
+./VBoxLinuxAdditions.run
+</code></pre><p>Step 8. 安裝後，請重新啟動GuestOS即可完成安裝：</p><pre><code class=language-txt>reboot
+</code></pre><h2>Guest Additions安裝後的功能</h2><ul><li>共享剪貼簿</li></ul><p>這個功能應該是所有人最想要的功能了，但對不起，這個功能在VirtualBox原生檢視介面下，之於Ubuntu命令純文字介面（例如：Ubuntu Server）是沒有用的，他必須要在GUI介面下才可以使用。</p><ul><li>共享資料夾</li></ul><p>可以在Ubuntu命令純文字介面使用，只要去VirtualBox的設定裡面設定好共享資料夾：</p><ol><li>資料夾路徑：HostOS的資料夾路徑，請自行指定。</li><li>資料夾名稱：輸入<code>shared</code>。</li><li>掛載點：輸入<code>/shared</code>。</li><li>勾選<code>自動掛載</code>與<code>設為永久</code>。</li><li>到GuestOS中輸入下列指令，應該就可以看到HostOS分享的檔案了：</li></ol><pre><code class=language-txt>sudo -i
+cd /shared
+ls
+</code></pre><h6>VirtualBox Linux Ubuntu GuestAdditions Install Setup</h6></main><footer></footer><script src=/.file/site.js></script></body></html>

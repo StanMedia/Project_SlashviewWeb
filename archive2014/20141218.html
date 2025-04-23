@@ -8,4 +8,4 @@
 "PC 006" {329bb2d9-1d07-4d8f-993e-fdae3bdf1d54}
 </code></pre><h2>對你想要禁止時間同步的Guest OS開刀</h2><p>比對上例，假設我們想要對PC 006這一台電腦進行時間同步的禁止，那麼我們要下這樣的指令：</p><pre><code class=language-txt>VBoxManage setextradata "PC 006" "VBoxInternal/Devices/VMMDev/0/Config/GetHostTimeDisabled" "1"
 </code></pre><p>改完之後，如果沒有任何的錯誤資訊，把Guest OS關機，然後Host OS也要重新開機，就完成了！如果有一天想要改回來，那也很簡單，請使用下列的指令來解決即可。</p><pre><code class=language-txt>VBoxManage setextradata "PC 006" "VBoxInternal/Devices/VMMDev/0/Config/GetHostTimeDisabled" "0"
-</code></pre><h6>VirtualBox VBoxManage TimeSync Stop Disable</h6></main><footer></footer><script src=/.file/site.js></script></body></html>
+</code></pre><h3>相關連結</h3><ul><li><a href=/archive2014/20141218.html>關閉VirtualBox Host與Guest之間的時間同步</a></li><li><a href=/archive2025/20250420.html>設定VirtualBox HostOS與GuestOS之間的時間同步</a></li></ul><h6>VirtualBox VBoxManage TimeSync Stop Disable</h6></main><footer></footer><script src=/.file/site.js></script></body></html>
