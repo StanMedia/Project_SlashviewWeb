@@ -188,4 +188,4 @@ var oNamedPipeServer = new System.IO.Pipes.NamedPipeServerStream(
     4096,
     oSecurity  //在此添加安全性參數
 );
-</code></pre><p>B. 提供具名管道訊息的機器，需要在<code>具有進階安全性的Windows Defender防火牆</code>（wf.msc）中，針對<code>輸入規則</code>＞<code>檔案及印表機共用（SMB-In）</code>，進行<code>啟用</code>，這樣才能讓其他機器透過具名管道來進行通訊。</p><p>C. 進行跨主機具名管道連線前，建議先在Windows底下建立好對方伺服器的帳號密碼（例如在檔案總管輸入<code>\\ServerIP\pipe\NamepipeName</code>），這樣在連線時會比較順利。</p><h6>Windows Console Services C# Class NamedPipes NamedPipeServer NamedPipesClient NamedPipePowerShell</h6></main><footer></footer><script src=/.file/site.js></script></body></html>
+</code></pre><p>B. 提供具名管道訊息的機器，需要在<code>具有進階安全性的Windows Defender防火牆</code>（wf.msc）中，針對<code>輸入規則</code>＞<code>檔案及印表機共用（SMB-In）</code>，進行<code>啟用</code>，這樣才能讓其他機器透過具名管道來進行通訊。</p><p>C. 進行跨主機具名管道連線前，建議先在Windows底下建立好對方伺服器的帳號密碼（例如在檔案總管輸入<code>\\ServerIP\pipe\NamepipeName</code>），並勾選<code>儲存密碼</code>，這樣在連線時會比較順利。</p><h6>Windows Console Services C# Class NamedPipes NamedPipeServer NamedPipesClient NamedPipePowerShell</h6></main><footer></footer><script src=/.file/site.js></script></body></html>
