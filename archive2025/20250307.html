@@ -117,21 +117,20 @@ while (oClient.IsConnected)
 }
 </code></pre><h2>在PowerShell中使用具名管道接收伺服器端的訊息</h2><p>如果已經採用了NamePipe具名管道，這代表我們可以用各式的終端機工具來接收Server端的訊息，這反而是最常見的方法，舉例來說我們可以使用PowerShell來接收伺服器端的訊息。</p><pre><code class=language-txt>[Console]::OutputEncoding = [System.Text.Encoding]::UTF8  
 
+$pipeServer = "." # 如果是遠端機器的話請填入伺服器IP位址
 $pipeName = "MyNamedPipeTest"
 $bufferSize = 1024
-$disconnectTimeout = 180  # 若三分鐘無法連接上就會自動退出
-
+$disconnectTimeout = 180
 Write-Host "*** NamedPipe Client ***`n"
-
 $disconnectStartTime = $null
 
 while ($true) {
   Write-Host ("Connecting to named pipe ($pipeName)...")
   try {
-    $pipe = New-Object System.IO.Pipes.NamedPipeClientStream(".", $pipeName, [System.IO.Pipes.PipeDirection]::In)
-    $pipe.Connect(5000)  # 每五秒鐘嘗試連線一次
+    $pipe = New-Object System.IO.Pipes.NamedPipeClientStream($pipeServer, $pipeName, [System.IO.Pipes.PipeDirection]::In)
+    $pipe.Connect(5000)
 
-    # 若連接上就重設斷線時間
+    # 連上並重設斷線時間
     $disconnectStartTime = $null
 
     Write-Host "Connected, starting to receive messages...`n"
@@ -156,7 +155,6 @@ while ($true) {
     if (-not $disconnectStartTime) {
       $disconnectStartTime = Get-Date
     }
-
     if ($pipe) {
       $pipe.Dispose()
     }
@@ -172,7 +170,7 @@ while ($true) {
     Start-Sleep -Seconds 5
   }
 }
-</code></pre><h2>跨主機的具名管道說明</h2><p>如果需要跨主機使用具名管道，類別程式碼就需要添加安全性的參數，例如：</p><pre><code class=language-cs>//設定具名管道的安全性（WellKnownSidType.WorldSid = Everyone）
+</code></pre><h2>跨主機的具名管道之相關說明</h2><p>A. 如果需要跨主機使用具名管道，類別程式碼就需要添加安全性的參數，例如：</p><pre><code class=language-cs>//設定具名管道的安全性（WellKnownSidType.WorldSid = Everyone）
 var oSecurity = new System.IO.Pipes.PipeSecurity();
 oSecurity.AddAccessRule(new System.IO.Pipes.PipeAccessRule(
     new System.Security.Principal.SecurityIdentifier(System.Security.Principal.WellKnownSidType.WorldSid, null),
@@ -190,4 +188,4 @@ var oNamedPipeServer = new System.IO.Pipes.NamedPipeServerStream(
     4096,
     oSecurity  //在此添加安全性參數
 );
-</code></pre><h6>Windows Console Services C# Class NamedPipes NamedPipeServer NamedPipesClient NamedPipePowerShell</h6></main><footer></footer><script src=/.file/site.js></script></body></html>
+</code></pre><p>B. 提供具名管道訊息的機器，需要在<code>具有進階安全性的Windows Defender防火牆</code>（wf.msc）中，針對<code>輸入規則</code>＞<code>檔案及印表機共用（SMB-In）</code>，進行<code>啟用</code>，這樣才能讓其他機器透過具名管道來進行通訊。</p><h6>Windows Console Services C# Class NamedPipes NamedPipeServer NamedPipesClient NamedPipePowerShell</h6></main><footer></footer><script src=/.file/site.js></script></body></html>
