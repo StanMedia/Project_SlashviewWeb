@@ -1,0 +1,11 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>在Ubuntu下安裝sqlcmd（for MsSql-Server）</h1><p>老問題之提醒，在Linux下使用MSSQL Server是很挑作業系統環境、版本的，我這邊使用的是<code>Ubuntu 22.04 LTS</code>版，所以我所有的安裝過程都會假定是在這個環境下，如果跟我的環境不一樣將會遭遇到重重困難（且很不好解）。</p><h2>版本選擇：mssql-tools或mssql-tools18</h2><p>簡單的說，如果你的環境是<code>Ubuntu 20.04、SQL Server 2019</code>含以上，那麼你就要安裝<code>mssql-tools18</code>，否則就要安裝<code>mssql-tools</code>。因此對我來說就要安裝<code>mssql-tools18</code>。（竟然是透過這種命名法來區分版本？而不是寫自動化腳本依據不同的環境自動選擇不同的安裝方法...）</p><h2>安裝mssql-tools18</h2><p>Step 1. 切換到最高身分</p><pre><code class=language-txt>sudo -i
+</code></pre><p>Step 2. 匯入公開存放庫GPG金鑰</p><pre><code class=language-txt>curl https://packages.microsoft.com/keys/microsoft.asc | tee /etc/apt/trusted.gpg.d/microsoft.asc
+</code></pre><p>Step 3. 註冊Microsoft Ubuntu存放庫</p><pre><code class=language-txt>curl https://packages.microsoft.com/config/ubuntu/22.04/prod.list | sudo tee /etc/apt/sources.list.d/mssql-release.list
+</code></pre><p>Step 4. 更新apt套件清單</p><pre><code class=language-txt>apt update
+</code></pre><p>Step 5. 安裝mssql-tools18</p><pre><code class=language-txt>apt install -y mssql-tools18 unixodbc-dev
+</code></pre><p>到這邊應該就正式完成了。</p><h2>註冊PATH環境變數</h2><p>透過下列步驟將<code>/opt/mssql-tools18/bin</code>加入到PATH環境變數中，以利可以隨時在命令列中使用：</p><pre><code class=language-txt>echo 'export PATH="$PATH:/opt/mssql-tools18/bin"' >> ~/.bash_profile
+source ~/.bash_profile
+echo 'export PATH="$PATH:/opt/mssql-tools18/bin"' >> ~/.bashrc
+source ~/.bashrc
+</code></pre><p>一般來說因為已經進行切換過最高管理權限（root），所以這樣的PATH設定也會變成針對root指定，如果你要讓登入時的預設使用者也可以使用<code>sqlcmd</code>，那麼就要切回去再設定一次。</p><h2>測試sqlcmd是否可運作</h2><p>由於<code>mssql-tools18</code>會強制以SSL連線，所以在測試的時候必須要加上<code>-C</code>這個參數來規避安全性，否則會出現錯誤訊息：</p><pre><code class=language-txt>sqlcmd -C -S 192.168.1.2 -U sa -P YourPassword -Q "SELECT @@VERSION"
+</code></pre><p>透過上面的指令就可以從連接的192.168.1.2資料庫，查詢到當前的資料庫版本號，等於確定可以連線資料庫了。</p><h6>Linux Ubuntu MicrosoftSqlServer MsSqlServer MsSqlTools MsSqlTools18 SqlCmd Installation Setup</h6></main><footer></footer><script src=/.file/site.js></script></body></html>
