@@ -1,0 +1,35 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>在Ubuntu下透過cron執行SQL完整備份</h1><p>這篇文章紀錄如何在Linux Ubuntu上使用SQL Server的sqlcmd工具，透過cron排程來執行完整備份。如果還沒有安裝過sqlcmd工具的可以在相關連結找到安裝方法。</p><h2>切換到最高權限</h2><p>切換到root身分，之後指令不再贅述</p><pre><code class=language-txt>sudo -i
+</code></pre><h2>安裝cron排程工具</h2><p>cron是Linux系統中用來定期執行任務的工具，通常預設已經安裝在Ubuntu上，但如果沒有的話可以透過下列指令安裝：</p><pre><code class=language-txt>apt update
+apt install cron -y
+</code></pre><p>安裝後可以透過下列指令來檢查cron的狀態：</p><pre><code class=language-txt>systemctl status cron
+</code></pre><p>如果有出現綠色的<code>active (running)</code>，就表示cron已經啟動了。</p><h2>編輯bash排程檔案</h2><p>我的目標是要先把<code>YourSqlCatalogName</code>這個資料庫桶子備份到<code>/var/opt/mssql/backup</code>這個資料夾中，然後再把這個備份檔案移動到<code>/shared</code>這個資料夾中以利後續的處理。如果你有其他的需求可以自行更換指令，指令碼其實不複雜，以下是的bash指令碼：</p><pre><code class=language-txt>#!/bin/bash
+
+# sql parameter
+DB_NAME="YourSqlCatalogName"
+SQL_USER="YourUserName"
+SQL_PASS="YourSqlPassword"
+
+# backup file path
+BACKUP_DIR="/var/opt/mssql/backup"
+BACKUP_FILE="${BACKUP_DIR}/${DB_NAME}.bak"
+SHARED_DIR="/shared"
+SHARED_BACKUP_FILE="${SHARED_DIR}/${DB_NAME}.bak"
+
+# get current timestamp in yyyy-MM-dd HH:mm:ss format
+TIMESTAMP=$(date "+%Y-%m-%d %H:%M:%S")
+
+# make sure folders exist
+mkdir -p "$BACKUP_DIR"
+mkdir -p "$SHARED_DIR"
+
+# backup SQL catalog
+if /opt/mssql-tools18/bin/sqlcmd -C -S localhost -U "$SQL_USER" -P "$SQL_PASS" -Q "BACKUP DATABASE [$DB_NAME] TO DISK = N'$BACKUP_FILE' WITH INIT, FORMAT, COMPRESSION;"; then
+  echo "[$TIMESTAMP] Database backup successful. Backup file is located at [$BACKUP_FILE]."
+  mv -f "$BACKUP_FILE" "$SHARED_BACKUP_FILE"
+  echo "[$TIMESTAMP] Successfully moved backup file to [$SHARED_BACKUP_FILE]."
+else
+  echo "[$TIMESTAMP] ERROR: Database backup failed for database [$DB_NAME]."
+fi
+</code></pre><p>這個指令碼我將會儲存並放在<code>/usr/local/sbin/backupDB.sh</code>，下列是注意事項：</p><ol><li>如果這個檔案是在Windows下編輯，那麼請務必取消<code>UTF-8 BOM</code>，否則會導致<code>bash</code>無法執行。</li><li>移動到這個目錄後，請務必給予執行權限：<code>chmod +x /usr/local/sbin/backupDB.sh</code>。</li><li>確定檔案權限給root：<code>chown root:root /usr/local/sbin/backup_media.sh</code>。</li><li>完成後可以測試跑看看是否有達成自動備份的需求。</li></ol><h2>編輯cron排程</h2><p>接著我們可以透過cron來編輯排程，這邊我將會設定每天的凌晨7點執行這個備份指令碼，請輸入<code>crontab -e</code>，在檔案最末段插入下列指令：</p><pre><code class=language-txt>0 7 * * * /usr/local/sbin/backupDB.sh >> /shared/backupDB_log.txt 2>&amp;1
+</code></pre><p>這個指令的意思是每天的7點整執行<code>/usr/local/sbin/backupDB.sh</code>，並將執行過程log檔案寫入到<code>/shared/backupDB_log.txt</code>中。</p><p>完成後可以透過下列指令來檢查排程是否成功加入：</p><pre><code class=language-txt>crontab -l
+</code></pre><h3>相關連結</h3><ul><li><a href=/archive2024/20240507.html>在Ubuntu下安裝Microsoft SQL Server 2022</a></li><li><a href=/archive2025/20250412.html>在Ubuntu下進行mssql-server之資料桶（Catalog）備份與異地還原</a></li><li><a href=/archive2025/20250427.html>在Ubuntu下安裝sqlcmd（for mssql-server）</a></li><li><a href=/archive2025/20250428.html>在Ubuntu下透過cron執行SQL完整備份</a></li></ul><h6>Linux Ubuntu MicrosoftSqlServer MsSqlServer MsSqlTools MsSqlTools18 SqlCmd Backup FullBackup Cron Schedule</h6></main><footer></footer><script src=/.file/site.js></script></body></html>
