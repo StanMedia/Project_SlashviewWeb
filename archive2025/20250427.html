@@ -7,5 +7,8 @@
 source ~/.bash_profile
 echo 'export PATH="$PATH:/opt/mssql-tools18/bin"' >> ~/.bashrc
 source ~/.bashrc
-</code></pre><p>一般來說因為已經進行切換過最高管理權限（root），所以這樣的PATH設定也會變成針對root指定，如果你要讓登入時的預設使用者也可以使用<code>sqlcmd</code>，那麼就要切回去再設定一次。</p><h2>測試sqlcmd是否可運作</h2><p>由於<code>mssql-tools18</code>會強制以SSL連線，所以在測試的時候必須要加上<code>-C</code>這個參數來規避安全性，否則會出現錯誤訊息：</p><pre><code class=language-txt>sqlcmd -C -S 192.168.1.2 -U sa -P YourPassword -Q "SELECT @@VERSION"
-</code></pre><p>透過上面的指令就可以從連接的192.168.1.2資料庫，查詢到當前的資料庫版本號，等於確定可以連線資料庫了。</p><h6>Linux Ubuntu MicrosoftSqlServer MsSqlServer MsSqlTools MsSqlTools18 SqlCmd Installation Setup</h6></main><footer></footer><script src=/.file/site.js></script></body></html>
+</code></pre><p>一般來說因為已經進行切換過最高管理權限（root），所以這樣的PATH設定也會變成針對root指定，如果你要讓登入時的預設使用者也可以使用<code>sqlcmd</code>，那麼就要切回去再設定一次。</p><p>※ 註：這個加入<code>.bash_profile</code>的動作有時候可能會出現抹除掉原本的檔案參數的狀況，如果出現再次登入Ubuntu後不會自動執行<code>.bashrc</code>的情況，請檢查一下<code>~/.bash_profile</code>的內容是否正確，如果出現抹除的狀況可以重新透過<code>nano ~/.bash_profile</code>加入下列指令碼，讓使用者登入時會自動執行<code>.bashrc</code>：</p><pre><code class=language-txt>if [ -f ~/.bashrc ]; then
+  . ~/.bashrc
+fi
+</code></pre><h2>測試sqlcmd是否可運作</h2><p>由於<code>mssql-tools18</code>會強制以SSL連線，所以在測試的時候必須要加上<code>-C</code>這個參數來規避安全性，否則會出現錯誤訊息：</p><pre><code class=language-txt>sqlcmd -C -S localhost -U sa -P YourPassword -Q "SELECT @@VERSION"
+</code></pre><p>透過上面的指令就可以從連接localhost本機資料庫，查詢到當前的資料庫版本號，相當於確定可以連線資料庫了。</p><h6>Linux Ubuntu MicrosoftSqlServer MsSqlServer MsSqlTools MsSqlTools18 SqlCmd Installation Setup</h6></main><footer></footer><script src=/.file/site.js></script></body></html>
