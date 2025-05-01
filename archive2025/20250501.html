@@ -1,0 +1,23 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>透過sdelete將virtualbox之windows vdi空間清零釋放，結果卻灌爆硬碟</h1><p>最近這陣子開始回來搞VirtualBox，除了遭遇到一些詭異的自動化問題之外，最近在壓縮Windows下的VDI檔案時，也發現了另外一個詭異的現象，就是本來打算透過sdelete把GuestOS不到20GB的VDI檔案清零釋放後，再回到HostOS上面進行VDI壓縮，結果卻發現VDI檔案的大小從原本的20GB暴增到80GB（也就是我本來切給這個vdi磁碟的大小），透過compact指令怎麼壓縮也沒有任何效果，這讓我感到非常困惑。</p><p>求助了各大AI問答無果，最後還是只能靠自己逐步排查。</p><h2>透過sdelete在GuestOS將刪除的空間清零（寫入Zero）</h2><p>通常我們會透過微軟的<code>sdelete</code>指令來將GuestOS的已經被標記成刪除的空間清零，這樣在之後的HostOS進行VDI壓縮時，VirtualBox就會知道這些空間是可以釋放的。</p><pre><code class=language-txt>sdelete64 -z C:
+</code></pre><p>但透過這樣的指令後，VDI檔案的大小卻從原本的20GB暴增到80GB，這讓我感到非常困惑，因為這個問題在<code>以前的Windows</code>未曾遇見。我GuestOS使用的是全新安裝的<code>Windows 11 24H2</code>並進行了完整的更新，理論上應該不會有問題。</p><h2>透過HostOS的compact指令：無效</h2><p>如果你詢問AI的話會一直在這個問題上打轉，如果你跟我有同樣的問題，基本上我們會使用下列的HostOS指令在GuestOS關機的情況下，針對某台GuestOS的VDI檔案進行壓縮：</p><pre><code class=language-txt>vboxmanage modifymedium "YourVirtualMachineName.vdi" --compact
+</code></pre><h2>透過HostOS的clonemedium指令：無效</h2><p>如果你詢問AI的話也會一直在這個問題上打轉，基本上如果上面的compact指令無效的話，那麼這個指令有很大的機率也會無效。這個指令基本上就是把一個vdi複製一份出來，並且剔除掉本來就沒有占用的空間，這樣的話就會產生一個新的vdi檔案，這個檔案<code>理論上</code>會比你現在的vdi檔案小。</p><pre><code class=language-txt>vboxmanage clonemedium "OLD.vdi" "NEW.vdi" --variant Standard
+</code></pre><p>上面的指令對我來說完全無效，他只是複製了另外一份80GB的vdi檔案出來而已。</p><h2>會不會有可能是Windows 11搞出來的問題？</h2><p>在以前的Windows我未曾遇過這樣的情況，我的感覺是sdelete根本沒有把已經刪除的空間標記為零，這讓我慢慢地懷疑到會不會在覆寫的時候被打亂，基於這個思路我就懷疑到Windows的<code>BitLocker</code>加密功能。</p><p>將cmd跑在最高權限上，開始輸入下列指令查看：</p><pre><code class=language-txt>manage-bde -status
+</code></pre><p>顯示下列訊息，頓時發現我應該找到兇手了：</p><pre><code class=language-txt>大小:                 79.20 GB
+BitLocker 版本:       2.0
+轉換狀態:             僅加密已使用空間完成
+加密百分比:           100.0%
+加密方法:             XTS-AES 128
+保護狀態:             保護關閉
+鎖定狀態:             已解除鎖定
+識別碼欄位:           不明
+金鑰保護裝置:         找不到
+</code></pre><p>透過下列指令關閉BitLocker，這個解密的過程需要時間，建議等幾分鐘持續透過<code>manage-bde -status</code>查閱，直到<code>加密百分比</code>歸零：</p><pre><code class=language-txt>大小:                 79.20 GB
+BitLocker 版本:       無
+轉換狀態:             已完全解密
+加密百分比:           0.0%
+加密方法:             無
+保護狀態:             保護關閉
+鎖定狀態:             已解除鎖定
+識別碼欄位:           無
+金鑰保護裝置:         找不到
+</code></pre><p>關閉BitLocker後，重新啟動GuestOS然後再透過<code>sdelete</code>指令將空間清零並進行<code>compact</code>壓縮，果然Windows的大小成功的縮減了好幾GB。</p><h3>心得感想</h3><p>我沒有習慣啟用BitLocker，也記得以前的Windows並不會自動開啟BitLocker，推論應該是Windows 11的某個版本後更改BitLocker的預設值變更為<code>開啟</code>，導致這一連串的影響，實在是有夠無言... 微軟我還要感謝你沒有自動設定讓BitLocker將整個磁碟區進行加密（只有對使用的空間進行加密）感謝你喔～</p><p>對了，關閉BitLocker也可以加速虛擬機器開機速度與執行效率喔。</p><h6>Windows Windows11 VirtualBox VDI Disk Comression Compact SDelete SDelete64 HugeFiles LargeFiles Solution Fixed Addressed</h6></main><footer></footer><script src=/.file/site.js></script></body></html>
