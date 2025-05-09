@@ -1,4 +1,8 @@
-﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>在Javascript中使用類似C#的Region語法來折疊管理程式碼區塊</h1><p>今日由於需要撰寫大量的Javascript，因此上網搜尋是否有類似C#的Region語法來折疊程式碼區塊，發現有一個不錯的解決方案，這個解決方案是使用註解來實現的。</p><h2>在Javascript中使用Region語法摺疊程式碼</h2><p>可以摺疊的JS語法如下，當然，這種客製化的東西肯定是編輯器自定義的，也就是如果程式語言編輯器不支援那就沒轍了，幸好經過測試<code>VisualStudio</code>、<code>VisualStudio Code</code>兩者我常用的編輯器都支援。</p><pre><code class=language-js>//#region 你的程式碼註解
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>在Javascript中使用類似C#的Region語法來折疊管理程式碼區塊</h1><p>今日由於需要撰寫大量的Javascript，因此上網搜尋是否有類似C#的Region語法來折疊程式碼區塊，發現有一個不錯的解決方案，這個解決方案是使用註解來實現的。</p><h2>在Javascript中使用Region語法摺疊程式碼</h2><p>可以摺疊的JS語法如下，當然，這種客製化的東西肯定是編輯器自定義的，也就是如果程式語言編輯器不支援那就沒轍了，幸好經過測試<code>VisualStudio</code>、<code>VisualStudio Code</code>兩者我常用的編輯器都支援。</p><pre><code class=language-js>//#region 程式碼區塊註解
+
+function test() {
+  console.log("Hello World");
+}
 
 //#endregion
 </code></pre><p>只要你在屬於Javascript的程式碼中加入<code>//#region</code>和<code>//#endregion</code>，就可以在編輯器中摺疊這段程式碼了。</p><h6>VisualStudio VisualStudioCode VSCode Javascript JS C# Region CodeManagement CodeFolding</h6></main><footer></footer><script src=/.file/site.js></script></body></html>
