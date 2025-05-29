@@ -1,0 +1,95 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>在C#執行期中，執行動態直譯式程式碼並取得結果</h1><p>這個標題有點詭異，C#明明是編譯型語言，怎麼會跟直譯式程式碼扯上關係？其實在程式設計的過程中，還是會有相關直譯式的需求冒出，最常見的就是客戶要你在程式中執行某些動態運算的程式碼，而這個需求通常會不斷的變更異動。</p><p>最常見的舉例就是收銀機的金額計算，貨品與金額的計算方式會隨著活動不斷的變更，你總不可能編譯程式後，再跑去收銀機更新吧？這時候你就會開始想要把計算公式寫在資料庫中，然後在程式中讀取這些公式來計算金額。</p><h2>透過Dynamic Expresso來執行直譯式程式碼</h2><p><a href=https://github.com/dynamicexpresso/DynamicExpresso>Dynamic Expresso</a>是一個在GitHib上的開源專案，允許你在執行期中解析和執行C#表達式，缺點是不能夠太複雜、多行，頂多就是寫寫三元運算子<code>condition ? a : b</code>就差不多了。如果你需要的是更複雜的直譯式程式碼撰寫，那麼這個Library就不太適合了。</p><p>如果對於Dynamic Expresso有興趣，可以到nuget上搜尋<a href=https://www.nuget.org/packages/DynamicExpresso.Core/>DynamicExpresso.Core</a>來安裝，他支援.NET Framework的最末版是<code>2.10.0</code>，再之後的版本號就是往.NET Core的道路前進了。</p><h2>Dynamic Expresso程式碼範例：執行簡單的表達式寫法</h2><p>假設客戶的需求是：蘋果第一顆原價，第二顆（含）之後一律八折，購物袋另計...那麼我們可以透過以下程式碼來實現：</p><pre><code class=language-cs>//蘋果價格
+decimal iPrice = 50.5m;
+//採購數量
+decimal iQuantity = 4;
+//購物袋價格
+decimal iBag = 2;
+
+//蘋果第一顆原價，第二顆八折，第三顆（含）之後一律七折，購物袋另計
+string cFormula = @"
+iPrice +
+(
+  (iQuantity - 1) * iPrice * 0.8m
+) +
+iBag
+";
+
+//建立DynamicExpresso解譯器
+var oDI = new DynamicExpresso.Interpreter()
+  .SetVariable("iPrice", iPrice)
+  .SetVariable("iQuantity", iQuantity)
+  .SetVariable("iBag", iBag)
+  ;
+
+//執行公式
+var iResult = oDI.Eval&lt;decimal>(cFormula);
+
+## 正確答案應該是173.7元
+</code></pre><h2>Dynamic Expresso程式碼範例：執行相對複雜的表達式寫法</h2><p>如果客戶改成這樣的需求：蘋果第一顆原價，第二顆八折，第三顆（含）之後一律七折，購物袋另計...這時候我們可以透過這樣的程式碼來實現：</p><pre><code class=language-cs>//蘋果價格
+decimal iPrice = 50.5m;
+//採購數量
+decimal iQuantity = 4;
+//購物袋價格
+decimal iBag = 2;
+
+//蘋果第一顆原價，第二顆八折，第三顆（含）之後一律七折，購物袋另計
+string cFormula = @"
+(
+  iQuantity == 1 ? iPrice :
+    iQuantity == 2 ? iPrice + (iPrice * 0.8m) :
+      iPrice + (iPrice * 0.8m) + ((iQuantity - 2) * iPrice * 0.7m)
+) +
+iBag
+";
+
+//建立DynamicExpresso解譯器
+var oDI = new DynamicExpresso.Interpreter()
+  .SetVariable("iPrice", iPrice)
+  .SetVariable("iQuantity", iQuantity)
+  .SetVariable("iBag", iBag)
+  ;
+
+//執行公式
+var iResult = oDI.Eval&lt;decimal>(cFormula);
+
+## 正確答案應該是163.6元
+</code></pre><h2>Dynamic Expresso程式碼範例：台灣便利商店流行計價的表達式寫法</h2><p>如果客戶改成這樣的需求：蘋果第一顆原價，第二顆八折，購物袋另計...這時候我們可以透過這樣的程式碼來實現：</p><pre><code class=language-cs>//蘋果價格
+decimal iPrice = 50.5m;
+//採購數量
+decimal iQuantity = 4;
+//購物袋價格
+decimal iBag = 2;
+
+//蘋果第一顆原價，第二顆八折，購物袋另計
+string cFormula = @"
+(
+  (iQuantity % 2) == 0 ?
+    (
+      Math.Floor(iQuantity / 2) * (iPrice + (iPrice * 0.8m))
+    ) :
+    (
+      iQuantity == 1 ?
+        iPrice :
+        Math.Floor(iQuantity / 2) * (iPrice + (iPrice * 0.8m)) + iPrice
+    )
+) +
+iBag
+";
+
+//建立DynamicExpresso解譯器
+var oDI = new DynamicExpresso.Interpreter()
+  .SetVariable("iPrice", iPrice)
+  .SetVariable("iQuantity", iQuantity)
+  .SetVariable("iBag", iBag)
+  ;
+
+//執行公式
+var iResult = oDI.Eval&lt;decimal>(cFormula);
+
+## 正確答案應該是181.8元
+</code></pre><p>※ 註：這裡的方程式最主要是用來描述思緒，實務上也可以用更精簡的寫法來表達，例如：</p><pre><code class=language-cs>(
+  (Math.Floor(iQuantity / 2) * iPrice * 0.8m) +   //偶數：八折
+  (Math.Floor((iQuantity + 1) / 2) * iPrice)      //奇數：原價
+) +
+iBag
+</code></pre><h3>總結</h3><p>透過上面的程式碼，我們可以看到Dynamic Expresso的使用方式非常簡單，只需要建立一個解譯器，然後設定變數，最後執行公式即可（這個公式可以儲存在資料庫中）。這樣的方式可以讓我們在C#中動態地執行一些簡單的表達式，滿足客戶對於動態計算的需求。</p><h6>C# DynamicExpresso Expression Interpreter Evaluator</h6></main><footer></footer><script src=/.file/site.js></script></body></html>
