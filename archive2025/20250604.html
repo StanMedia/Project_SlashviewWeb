@@ -1,0 +1,112 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>使用Http協定Connection Keep-Alive來針對網站進行連線測試</h1><p>我們知道Http協定的Connection Keep-Alive功能可以讓我們在同一個TCP連線上傳送多個請求，這樣可以減少TCP連線的建立和關閉次數，提高網路效能，這個在HTTP 1.1就已經支援了。最近因為有一些主機上有使用到Http協定的Connection Keep-Alive功能上的問題，但現有的很多工具（例如：curl...）都沒有辦法實際的支援這樣的效果測試，所以我就寫了一個簡單的C#程式來實現這個功能。</p><h2>透過C#程式來實現Http協定Connection Keep-Alive功能測試</h2><p>程式碼最主要的目的就是要在同一個TCP連線上傳送多個請求，並且在每次請求之後都不關閉連線，這樣就可以透過Connection Keep-Alive的效果來取得我們要捕捉的HTTP Header錯誤資訊。以下是程式碼的實現：</p><pre><code class=language-cs>static async Task Main(string[] args)
+{
+  Console.WriteLine("請輸入要測試的網址（例如: https://example.com）：");
+  Console.Write("> ");
+  var url = Console.ReadLine();
+
+  Console.Write("幾毫秒發出一次連線：");
+  var delay = Convert.ToInt32(Console.ReadLine());
+
+  Console.Write("總共發出幾次連線：");
+  var count = Convert.ToInt32(Console.ReadLine());
+
+  var listener = new TcpReuseEventListener();
+
+  var handler = new SocketsHttpHandler
+  {
+    PooledConnectionLifetime = TimeSpan.FromMinutes(5),
+    PooledConnectionIdleTimeout = TimeSpan.FromMinutes(2),
+    MaxConnectionsPerServer = 1,
+    KeepAlivePingDelay = TimeSpan.FromSeconds(30),
+    KeepAlivePingPolicy = HttpKeepAlivePingPolicy.Always
+  };
+
+  using var client = new HttpClient(handler);
+
+  Log($@"
+-------------------------------------
+檢測時間：{DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss")}
+檢測目標：{url}
+-------------------------------------
+");
+
+  for (int i = 1; i &lt;= count; i++)
+  {
+    try
+    {
+      var response = await client.GetAsync(url);
+      Log($"#{i}: {(int)response.StatusCode} {response.ReasonPhrase}");
+
+      // 檢查是否有出現指定的HeaderKey
+      if (!response.Headers.Contains("YourHeaderKey"))
+      {
+        Console.ForegroundColor = ConsoleColor.Red;
+        Log("X 未發現指定的HeaderKey，以下為此次Headers:");
+            
+        Console.ForegroundColor = ConsoleColor.DarkYellow;
+        foreach (var header in response.Headers)
+        { Log($"{header.Key}: {string.Join(", ", header.Value)}"); }
+        Console.ForegroundColor = ConsoleColor.DarkMagenta;
+        if (response.Content.Headers != null)
+        {
+          foreach (var header in response.Content.Headers)
+          { Log($"{header.Key}: {string.Join(", ", header.Value)}"); }
+        }
+
+        Log("");
+        Console.ResetColor();
+      }
+
+      await Task.Delay(delay);
+    }
+    catch (Exception ex)
+    {
+      Console.ForegroundColor = ConsoleColor.Magenta;
+      Log($"[#{i} ERROR: {ex.Message}");
+      Console.ResetColor();
+    }
+  }
+  listener.Dispose();
+}
+
+//事件監聽器：觀察TCP是否重用
+class TcpReuseEventListener : System.Diagnostics.Tracing.EventListener
+{
+  protected override void OnEventSourceCreated(System.Diagnostics.Tracing.EventSource eventSource)
+  {
+    if (eventSource.Name == "System.Net.Http")
+    {
+      EnableEvents(eventSource, System.Diagnostics.Tracing.EventLevel.Informational, System.Diagnostics.Tracing.EventKeywords.All);
+    }
+  }
+
+  protected override void OnEventWritten(System.Diagnostics.Tracing.EventWrittenEventArgs eventData)
+  {
+    if (eventData.EventName == "ConnectionEstablished")
+    {
+      Console.ForegroundColor = ConsoleColor.Yellow;
+      Console.WriteLine("[TCP] ConnectionEstablished"); //連線建立
+      Console.ResetColor();
+    }
+    else if (eventData.EventName == "ConnectionReuse")
+    {
+      Console.ForegroundColor = ConsoleColor.Yellow;
+      Console.WriteLine("[TCP] ConnectionReuse"); //重用連線
+      Console.ResetColor();
+    }
+    else if (eventData.EventName == "ConnectionClosed")
+    {
+      Console.ForegroundColor = ConsoleColor.Yellow;
+      Console.WriteLine("[TCP] ConnectionClosed"); //連線關閉
+      Console.ResetColor();
+    }
+  }
+}
+
+//建立訊息
+static void Log(string text)
+{
+  Console.WriteLine(text);
+  File.AppendAllText(Path.Combine(AppContext.BaseDirectory, "log.txt"), text + Environment.NewLine);
+}
+</code></pre><p>上面的程式碼是採用<code>.NET Core 8</code>環境撰寫，經過實測確定可以執行運作。這個程式會要求使用者輸入要測試的網址、每次請求之間的延遲時間以及總共要發出多少次請求。它會在同一個TCP連線上發出多個請求，並且在每次請求之後都不關閉連線，這樣就可以測試Connection Keep-Alive的效果。</p><h6>HttpConnectionKeepAlive TcpConnection NetworkTesting CSharp SocketsHttpHandler HttpHeader DotNetCore ConnectionReuse PerformanceTesting HttpClient EventListener NetworkDiagnostics ConnectionAutomation</h6></main><footer></footer><script src=/.file/site.js></script></body></html>
