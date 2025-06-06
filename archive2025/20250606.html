@@ -1,0 +1,30 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>nVidia顯示卡在無負載的情況下自動黑屏並重新開機</h1><p>最近發現電腦在沒有任何重型負載的情況下，顯示器會突然黑屏，然後電腦自動重新啟動。這個問題在我安裝nVidia顯示卡之前從來都沒有發生過，因此我推論應該是跟主機與作業系統無關，並且似乎與驅動程式有關。</p><h2>沒有任何運作負擔的情況下黑屏並自動重新開機</h2><p>發生自動重新開機的機率通常不會是在重度運作的時候，比較常出現在電腦背景播放Youtube音樂，前景我正在使用VisualStudio撰寫程式碼的時候。這時候電腦沒有任何重型負載，顯示器卻突然黑屏，然後電腦自動重新啟動。（連藍色螢幕BSOD都沒出現）</p><h2>可能的原因</h2><p>本來發生這種鳥事情重開機會一陣子沒事，今天一怒之下下載了<code>WinDbg</code>直接把<code>MEMORY.DMP</code>直接打開來分析，最後發現是<code>nvlddmkm.sys</code>這個檔案造成的問題。這個檔案是nVidia顯示卡的驅動程式，可能是因為驅動程式不穩定或與系統不兼容導致了這個問題。</p><p>以下是WinDbg分析的部分結果：</p><pre><code class=language-txt>*******************************************************************************
+*                                                                             *
+*                        Bugcheck Analysis                                    *
+*                                                                             *
+*******************************************************************************
+VIDEO_TDR_FAILURE (116)
+Attempt to reset the display driver and recover from timeout failed.
+Arguments:
+Arg1: ffffb08416c5f010, Optional pointer to internal TDR recovery context (TDR_RECOVERY_CONTEXT).
+Arg2: fffff8033b7d9ac0, The pointer into responsible device driver module (e.g. owner tag).
+Arg3: ffffffffc000009a, Optional error code (NTSTATUS) of the last failed operation.
+Arg4: 0000000000000004, Optional internal context dependent data.
+...
+Unable to load image \SystemRoot\System32\DriverStore\FileRepository\nvmdi.inf_amd64_bfe8dceee6420e76\nvlddmkm.sys, Win32 error 0n2
+...
+SYMBOL_NAME:  nvlddmkm+1919ac0
+MODULE_NAME: nvlddmkm
+IMAGE_NAME:  nvlddmkm.sys
+STACK_COMMAND: .process /r /p 0xffffb083e2f02080; .thread 0xffffb0840b76b040 ; kb
+FAILURE_BUCKET_ID:  0x116_IMAGE_nvlddmkm.sys
+OS_VERSION:  10.0.19041.1
+BUILDLAB_STR:  vb_release
+OSPLATFORM_TYPE:  x64
+...
+OSNAME:  Windows 10
+</code></pre><p>把上面這些分析結果隨便丟幾個關鍵字到網路找，果然看到一大堆網友提出類似的問題，並且大多數人都認為是nVidia顯示卡驅動程式的問題。但是大部分的解決方案都是更新驅動程式或是回滾到之前的版本，但其實看到後續的回覆留言大都反映沒有太大的效果。</p><h2>可能的解決方案</h2><p>在這茫茫的回覆留言中我看到一個可能是比較有意義的解決方案，就是在註冊檔案中加入一個<code>TdrDelay</code>的值，這個值可以讓系統在等待顯示卡回應時延長時間，從而避免自動重新啟動。具體步驟如下：</p><pre><code class=language-txt>Windows Registry Editor Version 5.00
+
+[HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\GraphicsDrivers]
+"TdrDelay"=dword:0000000a
+</code></pre><p>不知道這個設定會不會產生效果，我會持續觀察，若沒有再回來更新這篇文章的話，代表這個設定對我來說是有效的。</p><h6>nVidiaDisplayCard BlackScreen AutoRestart DriverIssue VideoTdrFailure NvlddmkmSys WinDbgAnalysis TdrDelay RegistrySetting Windows10</h6></main><footer></footer><script src=/.file/site.js></script></body></html>
