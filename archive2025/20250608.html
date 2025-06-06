@@ -1,0 +1,10 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>透過dd將virtualbox之linux vdi空間清零釋放</h1><p>相較於Windows虛擬機的空間清零釋放，Linux虛擬機（Ubuntu）的空間清零釋簡單多了！以下是針對Linux Ubuntu虛擬機在VirtualBox中進行VDI磁碟壓縮的步驟。</p><h2>透過dd來進行填充零檔案</h2><p>不用安裝任何程式，透過內建的<code>dd</code>指令即可完成。這個方法會將整個磁碟填充為零，以下是具體步驟：</p><pre><code class=language-txt>#切換到最高權限
+sudo -i
+
+#將整個磁碟填充為零
+dd if=/dev/zero of=~/zero.fill bs=1M status=progress
+</code></pre><p>執行後你會看到開始填充的進度，最後會出錯收場，但這是正常的，因為磁碟已經被填滿了。</p><h2>刪除這個填充檔案以釋放空間</h2><p>最後將這個檔案刪除，同步一下磁碟並關機，這樣就完成了空間的清零釋放。</p><pre><code class=language-txt>rm ~/zero.fill
+sync
+shutdown -h now
+</code></pre><h2>回到VirtualBox並進行VDI磁碟壓縮</h2><p>回到HostOS的虛擬機器目錄，透過cmd輸入指令來壓縮VDI磁碟：</p><pre><code class=language-txt>VBoxManage modifymedium YourUbuntuDisk.vdi --compact
+</code></pre><p>執行後就可以看到磁碟已經被壓縮了。</p><h3>相關連結</h3><ul><li>Windows虛擬機的空間清零釋放：<a href=/archive2025/20250501.html>透過sdelete將virtualbox之windows vdi空間清零釋放，結果卻灌爆硬碟</a></li><li>Linux虛擬機的空間清零釋放：<a href=/archive2025/20250608.html>過dd將virtualbox之linux vdi空間清零釋放</a></li></ul><h6>Linux Ubuntu VirtualBox VDI Disk Comression Compact SDelete SDelete64 HugeFiles LargeFiles Solution Fixed Addressed</h6></main><footer></footer><script src=/.file/site.js></script></body></html>
