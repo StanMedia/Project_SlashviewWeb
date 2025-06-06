@@ -1,0 +1,51 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>在Ubuntu下安裝playwright並使用chromium瀏覽器針對某網頁截圖</h1><p>因為沒有玩過playwright，所以這篇文章主要是記錄一下在Ubuntu下安裝playwright的過程，順帶使用chromium瀏覽器針對某網頁截圖。目前我使用的作業系統是Ubuntu 24.04 LTS使用Minimal Server安裝。</p><h2>安裝node.js</h2><p>由於playwright是基於node.js的，所以首先需要安裝node.js。可以使用以下命令安裝最新版本的node.js：</p><pre><code class=language-txt>#下載並安裝nvm
+curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.3/install.sh | bash
+
+#執行nvm腳本
+\. "$HOME/.nvm/nvm.sh"
+
+#下載並安裝node.js
+nvm install 24
+
+#驗證是否該裝的都有裝成功
+node -v 
+>> v24.1.0
+
+nvm current
+>> v24.1.0
+
+npm -v
+>> 11.3.0
+</code></pre><h2>安裝playwright</h2><p>playwright可以通過npm安裝，且由於我只會用到chromium瀏覽器，所以只安裝chromium相關的套件。可以使用以下命令安裝playwright：</p><pre><code class=language-txt>#切換到家目錄
+cd ~
+
+#建立playwright目錄
+mkdir playwright
+
+#切換到playwright目錄
+cd playwright
+
+#初始化npm專案
+npm init -y
+
+#安裝playwright
+npm install playwright
+
+#安裝playwright的依賴項（一定要安裝，檔案龐大故需要一點時間）
+sudo npx playwright install-deps
+
+#安裝playwright適用的chromium瀏覽器
+npx playwright install chromium
+</code></pre><h2>使用playwright截圖</h2><p>如果上述一切都安裝妥當，就可以開始建立一個簡單的Node.js腳本來使用playwright截圖了。以下這個<code>test.js</code>範例腳本，將會打開指定的網頁並截取屏幕截圖：</p><pre><code class=language-js>const { chromium } = require('playwright');
+
+( async () => {
+  const browser = await chromium.launch({ headless: true });
+  const context = await browser.newContext();
+  const page = await context.newPage();
+  await page.goto('https://web.page/');
+  await page.screenshot({ path: 'webpage.png' });
+  console.log('OK!');
+  await browser.close();
+})();
+</code></pre><p>把<code>test.js</code>儲存到<code>playwright</code>目錄下，然後在終端機中執行以下命令來運行腳本：</p><pre><code class=language-txt>node test.js
+</code></pre><p>如果一切順利，你應該會在<code>playwright</code>目錄下看到一個名為<code>webpage.png</code>的截圖文件。這表示playwright已經成功地打開了指定的網頁並截取了屏幕截圖。</p><h6>UbuntuInstall PlaywrightInstall NodejsInstall NvmUsage ChromiumBrowser PlaywrightScreenshot PlaywrightDependencies PlaywrightDirectory PlaywrightScript PlaywrightExample PlaywrightChromium PlaywrightHeadless BrowserAutomation ScreenshotScript PlaywrightUsage PlaywrightSetup PlaywrightNodejs PlaywrightNpm PlaywrightInstallDeps PlaywrightInstallChromium PlaywrightGoto PlaywrightPage PlaywrightContext PlaywrightLaunch PlaywrightClose PlaywrightTestJs PlaywrightWebpagePng</h6></main><footer></footer><script src=/.file/site.js></script></body></html>
