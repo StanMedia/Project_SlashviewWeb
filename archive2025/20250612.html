@@ -3,7 +3,7 @@ npm install playwright-extra
 
 #安裝隱身套件
 npm install puppeteer-extra-plugin-stealth
-</code></pre><h2>使用Playwright隱身模式</h2><p>基本上只可以躲過基本的<code>WebDriver</code>偵測，其他的就且看且走吧，畢竟套件已經兩年沒有更新應該是被放生了。透過下列程式碼可以使用隱身模式正確地把Google.com的首頁打開。</p><pre><code class=language-js>const { chromium } = require('playwright-extra');
+</code></pre><h2>使用Playwright隱身模式</h2><p>基本上只可以躲過基本的<code>WebDriver</code>偵測，其他的就且看且走吧，畢竟套件已經兩年沒有更新應該是被放生了。透過下列程式碼可以使用隱身模式正確地的顯示<code>You are not Chrome headless</code>，但其實有更多精確測試BotBrowser的網站其實都測不過。</p><pre><code class=language-js>const { chromium } = require('playwright-extra');
 const pluginStealth = require('puppeteer-extra-plugin-stealth');
 chromium.use(pluginStealth());
 
@@ -22,7 +22,7 @@ const browserContextOptions = {
   });
   page = await context.newPage();
   try {
-    await page.goto('https://google.com/');
+    await page.goto('https://arh.antoinevastel.com/bots/areyouheadless');
     await page.waitForTimeout(5000);
     console.log('Finished!');
   } catch (error) {
