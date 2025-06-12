@@ -1,0 +1,34 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>讓playwright進入隱身（Stealth）防止被偵測為Bot</h1><p>透過playwright自動化尋找資料時，常常會遇到網站使用防爬蟲技術，這些技術會檢測是否為自動化工具存取網站。為了避免被偵測，可以使用Playwright的隱身模式（Stealth Mode）。</p><h2>安裝Playwright puppeteer stealth</h2><p>這部分需要套件來支援隱身模式，網路上其實<code>免費資源</code>不多（最大宗屬於<code>puppeteer-extra-plugin-stealth</code>，但也有接近兩年沒有更新了），由於BOT偵測是貓捉老鼠的遊戲，所以套件應該會逐漸失效。</p><p>安裝指令如下：</p><pre><code class=language-txt>#安裝擴充套件
+npm install playwright-extra
+
+#安裝隱身套件
+npm install puppeteer-extra-plugin-stealth
+</code></pre><h2>使用Playwright隱身模式</h2><p>基本上只可以躲過基本的<code>WebDriver</code>偵測，其他的就且看且走吧，畢竟套件已經兩年沒有更新應該是被放生了。透過下列程式碼可以使用隱身模式正確地把Google.com的首頁打開。</p><pre><code class=language-js>const { chromium } = require('playwright-extra');
+const pluginStealth = require('puppeteer-extra-plugin-stealth');
+chromium.use(pluginStealth());
+
+let browser, context, page;
+const browserContextOptions = {
+  viewport: { width: 1920, height: 1080 },
+};
+
+(async () => {
+  browser = await chromium.launch({
+    headless: true,
+    slowMo: 100,
+  });
+  context = await browser.newContext({
+    ...browserContextOptions
+  });
+  page = await context.newPage();
+  try {
+    await page.goto('https://google.com/');
+    await page.waitForTimeout(5000);
+    console.log('Finished!');
+  } catch (error) {
+    console.log(`Error: ${error.message}`);  
+  }
+  await page.screenshot({ path: `test.png` });
+  await browser.close();
+})();
+</code></pre><h6>Playwright StealthMode BotDetection Automation WebScraping PuppeteerExtraPluginStealth HeadlessBrowser Chromium PluginInstallation BrowserContextOptions Viewport Google HomePage Screenshot ErrorHandling NodeJs NpmInstall WebDriverDetection AntiBot</h6></main><footer></footer><script src=/.file/site.js></script></body></html>
