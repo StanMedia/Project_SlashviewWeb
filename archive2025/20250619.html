@@ -1,0 +1,5 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>規避Ubuntu的密碼變更原則</h1><p>這幾天在進行Ubuntu Desktop的自動化腳本開發遇到了一個Ubuntu的密碼變更原則問題，在變更密碼的過程中系統會跟我報錯下列的錯誤訊息：</p><pre><code class=language-txt>BAD PASSWORD: The password contains the user name in some form.
+BAD PASSWORD: The password is too similar to the old one.
+...
+</code></pre><p>這種類似的問題好像在網路上還蠻多人發問的，甚至有人教你去覆寫shadow檔來解決這個問題，但我覺得這樣做不太好，因為這樣會破壞系統的安全性。</p><p>其實問題的解法很簡單，答案就是<code>切到最高管理者root</code>去變更密碼，然後<code>不要鳥這些錯誤訊息</code>持續輸入<code>新密碼</code>就變更成功了：</p><pre><code class=language-txt>sudo passwd username
+</code></pre><p>這個問題我在Ubuntu Server Minimal上面沒有遇到，但在Ubuntu Desktop上就遇到了，真的是蠻神奇的。</p><h6>UbuntuPasswordPolicy PasswordChangeError BadPassword RootPrivilege PasswordContainsUserName PasswordTooSimilar SudoPasswd ShadowFile SecurityRisk UbuntuDesktop UbuntuServerMinimal AutomationScript</h6></main><footer></footer><script src=/.file/site.js></script></body></html>
