@@ -1,0 +1,13 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>禁止Ubuntu下的Google Chrome瀏覽器自動更新</h1><p>實在很受不了Google Chrome瀏覽器的摧殘，就算躲到了Linux Ubuntu下還是得要被強迫更新，超級惱人。去網路查詢了一下禁止Google Chrome自動更新的資訊記錄在此，不確定能不能<code>完全禁止</code>，日後若有結論再回來更新資訊。</p><h2>禁止Linux Ubuntu Google Chrome瀏覽器自動更新</h2><ol><li>禁止軟體管理包更新</li></ol><pre><code class=language-txt>sudo apt-mark hold google-chrome-stable
+</code></pre><ol start=2><li>透過策略禁止自動更新</li></ol><pre><code class=language-txt>sudo -i
+touch /etc/default/google-chrome
+nano /etc/default/google-chrome
+</code></pre><p>然後在檔案裡面新增內容：</p><pre><code class=language-txt>repo_add_once="false"
+</code></pre><ol start=3><li>關閉Chrome元件的自動更新</li></ol><pre><code class=language-txt>sudo -i
+mkdir -p /etc/opt/chrome/policies/managed
+touch /etc/opt/chrome/policies/managed/component_update.json
+nano /etc/opt/chrome/policies/managed/component_update.json
+</code></pre><p>然後在檔案裡面新增內容：</p><pre><code class=language-txt>{
+  "ComponentUpdatesEnabled": "false"
+}
+</code></pre><p>理論上弄完後重新開機，應該就可以解決了（由於我已經更新到最新版所以無法證明），但我想Google Chrome應該不會就這樣輕易地放過我們的，等待日後有新的資訊再來補充。</p><h6>Ubuntu GoogleChrome DisableAutoUpdate AptMark PolicyFile ComponentUpdatesEnabled LinuxBrowser UpdatePrevention ManagedPolicy SystemConfiguration</h6></main><footer></footer><script src=/.file/site.js></script></body></html>
