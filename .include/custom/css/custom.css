@@ -81,8 +81,8 @@ main .btn, .btn:focus, .btn:hover {
 main p {
   margin-bottom: 1.25rem;
 }
-main p:has(+ p img) {
-  margin-bottom: 0.25rem;
+main p:has(+p img) {
+  margin-bottom: .25rem;
 }
 main p:has(img) {
   margin-bottom: 2rem;
