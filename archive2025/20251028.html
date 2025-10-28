@@ -1,0 +1,22 @@
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>透過GPU來破解HASH雜湊值</h1><p>在過去大家的經驗裡面都知道雜湊其實很難破解，頂多透過彩虹表或字典檔來進行破解，但是隨著GPU運算能力的提升，現在透過GPU來破解雜湊值已經變得輕易達成，本文將介紹如何利用GPU來進行HASH雜湊值的破解。</p><h2>使用Hashcat進行破解</h2><p>Step 1. 下載並安裝<a href=https://hashcat.net/hashcat/>Hashcat binaries</a>，這是一個強大的雜湊破解工具，支援多種雜湊演算法。</p><p>Step 2. 準備好你想要破解的雜湊值，我們這邊準備的是<code>p@$wD</code>的MD5雜湊值，請把下列字串儲存到<code>hash.txt</code>：</p><pre><code class=language-txt>97255be31220b255fa4f3e4bf7c673c6
+</code></pre><p>Step 3. 解壓縮hashcat後，透過命令提示字元（CMD）進入hashcat的目錄，然後執行以下命令：</p><pre><code class=language-txt>hashcat -m 0 -a 3 hash.txt ?a?a?a?a?a?a?a?a -i --increment-min=1 --increment-max=8
+</code></pre><p>參數意義：</p><ul><li><code>-m 0</code>：表示MD5雜湊演算法，算法列表請參考<a href=https://gist.github.com/CalfCrusher/6b87a738d0fe7b88e04f4a36eb6d722d>Hashcat Example hashes</a>。</li><li><code>-a 3</code>：表示使用暴力破解模式。</li><li><code>hash.txt</code>：是包含雜湊值的檔案。</li><li><code>?a?a?a?a?a?a?a?a</code>：表示該位置的密碼字元為全部。（小寫、大寫、數字、符號）</li><li><code>-i</code>：表示啟用增量模式。</li><li><code>--increment-min=1</code>：表示最小密碼長度為1。（一般來說系統不會給低位數的密碼通過，但話說回來，低位數的密碼其實很快就跑完了）</li><li><code>--increment-max=8</code>：表示最大密碼長度為8。</li></ul><p>Step 4. 接著Hashcat會開始調用OpenCL與CUDA API利用GPU來進行暴力破解，過程中你可以看到破解的進度和速度（按下<code>Enter</code>可以實時更新），例如下列就是已經算到<code>密碼組合總長度4</code>的範疇了：</p><pre><code class=language-txt>Session..........: hashcat
+Status...........: Exhausted
+Hash.Mode........: 0 (MD5)
+Hash.Target......: 97255be31220b255fa4f3e4bf7c673c6
+Time.Started.....: Tue Oct 28 11:17:28 2025 (0 secs)
+Time.Estimated...: Tue Oct 28 11:17:28 2025 (0 secs)
+Kernel.Feature...: Pure Kernel (password length 0-256 bytes)
+Guess.Mask.......: ?a?a?a?a [4]
+Guess.Queue......: 4/8 (50.00%)
+Speed.#01........:  5748.9 MH/s (4.48ms) @ Accel:288 Loops:64 Thr:256 Vec:1
+Recovered........: 0/1 (0.00%) Digests (total), 0/1 (0.00%) Digests (new)
+Progress.........: 81450625/81450625 (100.00%)
+Rejected.........: 0/81450625 (0.00%)
+Restore.Point....: 857375/857375 (100.00%)
+Restore.Sub.#01..: Salt:0 Amplifier:64-95 Iteration:0-64
+Candidate.Engine.: Device Generator
+Candidates.#01...: (ari ->   ~}
+Hardware.Mon.#01.: Temp: 62c Fan: 60% Util:  8% Core:2032MHz Mem:7501MHz Bus:16
+</code></pre><p>Step 5. 由於我們不知道原先密碼的長度，所以必須經過一些時間的嘗試（但其實<code>八碼以下</code>的密碼長度通常幾分鐘內就破解掉了）。當破解完成後，你可以在終端機中看到破解出的明文密碼。</p><pre><code class=language-txt>97255be31220b255fa4f3e4bf7c673c6:p@$wD
+</code></pre><h3>感想</h3><p>透過現代的GPU來破解雜湊確實已經相當容易，而不是停留在論文與大型運算主機的範疇，這也提醒我們在設計密碼時，應該要選擇更強韌的密碼策略（特別是<code>密碼複雜度</code>、<code>密碼的長度</code>與<code>雜湊的等級</code>），以防止被輕易破解。</p><h6>HashCracking Hashcat GPUAcceleration MD5 BruteForce MaskAttack IncrementMode OpenCL CUDA HashTarget HashFile Charset CandidateMask SpeedMHs GPUUtilization HardwareMonitoring Temperature FanSpeed CoreClock MemoryClock RestorePoint SessionStatus RecoveredDigests PasswordRecovery PasswordStrength Salt Iteration DictionaryAttack RainbowTable EthicalUse SecurityBestPractices</h6></main><footer></footer><script src=/.file/site.js></script></body></html>
