@@ -1,26 +1,36 @@
-﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>將劇迷（Gimy）網站中對兒童不適當的選單隱藏</h1><p>最近小孩有使用<code>劇迷 Gimy</code>這個影音網站進行線上的卡通影片觀賞，但我發現上面有一些對兒童不適當的連結（<code>成人</code>、<code>老司機</code>、<code>18禁</code>...），因此透過油猴（Tempermonkey）寫了一個Script腳本，如果有這方面需求的家長，可以使用這個腳本來針對這個網站不恰當的內容進行隱藏。</p><h2>安裝油猴瀏覽器插件（Tempermonkey plugin）</h2><p>油猴（Tempermonkey）是一種瀏覽器套件，適用於各大瀏覽器使用，您可以到Chrome或Edge的擴充管理員中找到線上商店，以<code>Microsoft Edge</code>來說套件的中文名稱叫做<code>竄改猴</code>，但一般來說坊間還是統一用油猴來稱呼，請找到這個套件並安裝它。</p><h2>匯入腳本至套件</h2><p>要匯入腳本到油猴使其可以執行的方式有下列幾種，如果沒有特別的需求建議採用<code>Ａ方式</code>即可，日後該網站有異動更新而我恰好還在關注這個事情的話，我會直接過去更新腳本程式碼，你的瀏覽器打開後會自動偵測是否有新版，若有的話它會自動更新到新的程式碼腳本。</p><p>Ａ、線上匯入腳本（日後可線上自動更新）</p><p>直接打開油猴的管理介面，點選<code>控制台（Dashboard）</code>＞<code>匯入匯出工具</code>＞<code>自URL安裝</code>，將下列<code>網址</code>貼上後點選<code>安裝</code>即可。</p><pre><code class=language-txt>https://content.slashview.com/file/20240820/GimyForKids.user.js
-</code></pre><p>Ｂ、手動下載腳本：</p><p>下載下方<code>GimyForKids.user.js</code>腳本後，點選<code>控制台（Dashboard）</code>＞<code>匯入匯出工具</code>＞<code>匯入</code>＞<code>選擇檔案</code>，指定該檔案腳本後即可完成安裝。</p><p><a href=https://content.slashview.com/file/20240820/GimyForKids.user.js>隱藏Gimy劇迷網站兒童不宜連結</a></p><p>Ｃ、手動建立腳本：</p><p>如果擔心有甚麼閃失的話，可以複製下方程式碼自行建立全新腳本亦可，只是麻煩了點。</p><pre><code class=language-js>// ==UserScript==
+﻿<!DOCTYPE html><html><head><meta charset=utf-8 /><meta name=viewport content="width=device-width, initial-scale=1" /><link href=/.file/site.css rel=stylesheet /><script src=/.include/jquery/jquery.min.js></script></head><body><header></header><main><h1>將劇迷（Gimy）網站中對兒童不適當的選單隱藏</h1><p>最近小孩有使用<code>劇迷 Gimy</code>這個影音網站進行線上的卡通影片觀賞，但我發現上面有一些對兒童不適當的連結（<code>成人</code>、<code>老司機</code>、<code>18禁</code>...），因此透過油猴（Tempermonkey）寫了一個Script腳本，如果有這方面需求的家長，可以使用這個腳本來針對這個網站不恰當的內容進行隱藏。</p><h2>安裝油猴瀏覽器插件（Tempermonkey plugin）</h2><p>油猴（Tempermonkey）是一種瀏覽器套件，適用於各大瀏覽器使用，您可以到Chrome或Edge的擴充管理員中找到線上商店，以<code>Microsoft Edge</code>來說套件的中文名稱叫做<code>竄改猴</code>，但一般來說坊間還是統一用油猴來稱呼，請找到這個套件並安裝它。</p><h2>匯入腳本至套件</h2><p>要匯入腳本到油猴使其可以執行的方式有下列幾種，如果沒有特別的需求建議採用<code>Ａ方式</code>即可，日後該網站有異動更新而我恰好還在關注這個事情的話，我會直接過去更新腳本程式碼，你的瀏覽器打開後會自動偵測是否有新版，若有的話它會自動更新到新的程式碼腳本。</p><p>Ａ、線上匯入腳本（日後可線上自動更新）</p><p>直接打開油猴的管理介面，點選<code>控制台（Dashboard）</code>＞<code>工具</code>＞<code>從網址匯入</code>，將下列<code>網址</code>貼上後點選<code>安裝</code>即可。</p><pre><code class=language-txt>https://content.slashview.com/file/20240820/GimyForKids.user.js
+</code></pre><p>Ｂ、手動下載腳本：</p><p>從瀏覽器下載<code>GimyForKids.user.js</code>腳本後，點選<code>控制台（Dashboard）</code>＞<code>工具</code>＞<code>從檔案匯入</code>＞<code>選擇檔案</code>，指定該檔案腳本後即可完成安裝。</p><p>腳本下載處：<a href=https://content.slashview.com/file/20240820/GimyForKids.user.js>隱藏Gimy劇迷網站兒童不宜連結</a></p><p>Ｃ、手動建立腳本：</p><p>如果擔心有甚麼閃失的話，可以複製下方程式碼自行建立全新腳本亦可，只是麻煩了點。（Last Update: 2025-11-04）</p><pre><code class=language-js>// ==UserScript==
 // @name         Gimy for kids
 // @namespace    http://tampermonkey.net/
-// @version      2024-08-20
+// @version      2025-11-04
 // @description  Prevent unnecessary content from appearing in children's view.
 // @updateURL    https://content.slashview.com/file/20240820/GimyForKids.user.js
 // @downloadURL  https://content.slashview.com/file/20240820/GimyForKids.user.js
 // @author       Slashview
-// @match        *://gimy.ai/*
+// @match        *://*/*
 // @icon         https://www.google.com/s2/favicons?sz=64&amp;domain=slashview.com
 // @grant        none
 // @run-at       document-end
 // ==/UserScript==
 
+// ==ChangeLog==
+// 2025-11-04 由於Gimy網址超級多變，HTML架構上也不盡相同，因此改變思路
+// 1. 一律進入後再判斷網址是否出現Gimy。
+// 2. 依據ul>li之內容來判斷選單並移除。
+// ==/ChangeLog==
+
 (function() {
   'use strict';
-  var oLists = document.querySelectorAll('ul.nav.navbar-nav > li');
-  for (var i = 0; i &lt; oLists.length; i++) {
-    if (i > 5) {
-      var oItem = oLists[i];
-      oItem.parentNode.removeChild(oItem);
+  if (!/gimy/i.test(location.hostname)) return;
+  document.querySelectorAll('ul').forEach(ul => {
+    const liItems = ul.querySelectorAll('li');
+    if (liItems.length === 0) return;
+    const firstText = liItems[0].textContent.trim();
+    if (firstText === '首頁') {
+      for (let i = 5; i &lt; liItems.length; i++) {
+        liItems[i].remove();
+      }
     }
-  }
+  });
 })();
 </code></pre><h6>Gimy 內容 連結 不恰當 兒童不宜 18禁 色情 情色 隱藏 Greasemonkey Tampermonkey 油猴 竄改猴 腳本</h6></main><footer></footer><script src=/.file/site.js></script></body></html>
