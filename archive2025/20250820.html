@@ -10,4 +10,6 @@ nano /etc/opt/chrome/policies/managed/component_update.json
 </code></pre><p>然後在檔案裡面新增內容：</p><pre><code class=language-txt>{
   "ComponentUpdatesEnabled": "false"
 }
-</code></pre><p>理論上弄完後重新開機，應該就可以解決了（由於我已經更新到最新版所以無法證明），但我想Google Chrome應該不會就這樣輕易地放過我們的，等待日後有新的資訊再來補充。</p><h6>Ubuntu GoogleChrome DisableAutoUpdate AptMark PolicyFile ComponentUpdatesEnabled LinuxBrowser UpdatePrevention ManagedPolicy SystemConfiguration</h6></main><footer></footer><script src=/.file/site.js></script></body></html>
+</code></pre><p>理論上弄完後重新開機，應該就可以解決了（由於我已經更新到最新版所以無法證明），但我想Google Chrome應該不會就這樣輕易地放過我們的，等待日後有新的資訊再來補充。</p><h3>Update 20251113</h3><p>經過測試，以上方法沒辦法完全禁止Google Chrome在Ubuntu下自動更新。如果有遇到只能乖乖地上更新：</p><pre><code class=language-txt>sudo apt update
+sudo apt --only-upgrade install google-chrome-stable
+</code></pre><h6>Ubuntu GoogleChrome DisableAutoUpdate AptMark PolicyFile ComponentUpdatesEnabled LinuxBrowser UpdatePrevention ManagedPolicy SystemConfiguration</h6></main><footer></footer><script src=/.file/site.js></script></body></html>
